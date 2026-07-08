@@ -341,11 +341,13 @@ function renderOps(o, reasons) {
     options:{ cutout:"62%", plugins:{ legend:{ display:true, position:"right", labels:{ color:C["--text-secondary"], usePointStyle:true, pointStyle:"circle", padding:12, font:{size:12.5} } },
       datalabels: dl({ color:"#fff", formatter:function(v){return v>0?v:"";} }) } } });
 
+  var delivDone = (o.delivery.배송완료||0)+(o.delivery.구매확정||0);        // 배송완료+구매확정 합산
+  var uninstDone = (o.uninstallByDelivery.배송완료||0)+(o.uninstallByDelivery.구매확정||0);
   mk("opsDelivery", { type:"bar",
-    data:{ labels:["배송중","배송완료","구매확정"],
+    data:{ labels:["배송중","배송완료"],
       datasets:[
-        { label:"전체", data:[o.delivery.배송중,o.delivery.배송완료,o.delivery.구매확정], backgroundColor:C["--s-blue-l"], borderRadius:6, categoryPercentage:.6, barPercentage:.8 },
-        { label:"미설치(즉시대상)", data:[0,o.uninstallByDelivery.배송완료,o.uninstallByDelivery.구매확정], backgroundColor:C["--s-red"], borderRadius:6, categoryPercentage:.6, barPercentage:.8 }
+        { label:"전체", data:[o.delivery.배송중,delivDone], backgroundColor:C["--s-blue-l"], borderRadius:6, categoryPercentage:.6, barPercentage:.8 },
+        { label:"미설치(즉시대상)", data:[0,uninstDone], backgroundColor:C["--s-red"], borderRadius:6, categoryPercentage:.6, barPercentage:.8 }
       ] },
     options:{ scales:axes(), plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels: dl({anchor:"end",align:"end",formatter:function(v){return v>0?v:"";}}) } } });
   document.getElementById("ops-insight").innerHTML =
