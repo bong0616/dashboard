@@ -76,6 +76,9 @@
   .navitem:hover { background: rgba(255,255,255,.06); color: #fff; }
   .navitem.active { background: var(--sidebar-active); color: #fff; box-shadow: 0 4px 12px rgba(42,120,214,.35); }
   .navitem small { display:block; font-size: 11px; opacity:.75; font-weight: 400; }
+  .navitem.navchild { margin-left: 18px; padding: 9px 12px; font-size: 13px; position: relative; }
+  .navitem.navchild .ic { font-size: 14px; }
+  .navitem.navchild::before { content: ""; position: absolute; left: -9px; top: -3px; bottom: 50%; width: 10px; border-left: 1.5px solid rgba(255,255,255,.14); border-bottom: 1.5px solid rgba(255,255,255,.14); border-bottom-left-radius: 7px; }
   .side-foot { margin-top: auto; font-size: 11.5px; color: var(--sidebar-text); padding: 12px 10px 0; line-height: 1.6; border-top: 1px solid rgba(255,255,255,.08); }
   .side-foot b { color: #dfe6f0; }
   .refresh-btn { margin-top: 10px; width: 100%; padding: 9px; border-radius: 10px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); color: #cdd6e2; cursor: pointer; font-size: 12.5px; font-family: var(--font); }
@@ -200,6 +203,7 @@
   </div>
   <div class="navitem active" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량</small></div></div>
   <div class="navitem" data-tab="perf"><span class="ic">⚡</span><div>성과<small>설치속도·작업량</small></div></div>
+  <div class="navitem navchild" data-tab="flow"><span class="ic">📈</span><div>월·주·일 흐름<small>기간별 추이</small></div></div>
   <div class="navitem" data-tab="cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div></div>
   <div class="side-foot">
     <div>업데이트 <b id="foot-time">–</b></div>
@@ -250,6 +254,16 @@
       <div class="card col-6"><h3>🔁 재컨택 주기 → 설치 속도</h3><div class="sub">메모 재컨택 간격이 짧을수록 실제로 빨리 설치되는가?</div><div class="chart-wrap h220"><canvas id="perfRetouch"></canvas></div><div class="insight" id="retouch-insight"></div></div>
       <div class="card col-6"><h3>🐢 7일+ 지연 사유</h3><div class="sub">설치완료됐지만 7일 이상 걸린 건 (메모 자동분류)</div><div class="chart-wrap h220"><canvas id="perfDelay"></canvas></div></div>
       <div class="card col-12"><h3>📅 일별 처리량</h3><div class="sub">최근 45영업일 · 통화시도량 & 설치완료</div><div class="chart-wrap h260"><canvas id="perfDaily"></canvas></div></div>
+    </div>
+  </section>
+
+  <!-- FLOW (성과 하위: 월·주·일 흐름) -->
+  <section class="tab-content" id="tab-flow">
+    <div class="tiles" id="flow-tiles"></div>
+    <div class="grid">
+      <div class="card col-12"><h3>📆 월별 흐름</h3><div class="sub">실적로그 · 통화시도량 · 설치완료 · 최초컨택 (전체 월)</div><div class="chart-wrap h300"><canvas id="flowMonthly"></canvas></div></div>
+      <div class="card col-12"><h3>📅 주별 흐름</h3><div class="sub">최근 16주 · 월요일 시작 주 기준</div><div class="chart-wrap h300"><canvas id="flowWeekly"></canvas></div></div>
+      <div class="card col-12"><h3>🗓️ 일별 흐름</h3><div class="sub">최근 45영업일</div><div class="chart-wrap h300"><canvas id="flowDaily"></canvas></div></div>
     </div>
   </section>
 
@@ -319,6 +333,7 @@ function render(d) {
   document.getElementById("foot-sheet").textContent = d.meta.sheetTitle;
   renderOps(d.ops, d.reasons);
   renderPerf(d.perf);
+  renderFlow(d.perf);
   renderCohort(d.cohort);
 }
 
@@ -462,6 +477,49 @@ function renderPerf(p) {
       ] },
     options:{ scales:{ x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:12}}, y:{beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
       plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false} }, interaction:{mode:"index",intersect:false} } });
+}
+
+// ---------- FLOW (월·주·일 흐름) ----------
+// 직전 기간 대비 증감 타일: rows 배열의 마지막(현재) vs 직전 값
+function deltaTile(label, ic, rows, key, accent) {
+  var n = rows ? rows.length : 0;
+  var cur = n > 0 ? (rows[n-1][key]||0) : 0;
+  var prev = n > 1 ? (rows[n-2][key]||0) : null;
+  var sub;
+  if (prev == null) sub = '<span style="color:var(--muted)">직전 기간 데이터 없음</span>';
+  else if (prev === 0) sub = '<span style="color:var(--muted)">직전 '+fmt(prev)+'건</span>';
+  else {
+    var d = (cur - prev) / prev * 100;
+    var up = d >= 0;
+    sub = '<span style="color:'+(up?C["--good"]:C["--s-red"])+';font-weight:700">'+(up?"▲":"▼")+' '+Math.abs(Math.round(d))+'%</span>'
+        + ' <span style="color:var(--muted)">직전 '+fmt(prev)+'건</span>';
+  }
+  return tile(label, ic, fmt(cur), "건", sub, accent);
+}
+
+// 통화시도량(막대) + 설치완료·최초컨택(선) 콤보 추이
+function trendCombo(id, rows, labelFn) {
+  mk(id, { type:"bar",
+    data:{ labels: rows.map(labelFn),
+      datasets:[
+        { type:"bar", label:"통화시도량", data:rows.map(function(x){return x.calls;}), backgroundColor:C["--s-blue-l"], borderRadius:3, barPercentage:.9, categoryPercentage:.9, order:3 },
+        { type:"line", label:"설치완료", data:rows.map(function(x){return x.installs;}), borderColor:C["--s-aqua"], backgroundColor:"transparent", borderWidth:2.4, tension:.3, pointRadius:2, pointBackgroundColor:C["--s-aqua"], order:1 },
+        { type:"line", label:"최초컨택", data:rows.map(function(x){return x.firstContacts;}), borderColor:C["--s-yellow"], backgroundColor:"transparent", borderWidth:2, tension:.3, pointRadius:0, borderDash:[4,3], order:2 }
+      ] },
+    options:{ scales:{ x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:14}}, y:{beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
+      plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false} }, interaction:{mode:"index",intersect:false} } });
+}
+
+function renderFlow(p) {
+  var mo = p.monthly||[], wk = p.weekly||[], dd = p.daily||[];
+  document.getElementById("flow-tiles").innerHTML =
+    deltaTile("이번달 설치완료","✅", mo, "installs", true) +
+    deltaTile("이번달 통화시도","📞", mo, "calls") +
+    deltaTile("이번주 설치완료","✅", wk, "installs") +
+    deltaTile("이번주 통화시도","📞", wk, "calls");
+  trendCombo("flowMonthly", mo, function(x){ return x.ym.slice(2); });
+  trendCombo("flowWeekly", wk, function(x){ return x.week.slice(5); });
+  trendCombo("flowDaily", dd, function(x){ return x.date.slice(5); });
 }
 
 // ---------- COHORT ----------
@@ -678,7 +736,7 @@ document.getElementById("f-reset").addEventListener("click", function(){
   loadPeriod("","","전체 기간");
 });
 
-var TABMETA={ ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"] };
+var TABMETA={ ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], flow:["월·주·일 흐름","실적로그 기준 · 통화시도·설치완료·최초컨택의 월별/주별/일별 추이"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
