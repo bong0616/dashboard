@@ -126,6 +126,13 @@
   .tab-content { display: none; }
   .tab-content.active { display: block; }
 
+  .statgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 11px; margin-top: 8px; }
+  .statcell { border: 1px solid var(--border); border-radius: 12px; padding: 13px 15px; border-left: 4px solid var(--s-blue); background: color-mix(in srgb, var(--surface-1) 60%, transparent); }
+  .statcell .sc-lab { font-size: 12.5px; color: var(--text-secondary); font-weight: 500; }
+  .statcell .sc-val { font-size: 23px; font-weight: 700; margin-top: 7px; letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
+  .statcell .sc-val .sc-unit { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-left: 2px; }
+  .statcell .sc-pct { font-size: 11.5px; color: var(--muted); margin-left: 7px; font-weight: 500; }
+
   /* Passcode gate */
   #gate { position: fixed; inset: 0; background: var(--page); z-index: 100; display:flex; align-items:center; justify-content:center; }
   .gate-box { background: var(--surface-1); border:1px solid var(--border); border-radius: 20px; padding: 34px 30px; width: 340px; box-shadow: var(--shadow); text-align:center; }
@@ -227,6 +234,7 @@
   <section class="tab-content" id="tab-cohort">
     <div class="tiles" id="cohort-tiles"></div>
     <div class="grid">
+      <div class="card col-12"><h3>📊 2026 출고건 전체 상태 구성</h3><div class="sub">출고 <b id="coh-total">–</b>건이 지금 어떤 상태인지 세부 분류 (설치완료 외에도 반품·폐업, 위약금 등 종결건 분리)</div><div id="cohSummary" class="statgrid"></div></div>
       <div class="card col-7"><h3>📦 출고월별 진행률</h3><div class="sub">출고량 대비 설치완료 (자가설치 포함 전체)</div><div class="chart-wrap h260"><canvas id="cohMonth"></canvas></div></div>
       <div class="card col-5"><h3>🧩 월별 설치 채널 구성</h3><div class="sub">자가/문자/상담원 완료 건수</div><div class="chart-wrap h260"><canvas id="cohChannel"></canvas></div></div>
       <div class="card col-7"><h3>📉 주별 설치 진행률</h3><div class="sub">최근 14주 · 최근 주는 진행중이라 낮게 나옴(정상)</div><div class="chart-wrap h240" style="height:240px"><canvas id="cohWeek"></canvas></div></div>
@@ -412,14 +420,40 @@ function renderPerf(p) {
 }
 
 // ---------- COHORT ----------
+function renderCohortSummary(ss, total) {
+  var order=[
+    ["설치완료","--good"],
+    ["설치예정","--s-blue"],
+    ["미설치·보류","--s-orange"],
+    ["부재총계","--s-yellow"],
+    ["명의변경","--s-violet"],
+    ["설치거부·장기지연","--s-red"],
+    ["반품·폐업","--muted"],
+    ["위약금청구진행중","--critical"]
+  ];
+  var html=order.map(function(o){
+    var v=ss[o[0]]||0, p=total>0?(v/total*100):0;
+    return '<div class="statcell" style="border-left-color:'+C[o[1]]+'">'+
+      '<div class="sc-lab">'+o[0]+'</div>'+
+      '<div class="sc-val">'+fmt(v)+'<span class="sc-unit">건</span><span class="sc-pct">'+p.toFixed(1)+'%</span></div></div>';
+  }).join("");
+  document.getElementById("cohSummary").innerHTML=html;
+}
+
 function renderCohort(c) {
   var tot=c.byMonth.reduce(function(a,m){a.s+=m.shipped;a.c+=m.completed;a.p+=m.pending;return a;},{s:0,c:0,p:0});
+  var ss=c.statusSummary||{};
+  var actionable=(ss["미설치·보류"]||0)+(ss["설치예정"]||0)+(ss["부재총계"]||0); // 실제 쫓을 수 있는 잔여
   document.getElementById("cohort-tiles").innerHTML =
     tile("2026 총 출고","📦", fmt(tot.s), "건", "누적 출고량", true) +
     tile("총 설치완료","✅", fmt(tot.c), "건", "전환 완료") +
     tile("전체 진행률","📈", pct(tot.s>0?tot.c/tot.s:0,1), "", "자가설치 포함") +
-    tile("미설치 잔여","⏳", fmt(tot.p), "건", "30일+ "+fmt(c.aging["30+"])+"건") +
+    tile("실질 미설치 잔여","⏳", fmt(actionable), "건", "미설치·보류+예정+부재") +
     tile("30일+ 오래된 잔여","🚨", fmt(c.aging["30+"]), "건", "집중 관리 대상");
+
+  // 전체 상태 세부 구성 카드
+  document.getElementById("coh-total").textContent=fmt(tot.s);
+  renderCohortSummary(ss, tot.s);
 
   var m=c.byMonth;
   mk("cohMonth", { type:"bar",
