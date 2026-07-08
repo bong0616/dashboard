@@ -228,6 +228,7 @@
       <div class="card col-7"><h3>🚚 배송상태 · 미설치 즉시 컨택 대상</h3><div class="sub">미설치 중 배송완료/구매확정 건은 바로 설치 유도 가능</div><div class="chart-wrap h260"><canvas id="opsDelivery"></canvas></div><div class="insight" id="ops-insight"></div></div>
       <div class="card col-5"><h3>📵 부재 단계별</h3><div class="sub">재컨택 우선순위 판단용</div><div class="chart-wrap h220"><canvas id="opsAbsent"></canvas></div></div>
       <div class="card col-7"><h3>🧾 미설치 사유 (현재 잔여)</h3><div class="sub">로우데이터 L열 코드화 사유 · 반품/폐업 제외</div><div class="chart-wrap h260"><canvas id="opsReason"></canvas></div></div>
+      <div class="card col-12"><h3>🔎 '사유미기재' 건 메모 상세 분류</h3><div class="sub">L열 사유가 비어있는 미설치 <b id="ops-unspec-cnt">–</b>건을 K열 메모 키워드로 자동 분류</div><div class="chart-wrap h220"><canvas id="opsUnspecified"></canvas></div></div>
     </div>
   </section>
 
@@ -360,6 +361,13 @@ function renderOps(o, reasons) {
   mk("opsReason", { type:"bar",
     data:{ labels:rz.map(function(r){return r.label.length>16?r.label.slice(0,15)+"…":r.label;}),
       datasets:[{ data:rz.map(function(r){return r.count;}), backgroundColor:C["--s-blue"], borderRadius:5 }] },
+    options:{ indexAxis:"y", scales:axes({horizontal:true}), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
+
+  var uz = (reasons.uninstallUnspecified||[]).slice(0,8);
+  document.getElementById("ops-unspec-cnt").textContent = fmt(reasons.unspecifiedTotal||0);
+  mk("opsUnspecified", { type:"bar",
+    data:{ labels:uz.map(function(r){return r.label;}),
+      datasets:[{ data:uz.map(function(r){return r.count;}), backgroundColor:C["--s-violet"], borderRadius:5 }] },
     options:{ indexAxis:"y", scales:axes({horizontal:true}), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
 }
 
