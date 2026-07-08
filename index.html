@@ -261,9 +261,9 @@
   <section class="tab-content" id="tab-flow">
     <div class="tiles" id="flow-tiles"></div>
     <div class="grid">
-      <div class="card col-12"><h3>📆 월별 흐름</h3><div class="sub">실적로그 · 통화시도량 · 설치완료 · 최초컨택 (전체 월)</div><div class="chart-wrap h300"><canvas id="flowMonthly"></canvas></div></div>
-      <div class="card col-12"><h3>📅 주별 흐름</h3><div class="sub">최근 16주 · 월요일 시작 주 기준</div><div class="chart-wrap h300"><canvas id="flowWeekly"></canvas></div></div>
-      <div class="card col-12"><h3>🗓️ 일별 흐름</h3><div class="sub">최근 45영업일</div><div class="chart-wrap h300"><canvas id="flowDaily"></canvas></div></div>
+      <div class="card col-12"><h3>📆 월별 흐름</h3><div class="sub">통화시도·최초컨택 = 실적로그(자가설치 제외) · 설치완료 = 로우데이터 설치일(U열) 기준 (전체 월)</div><div class="chart-wrap h300"><canvas id="flowMonthly"></canvas></div></div>
+      <div class="card col-12"><h3>📅 주별 흐름</h3><div class="sub">최근 16주 · 월요일 시작 주 기준 · 설치완료는 설치일 기준</div><div class="chart-wrap h300"><canvas id="flowWeekly"></canvas></div></div>
+      <div class="card col-12"><h3>🗓️ 일별 흐름</h3><div class="sub">최근 45영업일 · 설치완료는 설치일 기준</div><div class="chart-wrap h300"><canvas id="flowDaily"></canvas></div></div>
     </div>
   </section>
 
@@ -511,7 +511,8 @@ function trendCombo(id, rows, labelFn) {
 }
 
 function renderFlow(p) {
-  var mo = p.monthly||[], wk = p.weekly||[], dd = p.daily||[];
+  var f = p.flow || { monthly:[], weekly:[], daily:[] };
+  var mo = f.monthly||[], wk = f.weekly||[], dd = f.daily||[];
   document.getElementById("flow-tiles").innerHTML =
     deltaTile("이번달 설치완료","✅", mo, "installs", true) +
     deltaTile("이번달 통화시도","📞", mo, "calls") +
