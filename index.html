@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>아이샵케어 · 설치 대시보드</title>
+<style>
+  :root {
+    --surface-1: #fcfcfb;
+    --page: #f4f5f3;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --muted: #898781;
+    --grid: #e6e5df;
+    --baseline: #c8c7bf;
+    --border: rgba(11,11,11,0.10);
+    --s-blue: #2a78d6;
+    --s-blue-l: #86b6ef;
+    --s-blue-d: #184f95;
+    --s-aqua: #1baf7a;
+    --s-yellow: #eda100;
+    --s-red: #e34948;
+    --s-violet: #4a3aa7;
+    --s-orange: #eb6834;
+    --good: #0ca30c;
+    --warning: #fab219;
+    --critical: #d03b3b;
+    --sidebar: #10233d;
+    --sidebar-text: #b9c6da;
+    --sidebar-active: #2a78d6;
+    --shadow: 0 1px 2px rgba(11,11,11,.04), 0 4px 16px rgba(11,11,11,.05);
+    --radius: 16px;
+    --font: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-1: #1a1a19;
+      --page: #0d0d0d;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --baseline: #383835;
+      --border: rgba(255,255,255,0.10);
+      --s-blue: #3987e5;
+      --s-blue-l: #5598e7;
+      --s-blue-d: #9ec5f4;
+      --s-aqua: #199e70;
+      --s-yellow: #c98500;
+      --s-red: #e66767;
+      --s-violet: #9085e9;
+      --s-orange: #d95926;
+      --sidebar: #0b0b0b;
+      --sidebar-text: #9a9a92;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.4);
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--page); color: var(--text-primary); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+  body { display: flex; min-height: 100vh; }
+
+  /* ---------- Sidebar ---------- */
+  #sidebar {
+    width: 232px; flex: 0 0 232px; background: var(--sidebar); color: var(--sidebar-text);
+    display: flex; flex-direction: column; padding: 22px 16px; position: sticky; top: 0; height: 100vh;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 20px; }
+  .brand .logo { width: 34px; height: 34px; border-radius: 9px; background: linear-gradient(135deg,#2a78d6,#1baf7a); display:flex; align-items:center; justify-content:center; font-size:18px; }
+  .brand b { color: #fff; font-size: 15px; letter-spacing: -.2px; }
+  .brand span { display:block; font-size: 11px; color: var(--sidebar-text); font-weight: 400; }
+  .navitem {
+    display: flex; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 11px;
+    color: var(--sidebar-text); cursor: pointer; font-size: 14px; font-weight: 500; margin-bottom: 3px; transition: background .15s, color .15s;
+  }
+  .navitem .ic { font-size: 17px; width: 20px; text-align: center; }
+  .navitem:hover { background: rgba(255,255,255,.06); color: #fff; }
+  .navitem.active { background: var(--sidebar-active); color: #fff; box-shadow: 0 4px 12px rgba(42,120,214,.35); }
+  .navitem small { display:block; font-size: 11px; opacity:.75; font-weight: 400; }
+  .side-foot { margin-top: auto; font-size: 11.5px; color: var(--sidebar-text); padding: 12px 10px 0; line-height: 1.6; border-top: 1px solid rgba(255,255,255,.08); }
+  .side-foot b { color: #dfe6f0; }
+  .refresh-btn { margin-top: 10px; width: 100%; padding: 9px; border-radius: 10px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); color: #cdd6e2; cursor: pointer; font-size: 12.5px; font-family: var(--font); }
+  .refresh-btn:hover { background: rgba(255,255,255,.1); }
+
+  /* ---------- Main ---------- */
+  main { flex: 1; padding: 26px 30px 60px; overflow-x: hidden; }
+  .page-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .page-head h1 { font-size: 22px; letter-spacing: -.5px; }
+  .page-head p { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .badge { display:inline-flex; align-items:center; gap:6px; background: color-mix(in srgb, var(--good) 14%, transparent); color: var(--good); font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+
+  /* Stat tiles */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 14px; margin-bottom: 18px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
+  .tile .t-label { font-size: 12.5px; color: var(--text-secondary); font-weight: 500; display:flex; align-items:center; gap:7px; }
+  .tile .t-ic { width: 26px; height: 26px; border-radius: 8px; display:inline-flex; align-items:center; justify-content:center; font-size:14px; background: color-mix(in srgb, var(--s-blue) 12%, transparent); }
+  .tile .t-val { font-size: 30px; font-weight: 700; letter-spacing: -1px; margin-top: 10px; font-variant-numeric: tabular-nums; }
+  .tile .t-val .unit { font-size: 15px; font-weight: 600; color: var(--text-secondary); margin-left: 2px; }
+  .tile .t-sub { font-size: 12px; color: var(--muted); margin-top: 5px; }
+  .tile.accent { background: linear-gradient(135deg, var(--s-blue), var(--s-blue-d)); color:#fff; border: none; }
+  .tile.accent .t-label, .tile.accent .t-sub { color: rgba(255,255,255,.85); }
+  .tile.accent .t-ic { background: rgba(255,255,255,.2); }
+
+  /* Cards grid */
+  .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 18px 16px; box-shadow: var(--shadow); min-width: 0; }
+  .card h3 { font-size: 14.5px; letter-spacing: -.3px; display:flex; align-items:center; gap:8px; }
+  .card .sub { font-size: 12px; color: var(--muted); margin-top: 3px; margin-bottom: 8px; }
+  .col-4 { grid-column: span 4; } .col-5 { grid-column: span 5; } .col-6 { grid-column: span 6; }
+  .col-7 { grid-column: span 7; } .col-8 { grid-column: span 8; } .col-12 { grid-column: span 12; }
+  .chart-wrap { position: relative; width: 100%; }
+  .h220 { height: 220px; } .h260 { height: 260px; } .h300 { height: 300px; }
+
+  .gauge-wrap { position: relative; height: 210px; display:flex; align-items:center; justify-content:center; }
+  .gauge-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; }
+  .gauge-center .g-val { font-size: 40px; font-weight: 800; letter-spacing:-1.5px; font-variant-numeric: tabular-nums; }
+  .gauge-center .g-lab { font-size: 12.5px; color: var(--muted); margin-top:2px; }
+
+  .legend { display:flex; flex-wrap:wrap; gap: 10px 16px; margin-top: 12px; }
+  .legend .li { display:flex; align-items:center; gap:7px; font-size: 12.5px; color: var(--text-secondary); }
+  .legend .dot { width: 11px; height: 11px; border-radius: 3px; flex:0 0 auto; }
+  .legend .li b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+  .insight { margin-top: 12px; padding: 11px 13px; background: color-mix(in srgb, var(--s-blue) 8%, transparent); border-left: 3px solid var(--s-blue); border-radius: 8px; font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; }
+  .insight b { color: var(--text-primary); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Passcode gate */
+  #gate { position: fixed; inset: 0; background: var(--page); z-index: 100; display:flex; align-items:center; justify-content:center; }
+  .gate-box { background: var(--surface-1); border:1px solid var(--border); border-radius: 20px; padding: 34px 30px; width: 340px; box-shadow: var(--shadow); text-align:center; }
+  .gate-box .logo { width: 52px; height:52px; border-radius: 14px; background: linear-gradient(135deg,#2a78d6,#1baf7a); margin: 0 auto 16px; display:flex; align-items:center; justify-content:center; font-size:26px; }
+  .gate-box h2 { font-size: 18px; margin-bottom: 6px; }
+  .gate-box p { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+  .gate-box input { width: 100%; padding: 12px 14px; border-radius: 11px; border: 1px solid var(--baseline); background: var(--page); color: var(--text-primary); font-size: 15px; font-family: var(--font); text-align:center; letter-spacing: 1px; }
+  .gate-box input:focus { outline: 2px solid var(--s-blue); border-color: transparent; }
+  .gate-box button { width: 100%; margin-top: 12px; padding: 12px; border-radius: 11px; border:none; background: var(--s-blue); color:#fff; font-size: 15px; font-weight: 600; cursor:pointer; font-family: var(--font); }
+  .gate-box button:hover { background: var(--s-blue-d); }
+  .gate-err { color: var(--critical); font-size: 12.5px; margin-top: 10px; min-height: 16px; }
+
+  #loading { position: fixed; inset:0; background: var(--page); z-index: 90; display:flex; align-items:center; justify-content:center; flex-direction: column; gap: 14px; color: var(--muted); }
+  .spinner { width: 34px; height: 34px; border: 3px solid var(--grid); border-top-color: var(--s-blue); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Mobile */
+  @media (max-width: 860px) {
+    body { flex-direction: column; }
+    #sidebar { width: 100%; flex: none; height: auto; position: static; flex-direction: row; flex-wrap: wrap; align-items:center; padding: 12px; gap: 6px; }
+    .brand { padding: 0 10px 0 4px; }
+    .navitem { flex: 1; justify-content: center; padding: 9px; }
+    .navitem small, .side-foot { display: none; }
+    .refresh-btn { width: auto; margin: 0; padding: 8px 12px; }
+    main { padding: 18px 14px 50px; }
+    .col-4,.col-5,.col-6,.col-7,.col-8 { grid-column: span 12; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Passcode gate -->
+<div id="gate">
+  <div class="gate-box">
+    <div class="logo">🔒</div>
+    <h2>설치 대시보드</h2>
+    <p>사내 열람용 · 접근 코드를 입력하세요</p>
+    <input id="gate-input" type="password" placeholder="접근 코드" autocomplete="off" />
+    <button id="gate-btn">입장</button>
+    <div class="gate-err" id="gate-err"></div>
+  </div>
+</div>
+
+<div id="loading" style="display:none"><div class="spinner"></div><div>데이터 불러오는 중…</div></div>
+
+<!-- Sidebar -->
+<nav id="sidebar" style="display:none">
+  <div class="brand">
+    <div class="logo">📊</div>
+    <div><b>아이샵케어</b><span>설치 운영 대시보드</span></div>
+  </div>
+  <div class="navitem active" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량</small></div></div>
+  <div class="navitem" data-tab="perf"><span class="ic">⚡</span><div>성과<small>설치속도·작업량</small></div></div>
+  <div class="navitem" data-tab="cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div></div>
+  <div class="side-foot">
+    <div>업데이트 <b id="foot-time">–</b></div>
+    <div id="foot-sheet" style="margin-top:4px;"></div>
+    <button class="refresh-btn" id="refresh">↻ 새로고침</button>
+  </div>
+</nav>
+
+<main id="main" style="display:none">
+  <div class="page-head">
+    <div>
+      <h1 id="page-title">운영 대시보드</h1>
+      <p id="page-desc">콜리스트 기준 · 현재 처리해야 할 잔여 업무량</p>
+    </div>
+    <span class="badge" id="page-badge">● 실시간</span>
+  </div>
+
+  <!-- OPS -->
+  <section class="tab-content active" id="tab-ops">
+    <div class="tiles" id="ops-tiles"></div>
+    <div class="grid">
+      <div class="card col-5"><h3>📊 상태 분포</h3><div class="sub">콜리스트 점주의사 기준</div><div class="chart-wrap h260"><canvas id="opsStatus"></canvas></div></div>
+      <div class="card col-7"><h3>🚚 배송상태 · 미설치 즉시 컨택 대상</h3><div class="sub">미설치 중 배송완료/구매확정 건은 바로 설치 유도 가능</div><div class="chart-wrap h260"><canvas id="opsDelivery"></canvas></div><div class="insight" id="ops-insight"></div></div>
+      <div class="card col-5"><h3>📵 부재 단계별</h3><div class="sub">재컨택 우선순위 판단용</div><div class="chart-wrap h220"><canvas id="opsAbsent"></canvas></div></div>
+      <div class="card col-7"><h3>🧾 미설치 사유 (현재 잔여)</h3><div class="sub">로우데이터 L열 코드화 사유 · 반품/폐업 제외</div><div class="chart-wrap h260"><canvas id="opsReason"></canvas></div></div>
+    </div>
+  </section>
+
+  <!-- PERF -->
+  <section class="tab-content" id="tab-perf">
+    <div class="tiles" id="perf-tiles"></div>
+    <div class="grid">
+      <div class="card col-4"><h3>🎯 설치 완료율</h3><div class="sub">2026 출고 대비 설치완료</div>
+        <div class="gauge-wrap"><canvas id="perfGauge"></canvas><div class="gauge-center"><div class="g-val" id="gauge-val">–</div><div class="g-lab">설치 완료율</div></div></div>
+      </div>
+      <div class="card col-8"><h3>📈 월별 처리량 추세</h3><div class="sub">실적로그 · 통화시도(처리)량 vs 설치완료</div><div class="chart-wrap h260"><canvas id="perfMonthly"></canvas></div></div>
+      <div class="card col-5"><h3>🔌 설치 채널 비중</h3><div class="sub">자가설치 vs 문자발송 vs 상담원 콜</div><div class="chart-wrap h220" style="height:200px"><canvas id="perfChannel"></canvas></div><div class="legend" id="channel-legend"></div></div>
+      <div class="card col-7"><h3>⏱️ 설치 소요일 분포</h3><div class="sub">출고 → 설치완료 (일). 평균 <b id="perf-avglead">–</b>일 · 5일 이내 <b id="perf-within5">–</b></div><div class="chart-wrap h220"><canvas id="perfSpeed"></canvas></div></div>
+      <div class="card col-6"><h3>🔁 재컨택 주기 → 설치 속도</h3><div class="sub">메모 재컨택 간격이 짧을수록 실제로 빨리 설치되는가?</div><div class="chart-wrap h220"><canvas id="perfRetouch"></canvas></div><div class="insight" id="retouch-insight"></div></div>
+      <div class="card col-6"><h3>🐢 7일+ 지연 사유</h3><div class="sub">설치완료됐지만 7일 이상 걸린 건 (메모 자동분류)</div><div class="chart-wrap h220"><canvas id="perfDelay"></canvas></div></div>
+      <div class="card col-12"><h3>📅 일별 처리량</h3><div class="sub">최근 45영업일 · 통화시도량 & 설치완료</div><div class="chart-wrap h260"><canvas id="perfDaily"></canvas></div></div>
+    </div>
+  </section>
+
+  <!-- COHORT -->
+  <section class="tab-content" id="tab-cohort">
+    <div class="tiles" id="cohort-tiles"></div>
+    <div class="grid">
+      <div class="card col-7"><h3>📦 출고월별 진행률</h3><div class="sub">출고량 대비 설치완료 (자가설치 포함 전체)</div><div class="chart-wrap h260"><canvas id="cohMonth"></canvas></div></div>
+      <div class="card col-5"><h3>🧩 월별 설치 채널 구성</h3><div class="sub">자가/문자/상담원 완료 건수</div><div class="chart-wrap h260"><canvas id="cohChannel"></canvas></div></div>
+      <div class="card col-7"><h3>📉 주별 설치 진행률</h3><div class="sub">최근 14주 · 최근 주는 진행중이라 낮게 나옴(정상)</div><div class="chart-wrap h240" style="height:240px"><canvas id="cohWeek"></canvas></div></div>
+      <div class="card col-5"><h3>⏳ 미설치 잔여 경과일</h3><div class="sub">출고 후 경과 · 오래된 잔여건 관리</div><div class="chart-wrap h240" style="height:240px"><canvas id="cohAging"></canvas></div></div>
+      <div class="card col-12"><h3>🗂️ 출고월별 현재 상태</h3><div class="sub">4월·5월 등 각 출고월 코호트가 지금 어떤 상태인지</div><div class="chart-wrap h260"><canvas id="cohStatus"></canvas></div></div>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script>
+// =================== CONFIG ===================
+var API_BASE = "https://script.google.com/macros/s/AKfycbzd8oX3LL_rTwG73cb-DFvWTJ-CnSs9273OjZsPQymz2uT8o89XE8z7TRPGztNA-GSc/exec";
+// 접근 코드는 소스에 저장하지 않습니다. 사용자가 입력한 코드를 GAS의 DASH_PASSCODE 와 대조합니다.
+// (코드 변경은 GAS 대시보드API.js 의 DASH_PASSCODE 한 곳만 바꾸면 됩니다.)
+
+// =================== helpers ===================
+var css = function (v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); };
+var C = {}; // color cache filled after load
+function loadColors() {
+  ["--text-primary","--text-secondary","--muted","--grid","--baseline","--surface-1",
+   "--s-blue","--s-blue-l","--s-blue-d","--s-aqua","--s-yellow","--s-red","--s-violet","--s-orange",
+   "--good","--warning","--critical"].forEach(function(k){ C[k]=css(k); });
+}
+var fmt = function (n) { return (n==null?"–":Number(n).toLocaleString("ko-KR")); };
+var pct = function (x, d) { return x==null?"–":(x*100).toFixed(d==null?1:d)+"%"; };
+var round1 = function (x) { return x==null?"–":(Math.round(x*10)/10); };
+
+var charts = {};
+function mk(id, cfg) { if (charts[id]) charts[id].destroy(); var el=document.getElementById(id); if(el) charts[id]=new Chart(el.getContext("2d"), cfg); }
+
+// Chart.js global defaults
+function setDefaults() {
+  Chart.register(ChartDataLabels);
+  Chart.defaults.font.family = css("--font") || "system-ui, sans-serif";
+  Chart.defaults.font.size = 12;
+  Chart.defaults.color = C["--muted"];
+  Chart.defaults.plugins.datalabels.display = false; // opt-in per chart
+  Chart.defaults.plugins.legend.display = false;
+  Chart.defaults.plugins.tooltip.backgroundColor = C["--text-primary"];
+  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.plugins.tooltip.cornerRadius = 8;
+  Chart.defaults.plugins.tooltip.titleColor = C["--surface-1"];
+  Chart.defaults.plugins.tooltip.bodyColor = C["--surface-1"];
+  Chart.defaults.maintainAspectRatio = false;
+}
+function axes(opts) {
+  opts = opts || {};
+  var g = { grid:{ color:C["--grid"], drawTicks:false, drawBorder:false }, border:{display:false}, ticks:{ color:C["--muted"], padding:6 } };
+  var cat = { grid:{ display:false, drawBorder:false }, border:{display:false}, ticks:{ color:C["--muted"], padding:6 } };
+  return opts.horizontal ? { x:g, y:cat } : { x:cat, y:Object.assign({beginAtZero:true},g) };
+}
+var dl = function (extra) { return Object.assign({ display:true, color:C["--text-secondary"], font:{weight:"600",size:11}, formatter:function(v){return fmt(v);} }, extra||{}); };
+
+// =================== render ===================
+function render(d) {
+  document.getElementById("foot-time").textContent = d.meta.generatedAt;
+  document.getElementById("foot-sheet").textContent = d.meta.sheetTitle;
+  renderOps(d.ops, d.reasons);
+  renderPerf(d.perf);
+  renderCohort(d.cohort);
+}
+
+function tile(label, ic, val, unit, sub, accent) {
+  return '<div class="tile'+(accent?' accent':'')+'"><div class="t-label"><span class="t-ic">'+ic+'</span>'+label+'</div>'+
+    '<div class="t-val">'+val+(unit?'<span class="unit">'+unit+'</span>':'')+'</div>'+
+    (sub?'<div class="t-sub">'+sub+'</div>':'')+'</div>';
+}
+
+// ---------- OPS ----------
+function renderOps(o, reasons) {
+  var absentTotal = o.status.부재;
+  document.getElementById("ops-tiles").innerHTML =
+    tile("전체 잔여","📋", fmt(o.listTotal), "건", "콜리스트 전체", true) +
+    tile("미설치","⛔", fmt(o.status.미설치), "건", "배송완료 "+fmt(o.uninstallByDelivery.배송완료+o.uninstallByDelivery.구매확정)+"건 즉시가능") +
+    tile("설치예정","🗓️", fmt(o.status.설치예정), "건", "일정 잡힌 건") +
+    tile("부재","📵", fmt(absentTotal), "건", "재컨택 필요") +
+    tile("오늘 컨택 가능","🎯", fmt(o.todayContactable), "건", "미컨택 "+fmt(o.neverContacted)+"건 포함");
+
+  mk("opsStatus", { type:"doughnut",
+    data:{ labels:["설치예정","미설치","부재","보류","명의변경"],
+      datasets:[{ data:[o.status.설치예정,o.status.미설치,o.status.부재,o.status.보류,o.status.명의변경],
+        backgroundColor:[C["--s-blue"],C["--s-red"],C["--s-orange"],C["--s-yellow"],C["--s-violet"]],
+        borderColor:C["--surface-1"], borderWidth:2 }] },
+    options:{ cutout:"62%", plugins:{ legend:{ display:true, position:"right", labels:{ color:C["--text-secondary"], usePointStyle:true, pointStyle:"circle", padding:12, font:{size:12.5} } },
+      datalabels: dl({ color:"#fff", formatter:function(v){return v>0?v:"";} }) } } });
+
+  mk("opsDelivery", { type:"bar",
+    data:{ labels:["배송중","배송완료","구매확정"],
+      datasets:[
+        { label:"전체", data:[o.delivery.배송중,o.delivery.배송완료,o.delivery.구매확정], backgroundColor:C["--s-blue-l"], borderRadius:6, categoryPercentage:.6, barPercentage:.8 },
+        { label:"미설치(즉시대상)", data:[0,o.uninstallByDelivery.배송완료,o.uninstallByDelivery.구매확정], backgroundColor:C["--s-red"], borderRadius:6, categoryPercentage:.6, barPercentage:.8 }
+      ] },
+    options:{ scales:axes(), plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels: dl({anchor:"end",align:"end",formatter:function(v){return v>0?v:"";}}) } } });
+  document.getElementById("ops-insight").innerHTML =
+    "미설치 중 <b>"+fmt(o.uninstallByDelivery.배송완료+o.uninstallByDelivery.구매확정)+"건</b>은 이미 배송완료/구매확정 상태 → 지금 바로 설치 유도 가능. 이 중 <b>"+fmt(o.neverContacted)+"건</b>은 아직 한 번도 컨택되지 않았습니다.";
+
+  mk("opsAbsent", { type:"bar",
+    data:{ labels:["1차부재","2차부재","3차부재","4회이상"],
+      datasets:[{ data:[o.absent["1차부재"],o.absent["2차부재"],o.absent["3차부재"],o.absent["4회이상부재"]],
+        backgroundColor:[C["--s-blue-l"],C["--s-blue"],C["--s-orange"],C["--s-red"]], borderRadius:6 }] },
+    options:{ scales:axes(), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
+
+  var rz = reasons.uninstallReason.slice(0,8);
+  mk("opsReason", { type:"bar",
+    data:{ labels:rz.map(function(r){return r.label.length>16?r.label.slice(0,15)+"…":r.label;}),
+      datasets:[{ data:rz.map(function(r){return r.count;}), backgroundColor:C["--s-blue"], borderRadius:5 }] },
+    options:{ indexAxis:"y", scales:axes({horizontal:true}), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
+}
+
+// ---------- PERF ----------
+function renderPerf(p) {
+  var ins = p.install, sp = p.speed;
+  document.getElementById("perf-tiles").innerHTML =
+    tile("설치 완료율","🎯", pct(ins.completionRate,1), "", "완료 "+fmt(ins.completed)+" / 출고 "+fmt(ins.total2026), true) +
+    tile("평균 설치소요일","⏱️", round1(sp.avgShipToInstall), "일", "출고 → 설치완료") +
+    tile("5일 이내 설치율","🚀", pct(sp.within5Rate,1), "", "빠른 설치 비중") +
+    tile("자가설치율","🔧", pct(ins.selfRate,1), "", "무인 자가설치") +
+    tile("상담원 설치율","📞", pct(ins.agentRate,1), "", "상담원 콜 기여") +
+    tile("이번주 처리량","📆", fmt(p.thisWeek.calls), "건", "설치완료 "+fmt(p.thisWeek.installs)+"건");
+
+  // Gauge
+  document.getElementById("gauge-val").textContent = pct(ins.completionRate,1);
+  var r = ins.completionRate;
+  mk("perfGauge", { type:"doughnut",
+    data:{ datasets:[{ data:[r, 1-r], backgroundColor:[C["--s-aqua"], C["--grid"]], borderWidth:0, circumference:270, rotation:225 }] },
+    options:{ cutout:"78%", plugins:{ tooltip:{enabled:false}, datalabels:{display:false} } } });
+
+  // Monthly trend (2 series, one axis = counts)
+  var m = p.monthly;
+  mk("perfMonthly", { type:"line",
+    data:{ labels:m.map(function(x){return x.ym.slice(2);}),
+      datasets:[
+        { label:"통화시도량", data:m.map(function(x){return x.calls;}), borderColor:C["--s-blue"], backgroundColor:"transparent", borderWidth:2, tension:.3, pointRadius:3, pointBackgroundColor:C["--s-blue"] },
+        { label:"설치완료", data:m.map(function(x){return x.installs;}), borderColor:C["--s-aqua"], backgroundColor:"transparent", borderWidth:2, tension:.3, pointRadius:3, pointBackgroundColor:C["--s-aqua"] }
+      ] },
+    options:{ scales:axes(), plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"line",color:C["--text-secondary"]}}, datalabels:{display:false} }, interaction:{mode:"index",intersect:false} } });
+
+  // Channel doughnut + custom legend (relief: visible labels)
+  var ch=[["자가설치",ins.bySource.자가설치,C["--s-aqua"]],["문자발송",ins.bySource.문자발송,C["--s-yellow"]],["상담원 콜",ins.bySource.상담원,C["--s-blue"]]];
+  mk("perfChannel", { type:"doughnut",
+    data:{ labels:ch.map(function(x){return x[0];}), datasets:[{ data:ch.map(function(x){return x[1];}), backgroundColor:ch.map(function(x){return x[2];}), borderColor:C["--surface-1"], borderWidth:2 }] },
+    options:{ cutout:"64%", plugins:{ datalabels: dl({color:"#fff", formatter:function(v){return Math.round(v/ins.completed*100)+"%";}}) } } });
+  document.getElementById("channel-legend").innerHTML = ch.map(function(x){
+    return '<span class="li"><span class="dot" style="background:'+x[2]+'"></span>'+x[0]+' <b>'+fmt(x[1])+'</b> ('+Math.round(x[1]/ins.completed*100)+'%)</span>';
+  }).join("");
+
+  document.getElementById("perf-avglead").textContent = round1(sp.avgShipToInstall);
+  document.getElementById("perf-within5").textContent = pct(sp.within5Rate,0);
+
+  // Speed buckets (ordinal blue ramp)
+  var b=p.speed.buckets;
+  mk("perfSpeed", { type:"bar",
+    data:{ labels:["0~2일","3~4일","5~6일","7~13일","14일+"],
+      datasets:[{ data:[b["0-2"],b["3-4"],b["5-6"],b["7-13"],b["14+"]],
+        backgroundColor:[C["--s-blue-l"],C["--s-blue"],C["--s-blue-d"],C["--s-orange"],C["--s-red"]], borderRadius:6 }] },
+    options:{ scales:axes(), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
+
+  // Retouch vs speed
+  var rv=p.retouchVsSpeed.filter(function(x){return x.n>0;});
+  var lbl={"0-2":"0~2일","3-5":"3~5일","6-9":"6~9일","10+":"10일+"};
+  mk("perfRetouch", { type:"bar",
+    data:{ labels:rv.map(function(x){return lbl[x.gap];}),
+      datasets:[{ label:"평균 설치소요일", data:rv.map(function(x){return round1(x.avgLeadTime);}),
+        backgroundColor:C["--s-aqua"], borderRadius:6 }] },
+    options:{ scales:axes(), plugins:{ datalabels: dl({anchor:"end",align:"end",formatter:function(v){return v+"일";}}) },
+      onHover:null } });
+  var first=rv[0], last=rv[rv.length-1];
+  if(first&&last) document.getElementById("retouch-insight").innerHTML =
+    "재컨택 주기 <b>"+lbl[first.gap]+"</b> 그룹은 평균 <b>"+round1(first.avgLeadTime)+"일</b> 만에 설치되는 반면, <b>"+lbl[last.gap]+"</b> 그룹은 <b>"+round1(last.avgLeadTime)+"일</b> 소요 → 재컨택 간격을 좁힐수록 설치가 빨라집니다.";
+
+  // Daily volume (combo, one axis = counts): calls bars + installs line
+  var dd=p.daily;
+  mk("perfDaily", { type:"bar",
+    data:{ labels:dd.map(function(x){return x.date.slice(5);}),
+      datasets:[
+        { type:"bar", label:"통화시도량", data:dd.map(function(x){return x.calls;}), backgroundColor:C["--s-blue-l"], borderRadius:3, barPercentage:.9, categoryPercentage:.9, order:2 },
+        { type:"line", label:"설치완료", data:dd.map(function(x){return x.installs;}), borderColor:C["--s-blue"], backgroundColor:"transparent", borderWidth:2, tension:.3, pointRadius:0, order:1 }
+      ] },
+    options:{ scales:{ x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:12}}, y:{beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
+      plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false} }, interaction:{mode:"index",intersect:false} } });
+}
+
+// ---------- COHORT ----------
+function renderCohort(c) {
+  var tot=c.byMonth.reduce(function(a,m){a.s+=m.shipped;a.c+=m.completed;a.p+=m.pending;return a;},{s:0,c:0,p:0});
+  document.getElementById("cohort-tiles").innerHTML =
+    tile("2026 총 출고","📦", fmt(tot.s), "건", "누적 출고량", true) +
+    tile("총 설치완료","✅", fmt(tot.c), "건", "전환 완료") +
+    tile("전체 진행률","📈", pct(tot.s>0?tot.c/tot.s:0,1), "", "자가설치 포함") +
+    tile("미설치 잔여","⏳", fmt(tot.p), "건", "30일+ "+fmt(c.aging["30+"])+"건") +
+    tile("30일+ 오래된 잔여","🚨", fmt(c.aging["30+"]), "건", "집중 관리 대상");
+
+  var m=c.byMonth;
+  mk("cohMonth", { type:"bar",
+    data:{ labels:m.map(function(x){return x.ym.slice(2);}),
+      datasets:[
+        { label:"출고", data:m.map(function(x){return x.shipped;}), backgroundColor:C["--s-blue-l"], borderRadius:5, categoryPercentage:.62, barPercentage:.82 },
+        { label:"설치완료", data:m.map(function(x){return x.completed;}), backgroundColor:C["--s-blue"], borderRadius:5, categoryPercentage:.62, barPercentage:.82,
+          datalabels: Object.assign(dl(),{anchor:"end",align:"end",formatter:function(v,ctx){var mm=m[ctx.dataIndex];return Math.round(mm.rate*100)+"%";},color:C["--good"],font:{weight:"700",size:10.5}}) }
+      ] },
+    options:{ scales:axes(), plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false} } } });
+
+  mk("cohChannel", { type:"bar",
+    data:{ labels:m.map(function(x){return x.ym.slice(2);}),
+      datasets:[
+        { label:"자가설치", data:m.map(function(x){return x.self;}), backgroundColor:C["--s-aqua"], borderRadius:{topLeft:0,topRight:0}, stack:"s", borderColor:C["--surface-1"], borderWidth:{top:2} },
+        { label:"문자발송", data:m.map(function(x){return x.sms;}), backgroundColor:C["--s-yellow"], stack:"s", borderColor:C["--surface-1"], borderWidth:{top:2} },
+        { label:"상담원", data:m.map(function(x){return x.agent;}), backgroundColor:C["--s-blue"], borderRadius:{topLeft:5,topRight:5}, stack:"s", borderColor:C["--surface-1"], borderWidth:{top:2} }
+      ] },
+    options:{ scales:{ x:{stacked:true,grid:{display:false},ticks:{color:C["--muted"]}}, y:{stacked:true,beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
+      plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false} } } });
+
+  var w=c.byWeek;
+  mk("cohWeek", { type:"line",
+    data:{ labels:w.map(function(x){return x.week.slice(5);}),
+      datasets:[{ label:"설치 진행률", data:w.map(function(x){return Math.round(x.rate*1000)/10;}),
+        borderColor:C["--s-blue"], backgroundColor:"transparent", borderWidth:2, tension:.3, pointRadius:3, pointBackgroundColor:C["--s-blue"] }] },
+    options:{ scales:{ x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:8}}, y:{beginAtZero:true,max:100,grid:{color:C["--grid"]},ticks:{color:C["--muted"],callback:function(v){return v+"%";}}} },
+      plugins:{ datalabels:{display:false}, tooltip:{callbacks:{label:function(ct){return ct.parsed.y+"%";}}} } } });
+
+  var ag=c.aging;
+  mk("cohAging", { type:"bar",
+    data:{ labels:["0~6일","7~13일","14~29일","30일+"],
+      datasets:[{ data:[ag["0-6"],ag["7-13"],ag["14-29"],ag["30+"]],
+        backgroundColor:[C["--s-blue-l"],C["--s-blue"],C["--s-yellow"],C["--critical"]], borderRadius:6 }] },
+    options:{ scales:axes(), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
+
+  // Month status stacked
+  var ms=c.monthStatus, keys=Object.keys(ms).sort();
+  var cats=[["설치완료",C["--s-aqua"]],["설치예정",C["--s-blue"]],["미설치",C["--s-red"]],["부재",C["--s-orange"]],["반품·폐업",C["--muted"]],["기타",C["--s-violet"]]];
+  mk("cohStatus", { type:"bar",
+    data:{ labels:keys.map(function(k){return k.slice(2);}),
+      datasets:cats.map(function(cat){ return { label:cat[0], data:keys.map(function(k){return ms[k][cat[0]]||0;}), backgroundColor:cat[1], stack:"st", borderColor:C["--surface-1"], borderWidth:{top:2} }; }) },
+    options:{ scales:{ x:{stacked:true,grid:{display:false},ticks:{color:C["--muted"]}}, y:{stacked:true,beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
+      plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"],padding:12}}, datalabels:{display:false} } } });
+}
+
+// delay reasons chart needs reasons object; render it here with access to full payload
+function renderDelay(reasons, ins) {
+  var dz=reasons.delayReason.slice(0,7);
+  mk("perfDelay", { type:"bar",
+    data:{ labels:dz.map(function(r){return r.label;}),
+      datasets:[{ data:dz.map(function(r){return r.count;}), backgroundColor:C["--s-orange"], borderRadius:5 }] },
+    options:{ indexAxis:"y", scales:axes({horizontal:true}), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
+}
+
+// =================== data loading (JSONP) ===================
+var _jsonpSeq=0;
+function fetchData(passcode, cb, err) {
+  var name="__dashcb"+(++_jsonpSeq);
+  var timeout=setTimeout(function(){ cleanup(); err("응답 시간 초과. 네트워크를 확인하세요."); }, 20000);
+  function cleanup(){ try{delete window[name];}catch(e){window[name]=undefined;} if(s.parentNode) s.parentNode.removeChild(s); clearTimeout(timeout); }
+  window[name]=function(data){ cleanup(); cb(data); };
+  var s=document.createElement("script");
+  s.onerror=function(){ cleanup(); err("데이터 로드 실패."); };
+  s.src=API_BASE+"?key="+encodeURIComponent(passcode)+"&callback="+name+"&_="+Date.now();
+  document.body.appendChild(s);
+}
+
+var LAST_PASS=null, LAST_DATA=null;
+function boot(passcode) {
+  document.getElementById("gate").style.display="none";
+  document.getElementById("loading").style.display="flex";
+  fetchData(passcode, function(d){
+    if(d && d.error){
+      document.getElementById("loading").style.display="none";
+      if(d.error==="unauthorized"){ showGate("접근 코드가 올바르지 않습니다."); }
+      else { showGate("오류: "+d.error); }
+      return;
+    }
+    LAST_PASS=passcode; LAST_DATA=d;
+    try{ sessionStorage.setItem("dashpass", passcode); }catch(e){}
+    loadColors(); setDefaults();
+    document.getElementById("loading").style.display="none";
+    document.getElementById("sidebar").style.display="flex";
+    document.getElementById("main").style.display="block";
+    render(d);
+    renderDelay(d.reasons, d.perf.install);
+  }, function(msg){
+    document.getElementById("loading").style.display="none";
+    showGate(msg);
+  });
+}
+function showGate(errMsg){
+  document.getElementById("gate").style.display="flex";
+  document.getElementById("gate-err").textContent=errMsg||"";
+  document.getElementById("gate-input").focus();
+}
+
+// =================== UI wiring ===================
+document.getElementById("gate-btn").addEventListener("click", function(){
+  var v=document.getElementById("gate-input").value.trim(); if(v) boot(v);
+});
+document.getElementById("gate-input").addEventListener("keydown", function(e){ if(e.key==="Enter"){ var v=this.value.trim(); if(v) boot(v);} });
+document.getElementById("refresh").addEventListener("click", function(){ if(LAST_PASS){ document.getElementById("loading").style.display="flex"; fetchData(LAST_PASS,function(d){ if(d&&!d.error){LAST_DATA=d; render(d); renderDelay(d.reasons,d.perf.install);} document.getElementById("loading").style.display="none"; },function(){document.getElementById("loading").style.display="none";}); } });
+
+var TABMETA={ ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"] };
+document.querySelectorAll(".navitem").forEach(function(n){
+  n.addEventListener("click", function(){
+    document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
+    n.classList.add("active");
+    var t=n.dataset.tab;
+    document.querySelectorAll(".tab-content").forEach(function(x){x.classList.remove("active");});
+    document.getElementById("tab-"+t).classList.add("active");
+    document.getElementById("page-title").textContent=TABMETA[t][0];
+    document.getElementById("page-desc").textContent=TABMETA[t][1];
+    // resize charts in newly shown tab
+    setTimeout(function(){ Object.keys(charts).forEach(function(k){ try{charts[k].resize();}catch(e){} }); },20);
+  });
+});
+
+// auto-login if session has passcode
+(function(){
+  var saved=null; try{saved=sessionStorage.getItem("dashpass");}catch(e){}
+  if(saved){ boot(saved); } else { document.getElementById("gate-input").focus(); }
+})();
+</script>
+</body>
+</html>
