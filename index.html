@@ -99,6 +99,11 @@
   .tile.accent { background: linear-gradient(135deg, var(--s-blue), var(--s-blue-d)); color:#fff; border: none; }
   .tile.accent .t-label, .tile.accent .t-sub { color: rgba(255,255,255,.85); }
   .tile.accent .t-ic { background: rgba(255,255,255,.2); }
+  .tile .t-help { margin-left:auto; width:16px; height:16px; border-radius:50%; border:1px solid var(--border); color:var(--muted); font-size:11px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; cursor:help; position:relative; flex:0 0 auto; }
+  .tile.accent .t-help { border-color:rgba(255,255,255,.5); color:rgba(255,255,255,.9); }
+  .tile .t-help .t-tip { visibility:hidden; opacity:0; transition:opacity .12s; position:absolute; top:22px; right:0; width:250px; background:var(--surface-1); color:var(--text-primary); border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow); padding:11px 13px; font-size:11.5px; font-weight:400; line-height:1.55; text-align:left; letter-spacing:0; z-index:20; white-space:normal; }
+  .tile .t-help:hover .t-tip { visibility:visible; opacity:1; }
+  .tile .t-help .t-tip b { color:var(--s-blue); font-weight:700; }
 
   /* Cards grid */
   .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
@@ -317,8 +322,9 @@ function render(d) {
   renderCohort(d.cohort);
 }
 
-function tile(label, ic, val, unit, sub, accent) {
-  return '<div class="tile'+(accent?' accent':'')+'"><div class="t-label"><span class="t-ic">'+ic+'</span>'+label+'</div>'+
+function tile(label, ic, val, unit, sub, accent, tip) {
+  var help = tip ? '<span class="t-help">?<span class="t-tip">'+tip+'</span></span>' : '';
+  return '<div class="tile'+(accent?' accent':'')+'"><div class="t-label"><span class="t-ic">'+ic+'</span>'+label+help+'</div>'+
     '<div class="t-val">'+val+(unit?'<span class="unit">'+unit+'</span>':'')+'</div>'+
     (sub?'<div class="t-sub">'+sub+'</div>':'')+'</div>';
 }
@@ -331,7 +337,8 @@ function renderOps(o, reasons) {
     tile("미설치","⛔", fmt(o.status.미설치), "건", "배송완료 "+fmt(o.uninstallByDelivery.배송완료+o.uninstallByDelivery.구매확정)+"건 즉시가능") +
     tile("설치예정","🗓️", fmt(o.status.설치예정), "건", "일정 잡힌 건") +
     tile("부재","📵", fmt(absentTotal), "건", "재컨택 필요") +
-    tile("오늘 컨택 가능","🎯", fmt(o.todayContactable), "건", "미컨택 "+fmt(o.neverContacted)+"건 포함");
+    tile("오늘 컨택 가능","🎯", fmt(o.todayContactable), "건", "미컨택 "+fmt(o.neverContacted)+"건 포함", false,
+      "<b>배송완료·구매확정</b>(물건 도착)이면서 아래 중 하나에 해당하는 건입니다.<br>• <b>미설치</b> 전체<br>• <b>부재</b>(1~4차) 전체<br>• <b>설치예정</b>인데 예정일이 오늘보다 지난 건<br><br>배송중인 건은 제외 — 지금 연락하면 바로 설치 진행이 가능한 대상만 집계합니다.<br><br><b>미컨택 N건</b>: 이 중 최초컨텍일(P열)이 비어 한 번도 연락한 적 없는 건.");
 
   var usp = o.uninstallSplit||{배송중:0,배송완료:0,기타:0};
   var stSegs = [
