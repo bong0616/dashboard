@@ -228,7 +228,8 @@
       <div class="card col-7"><h3>🚚 배송상태 · 미설치 즉시 컨택 대상</h3><div class="sub">미설치 중 배송완료/구매확정 건은 바로 설치 유도 가능</div><div class="chart-wrap h260"><canvas id="opsDelivery"></canvas></div><div class="insight" id="ops-insight"></div></div>
       <div class="card col-5"><h3>📵 부재 단계별</h3><div class="sub">재컨택 우선순위 판단용</div><div class="chart-wrap h220"><canvas id="opsAbsent"></canvas></div></div>
       <div class="card col-7"><h3>🧾 미설치 사유 (현재 잔여)</h3><div class="sub">로우데이터 L열 코드화 사유 · 반품/폐업 제외</div><div class="chart-wrap h260"><canvas id="opsReason"></canvas></div></div>
-      <div class="card col-12"><h3>🔎 '사유미기재' 건 메모 상세 분류</h3><div class="sub">L열 사유가 비어있는 미설치 <b id="ops-unspec-cnt">–</b>건을 K열 메모 키워드로 자동 분류</div><div class="chart-wrap h220"><canvas id="opsUnspecified"></canvas></div></div>
+      <div class="card col-6"><h3>🔎 사유미기재 — 담당자 유형별</h3><div class="sub">사유·상담이력 없는 미설치 <b id="ops-unspec-cnt">–</b>건이 어떤 채널인지</div><div class="chart-wrap" style="height:210px"><canvas id="opsUnspecMgr"></canvas></div><div class="legend" id="unspec-mgr-legend"></div></div>
+      <div class="card col-6"><h3>📦 사유미기재 — 배송상태별</h3><div class="sub">배송중이면 아직 설치 시점 전, 배송완료면 방치 가능성</div><div class="chart-wrap h220"><canvas id="opsUnspecDelivery"></canvas></div></div>
     </div>
   </section>
 
@@ -363,12 +364,22 @@ function renderOps(o, reasons) {
       datasets:[{ data:rz.map(function(r){return r.count;}), backgroundColor:C["--s-blue"], borderRadius:5 }] },
     options:{ indexAxis:"y", scales:axes({horizontal:true}), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
 
-  var uz = (reasons.uninstallUnspecified||[]).slice(0,8);
   document.getElementById("ops-unspec-cnt").textContent = fmt(reasons.unspecifiedTotal||0);
-  mk("opsUnspecified", { type:"bar",
-    data:{ labels:uz.map(function(r){return r.label;}),
-      datasets:[{ data:uz.map(function(r){return r.count;}), backgroundColor:C["--s-violet"], borderRadius:5 }] },
-    options:{ indexAxis:"y", scales:axes({horizontal:true}), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
+  var um = reasons.unspecifiedByManager||{};
+  var mgr = [["자가설치",um.자가설치||0,C["--s-aqua"]],["문자발송",um.문자발송||0,C["--s-yellow"]],["상담원",um.상담원||0,C["--s-blue"]],["공란",um.공란||0,C["--muted"]]].filter(function(x){return x[1]>0;});
+  mk("opsUnspecMgr", { type:"doughnut",
+    data:{ labels:mgr.map(function(x){return x[0];}), datasets:[{ data:mgr.map(function(x){return x[1];}), backgroundColor:mgr.map(function(x){return x[2];}), borderColor:C["--surface-1"], borderWidth:2 }] },
+    options:{ cutout:"62%", plugins:{ datalabels: dl({color:"#fff", formatter:function(v){return v>0?v:"";}}) } } });
+  document.getElementById("unspec-mgr-legend").innerHTML = mgr.map(function(x){
+    return '<span class="li"><span class="dot" style="background:'+x[2]+'"></span>'+x[0]+' <b>'+fmt(x[1])+'</b></span>';
+  }).join("");
+
+  var ud = reasons.unspecifiedByDelivery||{};
+  mk("opsUnspecDelivery", { type:"bar",
+    data:{ labels:["배송중","배송완료","구매확정","기타"],
+      datasets:[{ data:[ud.배송중||0,ud.배송완료||0,ud.구매확정||0,ud.기타||0],
+        backgroundColor:[C["--s-blue-l"],C["--s-red"],C["--s-orange"],C["--muted"]], borderRadius:6 }] },
+    options:{ scales:axes(), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
 }
 
 // ---------- PERF ----------
