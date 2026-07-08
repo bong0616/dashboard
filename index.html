@@ -477,14 +477,14 @@ function renderDelay(reasons, ins) {
 
 // =================== data loading (JSONP) ===================
 var _jsonpSeq=0;
-function fetchData(passcode, cb, err) {
+function fetchData(passcode, cb, err, fresh) {
   var name="__dashcb"+(++_jsonpSeq);
-  var timeout=setTimeout(function(){ cleanup(); err("응답 시간 초과. 네트워크를 확인하세요."); }, 20000);
+  var timeout=setTimeout(function(){ cleanup(); err("응답 시간 초과. 잠시 후 다시 시도해 주세요."); }, 60000);
   function cleanup(){ try{delete window[name];}catch(e){window[name]=undefined;} if(s.parentNode) s.parentNode.removeChild(s); clearTimeout(timeout); }
   window[name]=function(data){ cleanup(); cb(data); };
   var s=document.createElement("script");
   s.onerror=function(){ cleanup(); err("데이터 로드 실패."); };
-  s.src=API_BASE+"?key="+encodeURIComponent(passcode)+"&callback="+name+"&_="+Date.now();
+  s.src=API_BASE+"?key="+encodeURIComponent(passcode)+"&callback="+name+(fresh?"&fresh=1":"")+"&_="+Date.now();
   document.body.appendChild(s);
 }
 
