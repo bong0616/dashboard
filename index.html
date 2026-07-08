@@ -365,7 +365,7 @@ function renderOps(o, reasons) {
   var absentTotal = o.status.부재;
   document.getElementById("ops-tiles").innerHTML =
     tile("전체 잔여","📋", fmt(o.listTotal), "건", "콜리스트 전체", true) +
-    tile("미설치","⛔", fmt(o.status.미설치), "건", "배송완료 "+fmt(o.uninstallByDelivery.배송완료+o.uninstallByDelivery.구매확정)+"건 즉시가능") +
+    tile("미설치","⛔", fmt(o.status.미설치), "건", "배송완료·구매확정 "+fmt(o.uninstallByDelivery.배송완료+o.uninstallByDelivery.구매확정)+"건 즉시가능") +
     tile("설치예정","🗓️", fmt(o.status.설치예정), "건", "일정 잡힌 건") +
     tile("부재","📵", fmt(absentTotal), "건", "재컨택 필요") +
     tile("오늘 컨택 가능","🎯", fmt(o.todayContactable), "건", "미컨택 "+fmt(o.neverContacted)+"건 포함", false,
