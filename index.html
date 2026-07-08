@@ -152,6 +152,7 @@
   .statgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 11px; margin-top: 8px; }
   .statcell { border: 1px solid var(--border); border-radius: 12px; padding: 13px 15px; border-left: 4px solid var(--s-blue); background: color-mix(in srgb, var(--surface-1) 60%, transparent); }
   .statcell .sc-lab { font-size: 12.5px; color: var(--text-secondary); font-weight: 500; }
+  .statcell .sc-lab .sc-sub { font-size: 11px; color: var(--s-orange); font-weight: 600; }
   .statcell .sc-val { font-size: 23px; font-weight: 700; margin-top: 7px; letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
   .statcell .sc-val .sc-unit { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-left: 2px; }
   .statcell .sc-pct { font-size: 11.5px; color: var(--muted); margin-left: 7px; font-weight: 500; }
@@ -552,8 +553,11 @@ function renderCohortSummary(ss, total) {
   ];
   var html=order.map(function(o){
     var v=ss[o[0]]||0, p=total>0?(v/total*100):0;
+    var lab=o[0];
+    if(o[0]==="미설치·보류" && (ss["미설치·보류_배송중"]||0)>0)
+      lab+=' <span class="sc-sub">(배송중 '+fmt(ss["미설치·보류_배송중"])+'개)</span>';
     return '<div class="statcell" style="border-left-color:'+C[o[1]]+'">'+
-      '<div class="sc-lab">'+o[0]+'</div>'+
+      '<div class="sc-lab">'+lab+'</div>'+
       '<div class="sc-val">'+fmt(v)+'<span class="sc-unit">건</span><span class="sc-pct">'+p.toFixed(1)+'%</span></div></div>';
   }).join("");
   document.getElementById("cohSummary").innerHTML=html;
@@ -736,29 +740,35 @@ function fmtRangeLabel(s,e){ // "2026-02-01"~"2026-04-30" → "2.1~4.30"
   function md(x){ var p=x.split("-"); return (+p[1])+"."+(+p[2]); }
   return md(s)+"~"+md(e);
 }
+// 선택은 대기만 하고 실제 조회는 [조회] 버튼에서만 실행 (선택 중 로딩 방지)
 document.getElementById("f-month").addEventListener("change", function(){
-  var ym=this.value;
-  populateWeekFilter(ym);
-  clearDateInputs();
-  if(!ym){ loadPeriod("","","전체 기간"); return; }
-  var r=monthRange(ym);
-  loadPeriod(r.start, r.end, (+ym.slice(5))+"월");
+  populateWeekFilter(this.value);      // 주차 목록만 갱신 (로딩 없음)
+  if(this.value) clearDateInputs();    // 월 선택 시 날짜입력 비움
 });
-document.getElementById("f-apply").addEventListener("click", function(){
+document.getElementById("f-week").addEventListener("change", function(){ /* 선택만, 조회는 버튼에서 */ });
+["f-start","f-end"].forEach(function(id){
+  document.getElementById(id).addEventListener("change", function(){
+    if(this.value){ document.getElementById("f-month").value=""; populateWeekFilter(""); } // 날짜 선택 시 월/주 비움
+  });
+});
+
+function applyFilters(){
   var s=document.getElementById("f-start").value, e=document.getElementById("f-end").value;
-  if(!s||!e){ alert("시작일과 종료일을 모두 선택해 주세요."); return; }
-  if(s>e){ var t=s; s=e; e=t; document.getElementById("f-start").value=s; document.getElementById("f-end").value=e; }
-  document.getElementById("f-month").value=""; populateWeekFilter("");
-  loadPeriod(s, e, fmtRangeLabel(s,e));
-});
-document.getElementById("f-week").addEventListener("change", function(){
+  if(s&&e){                            // ① 날짜 범위 우선
+    if(s>e){ var t=s; s=e; e=t; document.getElementById("f-start").value=s; document.getElementById("f-end").value=e; }
+    loadPeriod(s, e, fmtRangeLabel(s,e)); return;
+  }
+  if(s||e){ alert("시작일과 종료일을 모두 선택해 주세요."); return; }
   var ym=document.getElementById("f-month").value;
-  if(!ym) return;
-  if(!this.value){ var r=monthRange(ym); loadPeriod(r.start,r.end,(+ym.slice(5))+"월"); return; }
-  var p=this.value.split("|"); var s=+p[0], e=+p[1];
-  var wlab=this.options[this.selectedIndex].text.split(" ")[0];
-  loadPeriod(ym+"-"+pad2(s), ym+"-"+pad2(e), (+ym.slice(5))+"월 "+wlab);
-});
+  if(!ym){ loadPeriod("","","전체 기간"); return; }   // ② 전체
+  var wk=document.getElementById("f-week").value;
+  if(!wk){ var r=monthRange(ym); loadPeriod(r.start, r.end, (+ym.slice(5))+"월"); return; } // ③ 월
+  var p=wk.split("|");                  // ④ 월+주차
+  var wsel=document.getElementById("f-week");
+  var wlab=wsel.options[wsel.selectedIndex].text.split(" ")[0];
+  loadPeriod(ym+"-"+pad2(+p[0]), ym+"-"+pad2(+p[1]), (+ym.slice(5))+"월 "+wlab);
+}
+document.getElementById("f-apply").addEventListener("click", applyFilters);
 document.getElementById("f-reset").addEventListener("click", function(){
   document.getElementById("f-month").value="";
   populateWeekFilter("");
