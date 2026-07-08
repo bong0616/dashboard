@@ -126,6 +126,15 @@
   .tab-content { display: none; }
   .tab-content.active { display: block; }
 
+  .head-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .filters { display: flex; align-items: center; gap: 8px; background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 7px 11px; box-shadow: var(--shadow); }
+  .filters .flab { font-size: 12px; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 5px; }
+  .filters select { font-family: var(--font); font-size: 13px; font-weight: 500; color: var(--text-primary); background: var(--page); border: 1px solid var(--border); border-radius: 8px; padding: 6px 9px; cursor: pointer; }
+  .filters select:focus { outline: 2px solid var(--s-blue); border-color: transparent; }
+  .filters select:disabled { opacity: .45; cursor: not-allowed; }
+  .fbtn { font-family: var(--font); font-size: 12px; color: var(--text-secondary); background: var(--page); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+  .fbtn:hover { background: var(--grid); }
+
   .statgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 11px; margin-top: 8px; }
   .statcell { border: 1px solid var(--border); border-radius: 12px; padding: 13px 15px; border-left: 4px solid var(--s-blue); background: color-mix(in srgb, var(--surface-1) 60%, transparent); }
   .statcell .sc-lab { font-size: 12.5px; color: var(--text-secondary); font-weight: 500; }
@@ -200,7 +209,15 @@
       <h1 id="page-title">운영 대시보드</h1>
       <p id="page-desc">콜리스트 기준 · 현재 처리해야 할 잔여 업무량</p>
     </div>
-    <span class="badge" id="page-badge">● 실시간</span>
+    <div class="head-right">
+      <div class="filters">
+        <span class="flab">📅 기간</span>
+        <select id="f-month"><option value="">전체 기간</option></select>
+        <select id="f-week" disabled><option value="">–</option></select>
+        <button id="f-reset" class="fbtn">초기화</button>
+      </div>
+      <span class="badge" id="page-badge">● 실시간</span>
+    </div>
   </div>
 
   <!-- OPS -->
@@ -448,8 +465,7 @@ function renderCohort(c) {
     tile("2026 총 출고","📦", fmt(tot.s), "건", "누적 출고량", true) +
     tile("총 설치완료","✅", fmt(tot.c), "건", "전환 완료") +
     tile("전체 진행률","📈", pct(tot.s>0?tot.c/tot.s:0,1), "", "자가설치 포함") +
-    tile("실질 미설치 잔여","⏳", fmt(actionable), "건", "미설치·보류+예정+부재") +
-    tile("30일+ 오래된 잔여","🚨", fmt(c.aging["30+"]), "건", "집중 관리 대상");
+    tile("실질 미설치 잔여","⏳", fmt(actionable), "건", "미설치·보류+예정+부재");
 
   // 전체 상태 세부 구성 카드
   document.getElementById("coh-total").textContent=fmt(tot.s);
@@ -511,41 +527,95 @@ function renderDelay(reasons, ins) {
 
 // =================== data loading (JSONP) ===================
 var _jsonpSeq=0;
-function fetchData(passcode, cb, err, fresh) {
+function fetchData(passcode, cb, err, opts) {
+  opts=opts||{};
   var name="__dashcb"+(++_jsonpSeq);
   var timeout=setTimeout(function(){ cleanup(); err("응답 시간 초과. 잠시 후 다시 시도해 주세요."); }, 60000);
   function cleanup(){ try{delete window[name];}catch(e){window[name]=undefined;} if(s.parentNode) s.parentNode.removeChild(s); clearTimeout(timeout); }
   window[name]=function(data){ cleanup(); cb(data); };
   var s=document.createElement("script");
   s.onerror=function(){ cleanup(); err("데이터 로드 실패."); };
-  s.src=API_BASE+"?key="+encodeURIComponent(passcode)+"&callback="+name+(fresh?"&fresh=1":"")+"&_="+Date.now();
+  s.src=API_BASE+"?key="+encodeURIComponent(passcode)+"&callback="+name
+    +(opts.fresh?"&fresh=1":"")
+    +((opts.start&&opts.end)?("&start="+opts.start+"&end="+opts.end):"")
+    +"&_="+Date.now();
   document.body.appendChild(s);
 }
 
 var LAST_PASS=null, LAST_DATA=null;
+var CUR_PERIOD={start:"",end:"",label:"전체 기간"};
+
+function setLoading(on, msg){
+  var el=document.getElementById("loading");
+  if(on){ var t=el.querySelector("div:last-child"); if(t) t.textContent=msg||"불러오는 중…"; el.style.display="flex"; }
+  else el.style.display="none";
+}
+function applyData(d){
+  LAST_DATA=d;
+  render(d);
+  renderDelay(d.reasons, d.perf.install);
+  document.getElementById("page-badge").textContent = CUR_PERIOD.start ? ("● "+CUR_PERIOD.label) : "● 전체 기간";
+}
 function boot(passcode) {
   document.getElementById("gate").style.display="none";
-  document.getElementById("loading").style.display="flex";
+  setLoading(true, "데이터 불러오는 중…");
   fetchData(passcode, function(d){
     if(d && d.error){
-      document.getElementById("loading").style.display="none";
-      if(d.error==="unauthorized"){ showGate("접근 코드가 올바르지 않습니다."); }
-      else { showGate("오류: "+d.error); }
+      setLoading(false);
+      showGate(d.error==="unauthorized" ? "접근 코드가 올바르지 않습니다." : ("오류: "+d.error));
       return;
     }
-    LAST_PASS=passcode; LAST_DATA=d;
+    LAST_PASS=passcode;
     try{ sessionStorage.setItem("dashpass", passcode); }catch(e){}
     loadColors(); setDefaults();
-    document.getElementById("loading").style.display="none";
+    setLoading(false);
     document.getElementById("sidebar").style.display="flex";
     document.getElementById("main").style.display="block";
-    render(d);
-    renderDelay(d.reasons, d.perf.install);
-  }, function(msg){
-    document.getElementById("loading").style.display="none";
-    showGate(msg);
-  });
+    populateMonthFilter(d.meta.availableMonths||[]);
+    CUR_PERIOD={start:"",end:"",label:"전체 기간"};
+    applyData(d);
+  }, function(msg){ setLoading(false); showGate(msg); });
 }
+function loadPeriod(start,end,label){
+  if(!LAST_PASS) return;
+  CUR_PERIOD={start:start,end:end,label:label};
+  setLoading(true, start ? (label+" 집계 중… (해당 기간 최초 조회는 30~40초, 이후 즉시)") : "불러오는 중…");
+  fetchData(LAST_PASS, function(d){
+    setLoading(false);
+    if(d && !d.error) applyData(d);
+  }, function(msg){ setLoading(false); alert(msg); }, {start:start,end:end});
+}
+
+// ===== 기간 필터 =====
+function pad2(n){ return (n<10?"0":"")+n; }
+function populateMonthFilter(months){
+  var sel=document.getElementById("f-month");
+  sel.innerHTML='<option value="">전체 기간</option>'+months.map(function(m){ return '<option value="'+m+'">'+(+m.slice(5))+'월 ('+m.slice(0,4)+')</option>'; }).join("");
+}
+function weeksOfMonth(ym){ // 월요일 시작, 1주차=1일~첫 일요일
+  var y=+ym.slice(0,4), mo=+ym.slice(5)-1;
+  var dim=new Date(y,mo+1,0).getDate();
+  var firstDow=new Date(y,mo,1).getDay(); // 0=일
+  var firstSunday=1+((7-firstDow)%7);
+  var weeks=[], wStart=1, idx=1;
+  while(wStart<=dim){
+    var wEnd=(idx===1)?firstSunday:Math.min(wStart+6,dim);
+    if(wEnd>dim) wEnd=dim;
+    weeks.push({idx:idx,start:wStart,end:wEnd});
+    wStart=wEnd+1; idx++;
+  }
+  return weeks;
+}
+function populateWeekFilter(ym){
+  var sel=document.getElementById("f-week");
+  if(!ym){ sel.innerHTML='<option value="">–</option>'; sel.disabled=true; return; }
+  sel.disabled=false;
+  sel.innerHTML='<option value="">월 전체</option>'+weeksOfMonth(ym).map(function(w){
+    return '<option value="'+w.start+'|'+w.end+'">'+w.idx+'주차 ('+w.start+'~'+w.end+'일)</option>';
+  }).join("");
+}
+function monthRange(ym){ var y=+ym.slice(0,4),mo=+ym.slice(5); var dim=new Date(y,mo,0).getDate(); return {start:ym+"-01", end:ym+"-"+pad2(dim)}; }
+
 function showGate(errMsg){
   document.getElementById("gate").style.display="flex";
   document.getElementById("gate-err").textContent=errMsg||"";
@@ -557,7 +627,28 @@ document.getElementById("gate-btn").addEventListener("click", function(){
   var v=document.getElementById("gate-input").value.trim(); if(v) boot(v);
 });
 document.getElementById("gate-input").addEventListener("keydown", function(e){ if(e.key==="Enter"){ var v=this.value.trim(); if(v) boot(v);} });
-document.getElementById("refresh").addEventListener("click", function(){ if(LAST_PASS){ document.getElementById("loading").style.display="flex"; fetchData(LAST_PASS,function(d){ if(d&&!d.error){LAST_DATA=d; render(d); renderDelay(d.reasons,d.perf.install);} document.getElementById("loading").style.display="none"; },function(){document.getElementById("loading").style.display="none";}); } });
+document.getElementById("refresh").addEventListener("click", function(){ loadPeriod(CUR_PERIOD.start, CUR_PERIOD.end, CUR_PERIOD.label); });
+
+document.getElementById("f-month").addEventListener("change", function(){
+  var ym=this.value;
+  populateWeekFilter(ym);
+  if(!ym){ loadPeriod("","","전체 기간"); return; }
+  var r=monthRange(ym);
+  loadPeriod(r.start, r.end, (+ym.slice(5))+"월");
+});
+document.getElementById("f-week").addEventListener("change", function(){
+  var ym=document.getElementById("f-month").value;
+  if(!ym) return;
+  if(!this.value){ var r=monthRange(ym); loadPeriod(r.start,r.end,(+ym.slice(5))+"월"); return; }
+  var p=this.value.split("|"); var s=+p[0], e=+p[1];
+  var wlab=this.options[this.selectedIndex].text.split(" ")[0];
+  loadPeriod(ym+"-"+pad2(s), ym+"-"+pad2(e), (+ym.slice(5))+"월 "+wlab);
+});
+document.getElementById("f-reset").addEventListener("click", function(){
+  document.getElementById("f-month").value="";
+  populateWeekFilter("");
+  loadPeriod("","","전체 기간");
+});
 
 var TABMETA={ ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"] };
 document.querySelectorAll(".navitem").forEach(function(n){
