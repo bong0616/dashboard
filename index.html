@@ -224,7 +224,7 @@
   <section class="tab-content active" id="tab-ops">
     <div class="tiles" id="ops-tiles"></div>
     <div class="grid">
-      <div class="card col-5"><h3>📊 상태 분포</h3><div class="sub">콜리스트 점주의사 기준</div><div class="chart-wrap h260"><canvas id="opsStatus"></canvas></div></div>
+      <div class="card col-5"><h3>📊 상태 분포</h3><div class="sub">콜리스트 점주의사 기준 · 미설치는 배송완료/배송중으로 분리</div><div class="chart-wrap h260"><canvas id="opsStatus"></canvas></div></div>
       <div class="card col-7"><h3>🚚 배송상태 · 미설치 즉시 컨택 대상</h3><div class="sub">미설치 중 배송완료/구매확정 건은 바로 설치 유도 가능</div><div class="chart-wrap h260"><canvas id="opsDelivery"></canvas></div><div class="insight" id="ops-insight"></div></div>
       <div class="card col-5"><h3>📵 부재 단계별</h3><div class="sub">재컨택 우선순위 판단용</div><div class="chart-wrap h220"><canvas id="opsAbsent"></canvas></div></div>
       <div class="card col-7"><h3>🧾 미설치 사유 (현재 잔여)</h3><div class="sub">로우데이터 L열 코드화 사유 · 반품/폐업 제외 · 사유미기재는 배송중 제외(배송완료 기준)</div><div class="chart-wrap h260"><canvas id="opsReason"></canvas></div></div>
@@ -333,12 +333,22 @@ function renderOps(o, reasons) {
     tile("부재","📵", fmt(absentTotal), "건", "재컨택 필요") +
     tile("오늘 컨택 가능","🎯", fmt(o.todayContactable), "건", "미컨택 "+fmt(o.neverContacted)+"건 포함");
 
+  var usp = o.uninstallSplit||{배송중:0,배송완료:0,기타:0};
+  var stSegs = [
+    ["설치예정", o.status.설치예정, C["--s-blue"]],
+    ["미설치·배송완료", usp.배송완료||0, C["--s-red"]],
+    ["미설치·배송중", usp.배송중||0, C["--muted"]],
+    ["미설치·기타", usp.기타||0, "#e87ba4"],
+    ["부재", o.status.부재, C["--s-orange"]],
+    ["보류", o.status.보류, C["--s-yellow"]],
+    ["명의변경", o.status.명의변경, C["--s-violet"]]
+  ].filter(function(x){return x[1]>0;});
   mk("opsStatus", { type:"doughnut",
-    data:{ labels:["설치예정","미설치","부재","보류","명의변경"],
-      datasets:[{ data:[o.status.설치예정,o.status.미설치,o.status.부재,o.status.보류,o.status.명의변경],
-        backgroundColor:[C["--s-blue"],C["--s-red"],C["--s-orange"],C["--s-yellow"],C["--s-violet"]],
+    data:{ labels:stSegs.map(function(x){return x[0];}),
+      datasets:[{ data:stSegs.map(function(x){return x[1];}),
+        backgroundColor:stSegs.map(function(x){return x[2];}),
         borderColor:C["--surface-1"], borderWidth:2 }] },
-    options:{ cutout:"62%", plugins:{ legend:{ display:true, position:"right", labels:{ color:C["--text-secondary"], usePointStyle:true, pointStyle:"circle", padding:12, font:{size:12.5} } },
+    options:{ cutout:"62%", plugins:{ legend:{ display:true, position:"right", labels:{ color:C["--text-secondary"], usePointStyle:true, pointStyle:"circle", padding:10, font:{size:12} } },
       datalabels: dl({ color:"#fff", formatter:function(v){return v>0?v:"";} }) } } });
 
   var delivDone = (o.delivery.배송완료||0)+(o.delivery.구매확정||0);        // 배송완료+구매확정 합산
