@@ -157,6 +157,23 @@
   .statcell .sc-val .sc-unit { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-left: 2px; }
   .statcell .sc-pct { font-size: 11.5px; color: var(--muted); margin-left: 7px; font-weight: 500; }
 
+  /* Weekly comparison table */
+  .tbl-wrap { width: 100%; overflow-x: auto; margin-top: 6px; }
+  table.dtable { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; min-width: 640px; }
+  table.dtable th, table.dtable td { padding: 9px 11px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border); }
+  table.dtable th { color: var(--muted); font-weight: 600; font-size: 11.5px; text-align: right; border-bottom: 1.5px solid var(--baseline); position: sticky; top: 0; background: var(--surface-1); }
+  table.dtable th:first-child, table.dtable td:first-child { text-align: left; font-weight: 600; }
+  table.dtable td:first-child { color: var(--text-secondary); }
+  table.dtable tbody tr:hover { background: color-mix(in srgb, var(--s-blue) 6%, transparent); }
+  table.dtable tbody tr.cur td { background: color-mix(in srgb, var(--s-blue) 9%, transparent); }
+  table.dtable tbody tr.cur td:first-child { color: var(--text-primary); }
+  table.dtable .cell-main { font-weight: 700; color: var(--text-primary); }
+  table.dtable .wow { font-size: 10.5px; font-weight: 700; margin-left: 5px; }
+  table.dtable .wow.up { color: var(--good); }
+  table.dtable .wow.down { color: var(--s-red); }
+  table.dtable .wow.flat { color: var(--muted); }
+  .curtag { display:inline-block; font-size:10px; font-weight:700; color:#fff; background:var(--s-blue); border-radius:5px; padding:1px 6px; margin-left:6px; vertical-align:middle; }
+
   /* Passcode gate */
   #gate { position: fixed; inset: 0; background: var(--page); z-index: 100; display:flex; align-items:center; justify-content:center; }
   .gate-box { background: var(--surface-1); border:1px solid var(--border); border-radius: 20px; padding: 34px 30px; width: 340px; box-shadow: var(--shadow); text-align:center; }
@@ -212,6 +229,7 @@
   <div class="navitem" data-tab="perf"><span class="ic">⚡</span><div>성과<small>설치속도·작업량</small></div></div>
   <div class="navitem navchild" data-tab="flow"><span class="ic">📈</span><div>월·주·일 흐름<small>기간별 추이</small></div></div>
   <div class="navitem" data-tab="cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div></div>
+  <div class="navitem" data-tab="weekly"><span class="ic">🗓️</span><div>주간 비교<small>주차별 스코어보드</small></div></div>
   <div class="side-foot">
     <div>업데이트 <b id="foot-time">–</b></div>
     <div id="foot-sheet" style="margin-top:4px;"></div>
@@ -291,6 +309,18 @@
       <div class="card col-12"><h3>🗂️ 출고월별 현재 상태</h3><div class="sub">4월·5월 등 각 출고월 코호트가 지금 어떤 상태인지</div><div class="chart-wrap h260"><canvas id="cohStatus"></canvas></div></div>
     </div>
   </section>
+
+  <!-- WEEKLY (주간 비교 스코어보드) -->
+  <section class="tab-content" id="tab-weekly">
+    <div class="tiles" id="weekly-tiles"></div>
+    <div class="grid">
+      <div class="card col-12"><h3>📊 주별 업무량 비교</h3><div class="sub">출고건수 · 통화건수 · 설치완료 (최근 16주 · 월요일 시작 주). 맨 오른쪽이 이번 주(진행중)</div><div class="chart-wrap h300"><canvas id="wkVolume"></canvas></div></div>
+      <div class="card col-6"><h3>⏱️ 주별 평균 설치속도</h3><div class="sub">그 주에 설치완료된 건의 출고→설치 평균 소요일 · 낮을수록 빠름</div><div class="chart-wrap h260"><canvas id="wkSpeed"></canvas></div></div>
+      <div class="card col-6"><h3>🔁 주별 평균 재컨택주기</h3><div class="sub">그 주 설치완료 건의 메모 컨택 간격 평균(일) · 낮을수록 촘촘</div><div class="chart-wrap h260"><canvas id="wkRetouch"></canvas></div></div>
+      <div class="card col-12"><h3>🔧 주별 설치 채널 구성</h3><div class="sub">자가설치 · 문자발송 · 상담원 콜 완료 건수(설치일 기준)</div><div class="chart-wrap h260"><canvas id="wkChannel"></canvas></div></div>
+      <div class="card col-12"><h3>🗓️ 주차별 상세 비교표</h3><div class="sub">최근 12주 · 최신 주가 위 · <b>▲▼</b>는 직전 주 대비 증감(속도·재컨택주기는 낮을수록 개선)</div><div class="tbl-wrap"><table class="dtable" id="weeklyTable"></table></div></div>
+    </div>
+  </section>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -351,6 +381,7 @@ function render(d) {
   renderPerf(d.perf);
   renderFlow(d.perf);
   renderCohort(d.cohort);
+  renderWeekly(d.perf);
 }
 
 function tile(label, ic, val, unit, sub, accent, tip) {
@@ -537,6 +568,127 @@ function renderFlow(p) {
   trendCombo("flowMonthly", mo, function(x){ return x.ym.slice(2); });
   trendCombo("flowWeekly", wk, function(x){ return x.week.slice(5); });
   trendCombo("flowDaily", dd, function(x){ return x.date.slice(5); });
+}
+
+// ---------- WEEKLY (주간 비교 스코어보드) ----------
+// "YYYY-MM-DD"(월요일) → "M/D주"
+function wkLabel(w){ var p=w.split("-"); return (+p[1])+"/"+(+p[2]); }
+// 주간 값 타일: 이번 주(마지막) vs 직전 주. lowerBetter면 감소가 초록.
+function weekTile(label, ic, rows, key, opts){
+  opts = opts || {};
+  var n = rows ? rows.length : 0;
+  var cur = n>0 ? rows[n-1][key] : null;
+  var prev = n>1 ? rows[n-2][key] : null;
+  var valFn = opts.valFn || fmt;
+  var unit = opts.unit || "건";
+  var sub;
+  if (cur==null || prev==null) sub = '<span style="color:var(--muted)">직전 주 비교 불가</span>';
+  else if (prev === 0) sub = '<span style="color:var(--muted)">직전 주 '+valFn(prev)+unit+'</span>';
+  else {
+    var d = (cur - prev) / prev * 100;
+    var up = cur >= prev;
+    var better = opts.lowerBetter ? (cur < prev) : (cur > prev);
+    var arrow = up ? "▲" : "▼";
+    var color = (cur===prev) ? "var(--muted)" : (better ? C["--good"] : C["--s-red"]);
+    sub = '<span style="color:'+color+';font-weight:700">'+arrow+' '+Math.abs(Math.round(d))+'%</span>'
+        + ' <span style="color:var(--muted)">직전 주 '+valFn(prev)+unit+'</span>';
+  }
+  return tile(label, ic, cur==null?"–":valFn(cur), unit, sub, opts.accent);
+}
+// 표 셀: 값 + 직전(더 이전) 주 대비 WoW 화살표
+function wowCell(cur, prev, opts){
+  opts = opts || {};
+  var valFn = opts.valFn || fmt;
+  var main = '<span class="cell-main">'+(cur==null?"–":valFn(cur))+(opts.unit||"")+'</span>';
+  if (cur==null || prev==null || prev===0 || cur===prev) {
+    var flat = (cur===prev && cur!=null) ? '<span class="wow flat">–</span>' : '';
+    return '<td>'+main+flat+'</td>';
+  }
+  var up = cur > prev;
+  var better = opts.lowerBetter ? (cur < prev) : (cur > prev);
+  var pctv = Math.abs(Math.round((cur-prev)/prev*100));
+  return '<td>'+main+'<span class="wow '+(better?"up":"down")+'">'+(up?"▲":"▼")+pctv+'%</span></td>';
+}
+
+function renderWeekly(p){
+  var rows = (p && p.weekly) || [];
+  document.getElementById("weekly-tiles").innerHTML =
+    weekTile("이번주 출고","📦", rows, "shipped", {accent:true}) +
+    weekTile("이번주 통화","📞", rows, "calls") +
+    weekTile("이번주 설치완료","✅", rows, "installs") +
+    weekTile("이번주 자가설치","🔧", rows, "self") +
+    weekTile("평균 설치속도","⏱️", rows, "avgSpeed", {valFn:round1, unit:"일", lowerBetter:true}) +
+    weekTile("평균 재컨택주기","🔁", rows, "avgRetouch", {valFn:round1, unit:"일", lowerBetter:true});
+
+  var labels = rows.map(function(x){ return wkLabel(x.week); });
+
+  // 주별 업무량 비교: 출고·통화 막대 + 설치완료 선
+  mk("wkVolume", { type:"bar",
+    data:{ labels:labels,
+      datasets:[
+        { type:"bar", label:"출고건수", data:rows.map(function(x){return x.shipped;}), backgroundColor:C["--s-blue-l"], borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:3 },
+        { type:"bar", label:"통화건수", data:rows.map(function(x){return x.calls;}), backgroundColor:C["--s-yellow"], borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:3 },
+        { type:"line", label:"설치완료", data:rows.map(function(x){return x.installs;}), borderColor:C["--s-aqua"], backgroundColor:"transparent", borderWidth:2.4, tension:.3, pointRadius:2, pointBackgroundColor:C["--s-aqua"], order:1 }
+      ] },
+    options:{ scales:{ x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:16}}, y:{beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
+      plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false} }, interaction:{mode:"index",intersect:false} } });
+
+  // 주별 평균 설치속도(선)
+  mk("wkSpeed", { type:"line",
+    data:{ labels:labels,
+      datasets:[{ label:"평균 설치소요일", data:rows.map(function(x){return x.avgSpeed==null?null:Math.round(x.avgSpeed*10)/10;}),
+        borderColor:C["--s-blue"], backgroundColor:"transparent", borderWidth:2, tension:.3, pointRadius:3, pointBackgroundColor:C["--s-blue"], spanGaps:true }] },
+    options:{ scales:{ x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:12}}, y:{beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"],callback:function(v){return v+"일";}}} },
+      plugins:{ datalabels:{display:false}, tooltip:{callbacks:{label:function(ct){return ct.parsed.y==null?"–":ct.parsed.y+"일";}}} } } });
+
+  // 주별 평균 재컨택주기(선)
+  mk("wkRetouch", { type:"line",
+    data:{ labels:labels,
+      datasets:[{ label:"평균 재컨택주기", data:rows.map(function(x){return x.avgRetouch==null?null:Math.round(x.avgRetouch*10)/10;}),
+        borderColor:C["--s-orange"], backgroundColor:"transparent", borderWidth:2, tension:.3, pointRadius:3, pointBackgroundColor:C["--s-orange"], spanGaps:true }] },
+    options:{ scales:{ x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:12}}, y:{beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"],callback:function(v){return v+"일";}}} },
+      plugins:{ datalabels:{display:false}, tooltip:{callbacks:{label:function(ct){return ct.parsed.y==null?"–":ct.parsed.y+"일";}}} } } });
+
+  // 주별 설치 채널 구성(누적 막대)
+  mk("wkChannel", { type:"bar",
+    data:{ labels:labels,
+      datasets:[
+        { label:"자가설치", data:rows.map(function(x){return x.self;}), backgroundColor:C["--s-aqua"], stack:"w", borderColor:C["--surface-1"], borderWidth:{top:2} },
+        { label:"문자발송", data:rows.map(function(x){return x.sms;}), backgroundColor:C["--s-yellow"], stack:"w", borderColor:C["--surface-1"], borderWidth:{top:2} },
+        { label:"상담원", data:rows.map(function(x){return x.agent;}), backgroundColor:C["--s-blue"], stack:"w", borderRadius:{topLeft:5,topRight:5}, borderColor:C["--surface-1"], borderWidth:{top:2} }
+      ] },
+    options:{ scales:{ x:{stacked:true,grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:16}}, y:{stacked:true,beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
+      plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false} } } });
+
+  renderWeeklyTable(rows);
+}
+
+function renderWeeklyTable(rows){
+  var head = '<thead><tr>'
+    + '<th>주 (월요일)</th><th>출고</th><th>통화</th><th>최초컨택</th><th>설치완료</th>'
+    + '<th>자가설치</th><th>상담원</th><th>문자</th><th>평균 설치속도</th><th>평균 재컨택주기</th>'
+    + '</tr></thead>';
+  var recent = rows.slice(-12);            // 최근 12주(오름차순)
+  var lastIdx = recent.length - 1;
+  var body = recent.map(function(w, i){
+    var prev = i>0 ? recent[i-1] : null;   // 표에선 직전(더 이전) 주
+    var isCur = (i === lastIdx);
+    var wl = w.week.slice(5).replace("-",".") + "주";
+    var tag = isCur ? '<span class="curtag">이번주</span>' : '';
+    return '<tr'+(isCur?' class="cur"':'')+'>'
+      + '<td>'+wl+tag+'</td>'
+      + wowCell(w.shipped, prev&&prev.shipped)
+      + wowCell(w.calls, prev&&prev.calls)
+      + wowCell(w.firstContacts, prev&&prev.firstContacts)
+      + wowCell(w.installs, prev&&prev.installs)
+      + wowCell(w.self, prev&&prev.self)
+      + wowCell(w.agent, prev&&prev.agent)
+      + wowCell(w.sms, prev&&prev.sms)
+      + wowCell(w.avgSpeed, prev?prev.avgSpeed:null, {valFn:round1, unit:"일", lowerBetter:true})
+      + wowCell(w.avgRetouch, prev?prev.avgRetouch:null, {valFn:round1, unit:"일", lowerBetter:true})
+      + '</tr>';
+  }).reverse().join("");                    // 최신 주가 위로
+  document.getElementById("weeklyTable").innerHTML = head + '<tbody>' + body + '</tbody>';
 }
 
 // ---------- COHORT ----------
@@ -776,7 +928,7 @@ document.getElementById("f-reset").addEventListener("click", function(){
   loadPeriod("","","전체 기간");
 });
 
-var TABMETA={ ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], flow:["월·주·일 흐름","실적로그 기준 · 통화시도·설치완료·최초컨택의 월별/주별/일별 추이"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"] };
+var TABMETA={ ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], flow:["월·주·일 흐름","실적로그 기준 · 통화시도·설치완료·최초컨택의 월별/주별/일별 추이"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주간 비교 스코어보드","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
