@@ -314,9 +314,7 @@
   <section class="tab-content" id="tab-weekly">
     <div class="tiles" id="weekly-tiles"></div>
     <div class="grid">
-      <div class="card col-12"><h3>📊 주별 업무량 비교</h3><div class="sub">출고건수 · 통화건수 · 설치완료 (최근 16주 · 월요일 시작 주). 맨 오른쪽이 이번 주(진행중)</div><div class="chart-wrap h300"><canvas id="wkVolume"></canvas></div></div>
-      <div class="card col-6"><h3>⏱️ 주별 평균 설치속도</h3><div class="sub">그 주에 설치완료된 건의 출고→설치 평균 소요일 · 낮을수록 빠름</div><div class="chart-wrap h260"><canvas id="wkSpeed"></canvas></div></div>
-      <div class="card col-6"><h3>🔁 주별 평균 재컨택주기</h3><div class="sub">그 주 설치완료 건의 메모 컨택 간격 평균(일) · 낮을수록 촘촘</div><div class="chart-wrap h260"><canvas id="wkRetouch"></canvas></div></div>
+      <div class="card col-12"><h3>📊 주별 업무량 · 속도 종합 비교</h3><div class="sub">막대=출고·통화건수, 초록선=설치완료 <b>(왼쪽축 건수)</b> · 점선=평균 설치속도·재컨택주기 <b>(오른쪽축 일, 낮을수록 빠름)</b>. 최근 16주 · 맨 오른쪽이 이번 주(진행중)</div><div class="chart-wrap" style="height:380px"><canvas id="wkVolume"></canvas></div></div>
       <div class="card col-12"><h3>🔧 주별 설치 채널 구성</h3><div class="sub">자가설치 · 문자발송 · 상담원 콜 완료 건수(설치일 기준) · 막대 안 %는 그 주 설치완료 대비 비중</div><div class="chart-wrap h260"><canvas id="wkChannel"></canvas></div></div>
       <div class="card col-12"><h3>🗓️ 주차별 상세 비교표</h3><div class="sub">최근 12주 · 최신 주가 위 · <b>▲▼</b>는 직전 주 대비 증감(속도·재컨택주기는 낮을수록 개선)</div><div class="tbl-wrap"><table class="dtable" id="weeklyTable"></table></div></div>
     </div>
@@ -621,33 +619,29 @@ function renderWeekly(p){
     weekTile("평균 재컨택주기","🔁", rows, "avgRetouch", {valFn:round1, unit:"일", lowerBetter:true});
 
   var labels = rows.map(function(x){ return wkLabel(x.week); });
+  var r1 = function(v){ return v==null?null:Math.round(v*10)/10; };
 
-  // 주별 업무량 비교: 출고·통화 막대 + 설치완료 선
+  // 종합 콤보: 출고·통화 막대 + 설치완료 선(왼쪽축 건수) + 설치속도·재컨택주기 점선(오른쪽축 일)
   mk("wkVolume", { type:"bar",
     data:{ labels:labels,
       datasets:[
-        { type:"bar", label:"출고건수", data:rows.map(function(x){return x.shipped;}), backgroundColor:C["--s-blue-l"], borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:3 },
-        { type:"bar", label:"통화건수", data:rows.map(function(x){return x.calls;}), backgroundColor:C["--s-yellow"], borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:3 },
-        { type:"line", label:"설치완료", data:rows.map(function(x){return x.installs;}), borderColor:C["--s-aqua"], backgroundColor:"transparent", borderWidth:2.4, tension:.3, pointRadius:2, pointBackgroundColor:C["--s-aqua"], order:1 }
+        { type:"bar", label:"출고건수", data:rows.map(function(x){return x.shipped;}), backgroundColor:C["--s-blue-l"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:5 },
+        { type:"bar", label:"통화건수", data:rows.map(function(x){return x.calls;}), backgroundColor:C["--s-yellow"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:5 },
+        { type:"line", label:"설치완료", data:rows.map(function(x){return x.installs;}), borderColor:C["--s-aqua"], backgroundColor:"transparent", yAxisID:"y", borderWidth:2.6, tension:.3, pointRadius:2, pointBackgroundColor:C["--s-aqua"], order:3 },
+        { type:"line", label:"설치속도(일)", data:rows.map(function(x){return r1(x.avgSpeed);}), borderColor:C["--s-blue-d"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--s-blue-d"], spanGaps:true, order:1 },
+        { type:"line", label:"재컨택주기(일)", data:rows.map(function(x){return r1(x.avgRetouch);}), borderColor:C["--s-orange"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--s-orange"], spanGaps:true, order:1 }
       ] },
-    options:{ scales:{ x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:16}}, y:{beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
-      plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false} }, interaction:{mode:"index",intersect:false} } });
-
-  // 주별 평균 설치속도(선)
-  mk("wkSpeed", { type:"line",
-    data:{ labels:labels,
-      datasets:[{ label:"평균 설치소요일", data:rows.map(function(x){return x.avgSpeed==null?null:Math.round(x.avgSpeed*10)/10;}),
-        borderColor:C["--s-blue"], backgroundColor:"transparent", borderWidth:2, tension:.3, pointRadius:3, pointBackgroundColor:C["--s-blue"], spanGaps:true }] },
-    options:{ scales:{ x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:12}}, y:{beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"],callback:function(v){return v+"일";}}} },
-      plugins:{ datalabels:{display:false}, tooltip:{callbacks:{label:function(ct){return ct.parsed.y==null?"–":ct.parsed.y+"일";}}} } } });
-
-  // 주별 평균 재컨택주기(선)
-  mk("wkRetouch", { type:"line",
-    data:{ labels:labels,
-      datasets:[{ label:"평균 재컨택주기", data:rows.map(function(x){return x.avgRetouch==null?null:Math.round(x.avgRetouch*10)/10;}),
-        borderColor:C["--s-orange"], backgroundColor:"transparent", borderWidth:2, tension:.3, pointRadius:3, pointBackgroundColor:C["--s-orange"], spanGaps:true }] },
-    options:{ scales:{ x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:12}}, y:{beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"],callback:function(v){return v+"일";}}} },
-      plugins:{ datalabels:{display:false}, tooltip:{callbacks:{label:function(ct){return ct.parsed.y==null?"–":ct.parsed.y+"일";}}} } } });
+    options:{ scales:{
+        x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:16}},
+        y:{position:"left",beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]},title:{display:true,text:"건수",color:C["--muted"],font:{size:11}}},
+        y1:{position:"right",beginAtZero:true,grid:{drawOnChartArea:false},ticks:{color:C["--muted"],callback:function(v){return v+"일";}},title:{display:true,text:"소요일",color:C["--muted"],font:{size:11}}}
+      },
+      plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false},
+        tooltip:{ callbacks:{ label:function(ct){
+          var v=ct.parsed.y; if(v==null) return ct.dataset.label+": –";
+          return ct.dataset.label+": "+(ct.dataset.yAxisID==="y1" ? v+"일" : fmt(v)+"건");
+        } } } },
+      interaction:{mode:"index",intersect:false} } });
 
   // 주별 설치 채널 구성(누적 막대) — 각 세그먼트에 그 주 설치완료 대비 비중(%) 표기
   var chTotal = rows.map(function(x){ return (x.self||0)+(x.sms||0)+(x.agent||0); });
