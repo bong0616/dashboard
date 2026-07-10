@@ -255,6 +255,7 @@
   <div class="navitem active" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량</small></div></div>
   <div class="navitem" data-tab="perf" id="nav-perf"><span class="ic">⚡</span><div>성과<small>설치속도·작업량</small></div><span class="navcaret" id="perf-caret">▸</span></div>
   <div class="navitem navchild" data-tab="flow" id="nav-flow" style="display:none"><span class="ic">📈</span><div>월·주·일 흐름<small>기간별 추이</small></div></div>
+  <div class="navitem navchild" data-tab="delayweek" id="nav-delayweek" style="display:none"><span class="ic">🐢</span><div>D+7 초과 지연분석<small>출고 주별 사유</small></div></div>
   <div class="navitem" data-tab="cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div></div>
   <div class="navitem" data-tab="weekly" id="nav-weekly"><span class="ic">🗓️</span><div>주간 비교<small>주차별 스코어보드</small></div><span class="navcaret" id="weekly-caret">▸</span></div>
   <div class="navitem navchild" data-tab="daily" id="nav-daily" style="display:none"><span class="ic">📆</span><div>일간 비교<small>일자별 스코어보드</small></div></div>
@@ -296,6 +297,7 @@
       <div class="card col-5"><h3>📵 부재 단계별</h3><div class="sub">재컨택 우선순위 판단용</div><div class="chart-wrap h220"><canvas id="opsAbsent"></canvas></div></div>
       <div class="card col-7"><h3>🧾 미설치 사유 (현재 잔여)</h3><div class="sub">로우데이터 L열 코드화 사유 · 반품/폐업 제외 · 사유미기재는 배송중 제외(배송완료 기준)</div><div class="chart-wrap h260"><canvas id="opsReason"></canvas></div></div>
       <div class="card col-12"><h3>🔎 사유코드 없는 미설치 — 배송상태 구성</h3><div class="sub">L열 사유 없는 미설치 <b id="ops-unspec-cnt">–</b>건 중, <b>배송중은 아직 설치 전이라 위 '사유미기재'에서 제외</b> · 배송완료 건이 실제 관리 대상</div><div class="chart-wrap h220"><canvas id="opsUnspecDelivery"></canvas></div></div>
+      <div class="card col-12"><h3>🔑 미설치 사유 (메모 키워드 분류)</h3><div class="sub">현재 미설치 잔여건(반품·폐업 제외)의 <b>메모를 키워드 자동분류</b> · 설치일 무관 · 7일+ 지연 사유와 동일 로직(부재·문자안내/미룸/방문설치 접수/원격접수/전산·결제단말 등)</div><div class="chart-wrap h260"><canvas id="opsReasonKw"></canvas></div></div>
     </div>
   </section>
 
@@ -322,6 +324,15 @@
       <div class="card col-12"><h3>📆 월별 흐름</h3><div class="sub">통화시도·최초컨택 = 실적로그(자가설치 제외) · 설치완료 = 로우데이터 설치일(U열) 기준, 2026 출고분 (전체 월)</div><div class="chart-wrap h300"><canvas id="flowMonthly"></canvas></div></div>
       <div class="card col-12"><h3>📅 주별 흐름</h3><div class="sub">최근 16주 · 월요일 시작 주 기준 · 설치완료=설치일 기준(2026 출고분)</div><div class="chart-wrap h300"><canvas id="flowWeekly"></canvas></div></div>
       <div class="card col-12"><h3>🗓️ 일별 흐름</h3><div class="sub">최근 45영업일 · 설치완료=설치일 기준(2026 출고분)</div><div class="chart-wrap h300"><canvas id="flowDaily"></canvas></div></div>
+    </div>
+  </section>
+
+  <!-- DELAYWEEK (성과 하위: D+7 초과 설치지연분석 · 출고 주별) -->
+  <section class="tab-content" id="tab-delayweek">
+    <div class="tiles" id="delayweek-tiles"></div>
+    <div class="grid">
+      <div class="card col-12"><h3>🐢 출고 주별 D+7 초과 지연건 · 사유 구성</h3><div class="sub">출고→설치 <b>7일 이상</b> 걸려 완료된 건을 <b>출고일 기준 주(월요일)</b>로 집계 · 사유는 메모 키워드 자동분류 · 최근 16주 · <b>최근 주는 아직 설치 진행중이라 낮게 나옴(정상)</b></div><div class="chart-wrap" style="height:360px"><canvas id="dwBar"></canvas></div></div>
+      <div class="card col-12"><h3>📋 주차별 사유 상세표</h3><div class="sub">최근 12주 · 최신 주가 위 · 각 셀=그 출고주의 사유별 D+7 지연 건수</div><div class="tbl-wrap"><table class="dtable" id="delayWeekTable"></table></div></div>
     </div>
   </section>
 
@@ -436,6 +447,7 @@ function render(d) {
   renderCohort(d.cohort);
   renderWeekly(d.perf);
   renderDaily(d.perf);
+  renderDelayWeekly(d.reasons);
 }
 
 function tile(label, ic, val, unit, sub, accent, tip) {
@@ -505,6 +517,73 @@ function renderOps(o, reasons) {
       datasets:[{ data:[ud.배송중||0,ud.배송완료||0,ud.기타||0],
         backgroundColor:[C["--muted"],C["--s-red"],C["--s-orange"]], borderRadius:6 }] },
     options:{ scales:axes(), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
+
+  // 미설치 잔여건 메모 키워드 분류(보조)
+  var kz = (reasons.uninstallReasonKw||[]).slice(0,11);
+  mk("opsReasonKw", { type:"bar",
+    data:{ labels:kz.map(function(r){return r.label;}),
+      datasets:[{ data:kz.map(function(r){return r.count;}), backgroundColor:kz.map(function(r){return delayCatColor(r.label);}), borderRadius:5 }] },
+    options:{ indexAxis:"y", scales:axes({horizontal:true}), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
+}
+
+// D+7 지연/미설치 사유 카테고리 → 색상(운영 보조차트·주별 분석탭 공용)
+function delayCatColor(cat){
+  var map = {
+    "미룸·재약속(1회)":"--s-yellow", "미룸·재약속(반복)":"--s-orange", "부재·문자안내":"--s-blue-l",
+    "방문설치 접수":"--s-aqua", "원격접수":"--s-blue", "창업·환경지연":"--s-violet",
+    "전산·결제단말":"--s-red", "개인사유":"--s-blue-d", "장비·배송이슈":"--good",
+    "자가설치대기":"--muted", "기타":"--grid"
+  };
+  return C[map[cat]||"--s-blue"];
+}
+
+// ---------- DELAYWEEK (성과 하위: D+7 초과 지연 · 출고 주별) ----------
+function renderDelayWeekly(reasons){
+  var rows = (reasons && reasons.delayWeekly) || [];
+  var cats = (reasons && reasons.delayCats) || [];
+  // 타일: 최근16주 총건 · 최다 사유 · 이번(최근)주 · 평균/주
+  var sum = rows.reduce(function(s,x){return s+x.total;},0);
+  var catSum = {}; cats.forEach(function(c){ catSum[c]=rows.reduce(function(s,x){return s+(x.reasons[c]||0);},0); });
+  var topCat = cats.slice().sort(function(a,b){return catSum[b]-catSum[a];})[0] || "–";
+  var lastTotal = rows.length ? rows[rows.length-1].total : 0;
+  var avg = rows.length ? Math.round(sum/rows.length) : 0;
+  document.getElementById("delayweek-tiles").innerHTML =
+    tile("최근 16주 D+7 지연","🐢", fmt(sum), "건", "출고 주 기준 합계", true) +
+    tile("최다 사유","🏷️", topCat, "", fmt(catSum[topCat]||0)+"건") +
+    tile("주 평균","📊", fmt(avg), "건", "주당 D+7 지연") +
+    tile("최근 출고주","🗓️", fmt(lastTotal), "건", "진행중이라 낮음");
+
+  var labels = rows.map(function(x){ return wkLabel(x.week); });
+  mk("dwBar", { type:"bar",
+    data:{ labels:labels,
+      datasets: cats.map(function(cat){ return {
+        label:cat, data:rows.map(function(x){return x.reasons[cat]||0;}),
+        backgroundColor:delayCatColor(cat), stack:"dw", borderColor:C["--surface-1"], borderWidth:{top:1} };
+      }) },
+    options:{ scales:{ x:{stacked:true,grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:16}}, y:{stacked:true,beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
+      interaction:{mode:"index",intersect:false},
+      plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"],padding:8,font:{size:11}}}, datalabels:{display:false},
+        tooltip:{ callbacks:{ label:function(ct){ return ct.dataset.label+": "+fmt(ct.parsed.y||0)+"건"; } } } } } });
+
+  renderDelayWeekTable(rows, cats);
+}
+
+function renderDelayWeekTable(rows, cats){
+  var head = '<thead><tr><th>주 (월요일)</th><th>총계</th>'
+    + cats.map(function(c){ return '<th>'+c+'</th>'; }).join('') + '</tr></thead>';
+  var recent = rows.slice(-12);
+  var lastIdx = recent.length - 1;
+  var body = recent.map(function(w, i){
+    var isCur = (i === lastIdx);
+    var wl = w.week.slice(5).replace("-",".") + "주";
+    var tag = isCur ? '<span class="curtag">최근</span>' : '';
+    return '<tr'+(isCur?' class="cur"':'')+'>'
+      + '<td>'+wl+tag+'</td>'
+      + '<td><span class="cell-main">'+fmt(w.total)+'</span></td>'
+      + cats.map(function(c){ var v=w.reasons[c]||0; return '<td>'+(v>0?fmt(v):'<span style="color:var(--muted)">–</span>')+'</td>'; }).join('')
+      + '</tr>';
+  }).reverse().join("");
+  document.getElementById("delayWeekTable").innerHTML = head + '<tbody>' + body + '</tbody>';
 }
 
 // ---------- PERF ----------
@@ -965,7 +1044,7 @@ function renderCohort(c) {
 
 // delay reasons chart needs reasons object; render it here with access to full payload
 function renderDelay(reasons, ins) {
-  var dz=reasons.delayReason.slice(0,7);
+  var dz=reasons.delayReason.slice(0,10);
   var etc=reasons.delayEtcDetail||[];
   var etcTotal=etc.reduce(function(s,r){return s+r.count;},0);
   var isEtc=function(i){ return dz[i] && dz[i].label==="기타"; };
@@ -1146,18 +1225,18 @@ document.getElementById("f-reset").addEventListener("click", function(){
   loadPeriod("","","전체 기간");
 });
 
-var TABMETA={ ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], flow:["월·주·일 흐름","실적로그 기준 · 통화시도·설치완료·최초컨택의 월별/주별/일별 추이"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주간 비교 스코어보드","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일간 비교 스코어보드","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"] };
+var TABMETA={ ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], flow:["월·주·일 흐름","실적로그 기준 · 통화시도·설치완료·최초컨택의 월별/주별/일별 추이"], delayweek:["D+7 초과 설치지연분석","출고→설치 7일+ 완료건을 출고 주(월요일)별로 · 사유 메모 키워드 자동분류"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주간 비교 스코어보드","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일간 비교 스코어보드","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
     n.classList.add("active");
     var t=n.dataset.tab;
-    // 상위 메뉴 클릭 시 하위 메뉴 토글(펼침/접힘) — 성과→흐름, 주간비교→일간비교
-    var TOGGLE = { perf:{child:"nav-flow", caret:"perf-caret"}, weekly:{child:"nav-daily", caret:"weekly-caret"} };
+    // 상위 메뉴 클릭 시 하위 메뉴 토글(펼침/접힘) — 성과→흐름·D+7지연분석, 주간비교→일간비교
+    var TOGGLE = { perf:{children:["nav-flow","nav-delayweek"], caret:"perf-caret"}, weekly:{children:["nav-daily"], caret:"weekly-caret"} };
     if (TOGGLE[t]) {
-      var child = document.getElementById(TOGGLE[t].child);
-      var open = (child.style.display === "none");
-      child.style.display = open ? "flex" : "none";
+      var first = document.getElementById(TOGGLE[t].children[0]);
+      var open = (first.style.display === "none");
+      TOGGLE[t].children.forEach(function(id){ document.getElementById(id).style.display = open ? "flex" : "none"; });
       document.getElementById(TOGGLE[t].caret).classList.toggle("open", open);
     }
     document.querySelectorAll(".tab-content").forEach(function(x){x.classList.remove("active");});
