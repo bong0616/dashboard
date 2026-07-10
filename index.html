@@ -137,18 +137,28 @@
   .ach-save:disabled { opacity:.55; cursor:default; }
   .ach-msg { font-size:12px; font-weight:600; }
   .ach-msg.ok { color:#1f9e57; } .ach-msg.err { color: var(--critical); }
+  .ach-pace { margin-top:12px; padding:10px 13px; background: color-mix(in srgb, var(--s-blue) 8%, transparent); border-radius:8px; font-size:12.5px; color: var(--text-secondary); line-height:1.5; }
+  .ach-pace:empty { display:none; }
+  .ach-pace b { color: var(--text-primary); font-variant-numeric:tabular-nums; }
+  .ach-pace .pace-hl { color: var(--s-blue); font-weight:800; }
+  .ach-pace .pace-bad { color: var(--critical); }
   /* 주차별 리포트 */
   .rpt { margin-top: 4px; }
-  .rpt-head { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+  .rpt-top { display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; margin-bottom:16px; }
+  .rpt-head { display:flex; align-items:center; gap:12px; flex-wrap:wrap; flex:0 0 auto; }
+  .rpt-top .rpt-note { flex:1 1 320px; min-width:250px; }
+  .rpt-top .rpt-note textarea { min-height:62px; }
   .rpt-week { font-family: var(--font); font-size:14px; font-weight:700; color: var(--text-primary); background: var(--page); border:1px solid var(--border); border-radius:8px; padding:7px 11px; cursor:pointer; }
   .rpt-week:focus { outline:2px solid var(--s-blue); border-color:transparent; }
   .rpt-range { font-size:12.5px; color: var(--muted); font-weight:500; }
-  .rpt-tiles { display:grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap:10px; margin-bottom:16px; }
+  .rpt-tiles { display:grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap:10px; margin-bottom:16px; }
   .rt { background: var(--surface-1); border:1px solid var(--border); border-radius:12px; padding:12px 14px; }
   .rt .rt-l { font-size:12px; color: var(--text-secondary); font-weight:500; display:flex; align-items:center; gap:6px; }
   .rt .rt-v { font-size:23px; font-weight:800; letter-spacing:-.4px; margin-top:5px; font-variant-numeric:tabular-nums; }
   .rt .rt-v .u { font-size:13px; font-weight:600; color: var(--text-secondary); margin-left:2px; }
-  .rt .rt-d { font-size:11.5px; margin-top:4px; font-weight:600; }
+  .rt-prev { font-size:11.5px; color: var(--muted); margin-top:5px; }
+  .rt-prev b { color: var(--text-secondary); font-variant-numeric:tabular-nums; }
+  .rt-d { font-size:11.5px; font-weight:700; }
   .rt-d.good { color:#1f9e57; } .rt-d.bad { color: var(--critical); } .rt-d.muted { color: var(--muted); font-weight:500; }
   .rpt-summary { background: color-mix(in srgb, var(--s-blue) 7%, transparent); border-left:3px solid var(--s-blue); border-radius:8px; padding:13px 15px; margin-bottom:16px; }
   .rpt-summary .rs-head { font-size:13px; font-weight:700; color: var(--text-primary); margin-bottom:8px; }
@@ -1167,9 +1177,11 @@ function renderCohort(c) {
 }
 
 // ===== 🎯 월 목표 달성률 (U열 설치일 기준 월별 설치완료 vs 수기 목표) =====
-var ACH = { installByMonth:{}, targets:{}, month:null };
-function renderAchievement(a, todayYm){
+var ACH = { installByMonth:{}, targets:{}, month:null, today:"" };
+function renderAchievement(a, today){
   a = a || {};
+  ACH.today = today || "";
+  var todayYm = ACH.today.slice(0,7);
   ACH.installByMonth = a.installByMonth || {};
   ACH.targets = a.targets || {};
   // 월 목록: 설치 발생 월 ∪ 목표 설정 월
@@ -1189,7 +1201,8 @@ function renderAchievement(a, todayYm){
     +'<div class="ach-foot"><div class="ach-nums" id="achNums"></div>'
     +'<div class="ach-edit"><label for="achInput">목표</label>'
     +'<input class="ach-input" id="achInput" type="number" min="0" step="1" inputmode="numeric" placeholder="미설정">'
-    +'<button class="ach-save" id="achSave">목표 저장</button><span class="ach-msg" id="achMsg"></span></div></div>';
+    +'<button class="ach-save" id="achSave">목표 저장</button><span class="ach-msg" id="achMsg"></span></div></div>'
+    +'<div class="ach-pace" id="achPace"></div>';
   document.getElementById("achMonth").addEventListener("change", function(){ ACH.month=this.value; paintAchievement(); });
   document.getElementById("achSave").addEventListener("click", saveAchTarget);
   document.getElementById("achInput").addEventListener("keydown", function(e){ if(e.key==="Enter") saveAchTarget(); });
@@ -1208,6 +1221,23 @@ function paintAchievement(){
   var nums='설치 <b>'+fmt(done)+'</b> / 목표 <b>'+(hasT?fmt(target):"–")+'</b>';
   if(hasT) nums+= over ? ' <span class="ach-remain">· 초과 '+fmt(done-target)+'</span>' : ' <span class="ach-remain">· 잔여 '+fmt(target-done)+'</span>';
   document.getElementById("achNums").innerHTML=nums;
+  // 하루 평균 필요치 (이번달=오늘 포함 남은 일수 / 미래월=전체 / 과거월=종료)
+  var paceEl=document.getElementById("achPace"), paceHtml="";
+  if(hasT){
+    var y=+m.slice(0,4), mo=+m.slice(5), dim=new Date(y,mo,0).getDate();
+    var curYm=(ACH.today||"").slice(0,7), remaining=target-done;
+    if(over){ paceHtml='🎉 <b class="pace-hl">목표 달성!</b> (초과 '+fmt(done-target)+'개)'; }
+    else if(curYm && m<curYm){ paceHtml='기간 종료 · <b class="pace-bad">미달 '+fmt(remaining)+'개</b> (달성 '+pct+'%)'; }
+    else {
+      var daysLeft;
+      if(curYm && m===curYm){ var td=+(ACH.today.slice(8,10)); daysLeft=dim-td+1; }
+      else { daysLeft=dim; }
+      if(daysLeft<1) daysLeft=1;
+      var perDay=Math.ceil(remaining/daysLeft);
+      paceHtml='📅 남은 <b>'+daysLeft+'일</b> 동안 <b class="pace-hl">하루 평균 '+fmt(perDay)+'개</b> 설치해야 목표를 달성할 수 있어요 <span class="ach-remain">(잔여 '+fmt(remaining)+'개)</span>';
+    }
+  }
+  paceEl.innerHTML=paceHtml;
   var inp=document.getElementById("achInput"); inp.value=hasT?target:"";
   var msg=document.getElementById("achMsg"); msg.textContent=""; msg.className="ach-msg";
 }
@@ -1251,12 +1281,14 @@ function renderReport(perf, notesIn){
   var latest=weeks[weeks.length-1];
   var opts=weeks.slice().reverse().map(function(w){ return '<option value="'+w+'"'+(w===RPT.week?' selected':'')+'>'+rptWeekLabel(w)+'주'+(w===latest?' (이번주·진행중)':'')+'</option>'; }).join("");
   box.innerHTML=
-    '<div class="rpt-head"><select class="rpt-week" id="rptWeek">'+opts+'</select><span class="rpt-range" id="rptRange"></span></div>'
+    '<div class="rpt-top">'
+    +  '<div class="rpt-head"><select class="rpt-week" id="rptWeek">'+opts+'</select><span class="rpt-range" id="rptRange"></span></div>'
+    +  '<div class="rpt-note"><label for="rptNote">✍️ 코멘트 (이 주차 메모 · 저장 시 공유)</label>'
+    +    '<textarea id="rptNote" maxlength="1000" placeholder="예: 이번 주 자가설치 비중 늘어 상담원 부하 감소. 다음 주 설치예정 급증 예상."></textarea>'
+    +    '<div class="rpt-note-foot"><button class="rpt-save" id="rptSave">코멘트 저장</button><span class="rpt-cnt" id="rptCnt"></span><span class="rpt-msg" id="rptMsg"></span></div></div>'
+    +'</div>'
     +'<div class="rpt-tiles" id="rptTiles"></div>'
-    +'<div class="rpt-summary"><div class="rs-head">📌 전주 대비 요약</div><ul id="rptSummary"></ul></div>'
-    +'<div class="rpt-note"><label for="rptNote">✍️ 코멘트 (이 주차 메모 · 저장 시 공유)</label>'
-    +'<textarea id="rptNote" maxlength="1000" placeholder="예: 이번 주 자가설치 비중 늘어 상담원 부하 감소. 다음 주 설치예정 급증 예상."></textarea>'
-    +'<div class="rpt-note-foot"><button class="rpt-save" id="rptSave">코멘트 저장</button><span class="rpt-cnt" id="rptCnt"></span><span class="rpt-msg" id="rptMsg"></span></div></div>';
+    +'<div class="rpt-summary"><div class="rs-head">📌 전주 대비 요약</div><ul id="rptSummary"></ul></div>';
   document.getElementById("rptWeek").addEventListener("change", function(){ RPT.week=this.value; paintReport(rows, notes); });
   document.getElementById("rptSave").addEventListener("click", function(){ saveReportNote(notes); });
   var ta=document.getElementById("rptNote");
@@ -1278,7 +1310,12 @@ function paintReport(rows, notes){
     var valTxt=(c==null)?"–":rptFmt(d.r1)(c);
     var tg=tgtMeta(c, d.tgt);
     var valHtml=(c==null)?"–":('<span class="'+tg.cls+'">'+valTxt+'</span>');
-    return '<div class="rt"><div class="rt-l">'+d.ic+' '+d.l+'</div><div class="rt-v">'+valHtml+'<span class="u">'+d.u+'</span></div><div class="rt-d '+del.cls+'">'+del.txt+'</div>'+(tg.badge?('<div class="rt-tgt">'+tg.badge+'</div>'):'')+'</div>';
+    var dShort=(del.pct!=null)?('<span class="rt-d '+del.cls+'">'+del.arrow+' '+del.pct+'%</span>'):('<span class="rt-d muted">'+del.txt+'</span>');
+    var prevHtml=prev?('전주 <b>'+((pv==null)?"–":rptFmt(d.r1)(pv))+d.u+'</b>'):'전주 데이터 없음';
+    return '<div class="rt"><div class="rt-l">'+d.ic+' '+d.l+'</div>'
+      +'<div class="rt-v">'+valHtml+'<span class="u">'+d.u+'</span></div>'
+      +'<div class="rt-prev">'+prevHtml+'  '+dShort+'</div>'
+      +(tg.badge?('<div class="rt-tgt">'+tg.badge+'</div>'):'')+'</div>';
   }).join("");
   var lines=[];
   function line(label, k, low, r1, unit){
@@ -1422,7 +1459,7 @@ function applyData(d){
   LAST_DATA=d;
   render(d);
   renderDelay(d.reasons, d.perf.install);
-  renderAchievement(d.achievement, (d.meta && d.meta.today || "").slice(0,7));
+  renderAchievement(d.achievement, d.meta && d.meta.today);
   document.getElementById("page-badge").textContent = CUR_PERIOD.start ? ("● "+CUR_PERIOD.label) : "● 전체 기간";
 }
 function boot(passcode) {
