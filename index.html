@@ -79,6 +79,8 @@
   .navitem.navchild { margin-left: 18px; padding: 9px 12px; font-size: 13px; position: relative; }
   .navitem.navchild .ic { font-size: 14px; }
   .navitem.navchild::before { content: ""; position: absolute; left: -9px; top: -3px; bottom: 50%; width: 10px; border-left: 1.5px solid rgba(255,255,255,.14); border-bottom: 1.5px solid rgba(255,255,255,.14); border-bottom-left-radius: 7px; }
+  .navcaret { margin-left: auto; font-size: 11px; opacity: .6; transition: transform .15s ease; }
+  .navcaret.open { transform: rotate(90deg); }
   .side-foot { margin-top: auto; font-size: 11.5px; color: var(--sidebar-text); padding: 12px 10px 0; line-height: 1.6; border-top: 1px solid rgba(255,255,255,.08); }
   .side-foot b { color: #dfe6f0; }
   .refresh-btn { margin-top: 10px; width: 100%; padding: 9px; border-radius: 10px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); color: #cdd6e2; cursor: pointer; font-size: 12.5px; font-family: var(--font); }
@@ -229,7 +231,8 @@
   <div class="navitem" data-tab="perf"><span class="ic">⚡</span><div>성과<small>설치속도·작업량</small></div></div>
   <div class="navitem navchild" data-tab="flow"><span class="ic">📈</span><div>월·주·일 흐름<small>기간별 추이</small></div></div>
   <div class="navitem" data-tab="cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div></div>
-  <div class="navitem" data-tab="weekly"><span class="ic">🗓️</span><div>주간 비교<small>주차별 스코어보드</small></div></div>
+  <div class="navitem" data-tab="weekly" id="nav-weekly"><span class="ic">🗓️</span><div>주간 비교<small>주차별 스코어보드</small></div><span class="navcaret" id="weekly-caret">▸</span></div>
+  <div class="navitem navchild" data-tab="daily" id="nav-daily" style="display:none"><span class="ic">📆</span><div>일간 비교<small>일자별 스코어보드</small></div></div>
   <div class="side-foot">
     <div>업데이트 <b id="foot-time">–</b></div>
     <div id="foot-sheet" style="margin-top:4px;"></div>
@@ -319,6 +322,16 @@
       <div class="card col-12"><h3>🗓️ 주차별 상세 비교표</h3><div class="sub">최근 12주 · 최신 주가 위 · <b>▲▼</b>는 직전 주 대비 증감(속도·재컨택주기는 낮을수록 개선)</div><div class="tbl-wrap"><table class="dtable" id="weeklyTable"></table></div></div>
     </div>
   </section>
+
+  <!-- DAILY (일간 비교 스코어보드) -->
+  <section class="tab-content" id="tab-daily">
+    <div class="tiles" id="daily-tiles"></div>
+    <div class="grid">
+      <div class="card col-12"><h3>📊 일별 업무량 · 속도 종합 비교</h3><div class="sub">막대=출고·통화건수, 초록선=설치완료 <b>(왼쪽축 건수)</b> · 점선=평균 설치속도·재컨택주기 <b>(오른쪽축 일, 낮을수록 빠름)</b>. 최근 21일 · 맨 오른쪽이 오늘</div><div class="chart-wrap" style="height:380px"><canvas id="dyVolume"></canvas></div></div>
+      <div class="card col-12"><h3>🔧 일별 설치 채널 구성</h3><div class="sub">자가설치 · 문자발송 · 상담원 콜 완료 건수(설치일 기준) · 막대 안 %는 그 날 설치완료 대비 비중</div><div class="chart-wrap h260"><canvas id="dyChannel"></canvas></div></div>
+      <div class="card col-12"><h3>📆 일자별 상세 비교표</h3><div class="sub">최근 14일 · 최신 일이 위 · <b>▲▼</b>는 직전 일 대비 증감(속도·재컨택주기는 낮을수록 개선)</div><div class="tbl-wrap"><table class="dtable" id="dailyTable"></table></div></div>
+    </div>
+  </section>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -380,6 +393,7 @@ function render(d) {
   renderFlow(d.perf);
   renderCohort(d.cohort);
   renderWeekly(d.perf);
+  renderDaily(d.perf);
 }
 
 function tile(label, ic, val, unit, sub, accent, tip) {
@@ -698,6 +712,124 @@ function renderWeeklyTable(rows){
   document.getElementById("weeklyTable").innerHTML = head + '<tbody>' + body + '</tbody>';
 }
 
+// ---------- DAILY (일간 비교 스코어보드) — 주간 비교와 동일 지표를 '일' 단위로 ----------
+var DY_WD = ["일","월","화","수","목","금","토"];
+// "YYYY-MM-DD" → "M/D" (차트 축)
+function dyLabel(s){ var p=s.split("-"); return (+p[1])+"/"+(+p[2]); }
+// "YYYY-MM-DD" → "M.D(요일)" (표)
+function dyLabelW(s){ var p=s.split("-"); var d=new Date(+p[0], +p[1]-1, +p[2]); return (+p[1])+"."+(+p[2])+"("+DY_WD[d.getDay()]+")"; }
+// 일간 값 타일: 오늘(마지막) vs 직전 일. lowerBetter면 감소가 초록.
+function dayTile(label, ic, rows, key, opts){
+  opts = opts || {};
+  var n = rows ? rows.length : 0;
+  var cur = n>0 ? rows[n-1][key] : null;
+  var prev = n>1 ? rows[n-2][key] : null;
+  var valFn = opts.valFn || fmt;
+  var unit = opts.unit || "건";
+  var sub;
+  if (cur==null || prev==null) sub = '<span style="color:var(--muted)">직전 일 비교 불가</span>';
+  else if (prev === 0) sub = '<span style="color:var(--muted)">직전 일 '+valFn(prev)+unit+'</span>';
+  else {
+    var d = (cur - prev) / prev * 100;
+    var up = cur >= prev;
+    var better = opts.lowerBetter ? (cur < prev) : (cur > prev);
+    var arrow = up ? "▲" : "▼";
+    var color = (cur===prev) ? "var(--muted)" : (better ? C["--good"] : C["--s-red"]);
+    sub = '<span style="color:'+color+';font-weight:700">'+arrow+' '+Math.abs(Math.round(d))+'%</span>'
+        + ' <span style="color:var(--muted)">직전 일 '+valFn(prev)+unit+'</span>';
+  }
+  return tile(label, ic, cur==null?"–":valFn(cur), unit, sub, opts.accent);
+}
+
+function renderDaily(p){
+  var rows = (p && p.dailyScore) || [];
+  document.getElementById("daily-tiles").innerHTML =
+    dayTile("오늘 출고","📦", rows, "shipped", {accent:true}) +
+    dayTile("오늘 통화","📞", rows, "calls") +
+    dayTile("오늘 설치완료","✅", rows, "installs") +
+    dayTile("오늘 자가설치","🔧", rows, "self") +
+    dayTile("평균 설치속도","⏱️", rows, "avgSpeed", {valFn:round1, unit:"일", lowerBetter:true}) +
+    dayTile("평균 재컨택주기","🔁", rows, "avgRetouch", {valFn:round1, unit:"일", lowerBetter:true});
+
+  var labels = rows.map(function(x){ return dyLabel(x.date); });
+  var r1 = function(v){ return v==null?null:Math.round(v*10)/10; };
+
+  // 종합 콤보: 출고·통화 막대 + 설치완료 선(왼쪽축 건수) + 설치속도·재컨택주기 점선(오른쪽축 일)
+  mk("dyVolume", { type:"bar",
+    data:{ labels:labels,
+      datasets:[
+        { type:"bar", label:"출고건수", data:rows.map(function(x){return x.shipped;}), backgroundColor:C["--s-blue-l"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:5 },
+        { type:"bar", label:"통화건수", data:rows.map(function(x){return x.calls;}), backgroundColor:C["--s-yellow"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:5 },
+        { type:"line", label:"설치완료", data:rows.map(function(x){return x.installs;}), borderColor:C["--s-aqua"], backgroundColor:"transparent", yAxisID:"y", borderWidth:2.6, tension:.3, pointRadius:2, pointBackgroundColor:C["--s-aqua"], order:3 },
+        { type:"line", label:"설치속도(일)", data:rows.map(function(x){return r1(x.avgSpeed);}), borderColor:C["--s-blue-d"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--s-blue-d"], spanGaps:true, order:1 },
+        { type:"line", label:"재컨택주기(일)", data:rows.map(function(x){return r1(x.avgRetouch);}), borderColor:C["--s-orange"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--s-orange"], spanGaps:true, order:1 }
+      ] },
+    options:{ scales:{
+        x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:21}},
+        y:{position:"left",beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]},title:{display:true,text:"건수",color:C["--muted"],font:{size:11}}},
+        y1:{position:"right",beginAtZero:true,grid:{drawOnChartArea:false},ticks:{color:C["--muted"],callback:function(v){return v+"일";}},title:{display:true,text:"소요일",color:C["--muted"],font:{size:11}}}
+      },
+      plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false},
+        tooltip:{ callbacks:{ label:function(ct){
+          var v=ct.parsed.y; if(v==null) return ct.dataset.label+": –";
+          return ct.dataset.label+": "+(ct.dataset.yAxisID==="y1" ? v+"일" : fmt(v)+"건");
+        } } } },
+      interaction:{mode:"index",intersect:false} } });
+
+  // 일별 설치 채널 구성(누적 막대) — 각 세그먼트에 그 날 설치완료 대비 비중(%) 표기
+  var chTotal = rows.map(function(x){ return (x.self||0)+(x.sms||0)+(x.agent||0); });
+  var chLabel = function(v, ctx){
+    var tot = chTotal[ctx.dataIndex] || 0;
+    if (!v || tot <= 0) return "";
+    var p = Math.round(v / tot * 100);
+    return p >= 8 ? p + "%" : "";
+  };
+  var chDL = { display:true, color:"#fff", font:{weight:"700",size:10.5}, formatter:chLabel };
+  mk("dyChannel", { type:"bar",
+    data:{ labels:labels,
+      datasets:[
+        { label:"자가설치", data:rows.map(function(x){return x.self;}), backgroundColor:C["--s-aqua"], stack:"d", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
+        { label:"문자발송", data:rows.map(function(x){return x.sms;}), backgroundColor:C["--s-yellow"], stack:"d", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
+        { label:"상담원", data:rows.map(function(x){return x.agent;}), backgroundColor:C["--s-blue"], stack:"d", borderRadius:{topLeft:5,topRight:5}, borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL }
+      ] },
+    options:{ scales:{ x:{stacked:true,grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:21}}, y:{stacked:true,beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
+      interaction:{mode:"index",intersect:false},
+      plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:true},
+        tooltip:{ callbacks:{ label:function(ct){
+          var tot = chTotal[ct.dataIndex] || 0, v = ct.parsed.y || 0;
+          return ct.dataset.label + ": " + fmt(v) + "건 (" + (tot>0?Math.round(v/tot*100):0) + "%)";
+        } } } } } });
+
+  renderDailyTable(rows);
+}
+
+function renderDailyTable(rows){
+  var head = '<thead><tr>'
+    + '<th>일자</th><th>출고</th><th>통화</th><th>최초컨택</th><th>설치완료</th>'
+    + '<th>자가설치</th><th>상담원</th><th>문자</th><th>평균 설치속도</th><th>평균 재컨택주기</th>'
+    + '</tr></thead>';
+  var recent = rows.slice(-14);            // 최근 14일(오름차순)
+  var lastIdx = recent.length - 1;
+  var body = recent.map(function(w, i){
+    var prev = i>0 ? recent[i-1] : null;   // 표에선 직전 일
+    var isCur = (i === lastIdx);
+    var tag = isCur ? '<span class="curtag">오늘</span>' : '';
+    return '<tr'+(isCur?' class="cur"':'')+'>'
+      + '<td>'+dyLabelW(w.date)+tag+'</td>'
+      + wowCell(w.shipped, prev&&prev.shipped)
+      + wowCell(w.calls, prev&&prev.calls)
+      + wowCell(w.firstContacts, prev&&prev.firstContacts)
+      + wowCell(w.installs, prev&&prev.installs)
+      + wowCell(w.self, prev&&prev.self)
+      + wowCell(w.agent, prev&&prev.agent)
+      + wowCell(w.sms, prev&&prev.sms)
+      + wowCell(w.avgSpeed, prev?prev.avgSpeed:null, {valFn:round1, unit:"일", lowerBetter:true})
+      + wowCell(w.avgRetouch, prev?prev.avgRetouch:null, {valFn:round1, unit:"일", lowerBetter:true})
+      + '</tr>';
+  }).reverse().join("");                    // 최신 일이 위로
+  document.getElementById("dailyTable").innerHTML = head + '<tbody>' + body + '</tbody>';
+}
+
 // ---------- COHORT ----------
 function renderCohortSummary(ss, total) {
   var order=[
@@ -935,12 +1067,19 @@ document.getElementById("f-reset").addEventListener("click", function(){
   loadPeriod("","","전체 기간");
 });
 
-var TABMETA={ ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], flow:["월·주·일 흐름","실적로그 기준 · 통화시도·설치완료·최초컨택의 월별/주별/일별 추이"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주간 비교 스코어보드","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"] };
+var TABMETA={ ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], flow:["월·주·일 흐름","실적로그 기준 · 통화시도·설치완료·최초컨택의 월별/주별/일별 추이"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주간 비교 스코어보드","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일간 비교 스코어보드","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
     n.classList.add("active");
     var t=n.dataset.tab;
+    // 주간 비교 클릭 시 하위 '일간 비교' 메뉴 토글(펼침/접힘)
+    if (t === "weekly") {
+      var child = document.getElementById("nav-daily");
+      var open = (child.style.display === "none");
+      child.style.display = open ? "flex" : "none";
+      document.getElementById("weekly-caret").classList.toggle("open", open);
+    }
     document.querySelectorAll(".tab-content").forEach(function(x){x.classList.remove("active");});
     document.getElementById("tab-"+t).classList.add("active");
     document.getElementById("page-title").textContent=TABMETA[t][0];
