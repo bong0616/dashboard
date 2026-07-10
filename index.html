@@ -203,6 +203,11 @@
   .bch-v b { color: var(--text-primary); font-weight:800; }
   .bch-prev { color: var(--muted); font-size:11.5px; }
   .delta-up { color:#1f9e57; font-weight:700; } .delta-dn { color: var(--critical); font-weight:700; } .delta-flat { color: var(--muted); }
+  .delta-dn small, .delta-up small { font-weight:600; font-size:10.5px; opacity:.9; }
+  .cell-pct { font-size:11px; color: var(--muted); font-weight:500; }
+  .board-tmon { font-size:14px; font-weight:700; color: var(--text-primary); }
+  .sort-btn { cursor:pointer; border:1px solid var(--border); background: var(--page); color: var(--text-secondary); border-radius:5px; font-size:10.5px; font-weight:600; padding:1px 6px; margin-left:5px; font-family:var(--font); }
+  .sort-btn:hover { border-color: var(--s-blue); color: var(--s-blue); }
   .col-4 { grid-column: span 4; } .col-5 { grid-column: span 5; } .col-6 { grid-column: span 6; }
   .col-7 { grid-column: span 7; } .col-8 { grid-column: span 8; } .col-12 { grid-column: span 12; }
   .chart-wrap { position: relative; width: 100%; }
@@ -380,12 +385,15 @@
 
   <!-- BOARD (주간 현황판) -->
   <section class="tab-content active" id="tab-board">
+    <div class="grid" style="margin-bottom:14px">
+      <div class="card col-12"><h3>🎯 월 목표 달성률</h3><div class="sub">이번 달 설치완료 vs 목표(출고 코호트 탭과 동일 데이터) · 목표 수정은 코호트 탭에서</div><div id="achBoardBox" class="ach"></div></div>
+    </div>
     <div class="tiles" id="board-tiles"></div>
     <div class="grid">
       <div class="card col-12"><h3>📝 회의 코멘트 <span id="board-week" class="board-wk"></span></h3><div class="sub">이번 주 회의 메모 · 저장 시 공유(주차별 리포트와 동일 저장소)</div><div id="boardNote" class="rpt-note"></div></div>
       <div class="card col-6"><h3>🔧 설치 채널 비율</h3><div class="sub">자가설치 vs 상담원 vs 문자 · 이번주(전주 대비 %p)</div><div id="boardChannel" class="bch"></div></div>
       <div class="card col-6"><h3>⏳ 미설치 잔여 경과일 <small class="th-tgt" style="display:inline">배송완료 기준</small></h3><div class="sub">배송완료됐지만 미설치인 건의 출고 후 경과일(배송중 제외)</div><div class="chart-wrap h240" style="height:240px"><canvas id="boardAging"></canvas></div></div>
-      <div class="card col-6"><h3>📐 설치소요일 분포</h3><div class="sub">출고→설치 소요일 구간별 건수(2026 완료 전체)</div><div class="chart-wrap h240" style="height:240px"><canvas id="boardLead"></canvas></div></div>
+      <div class="card col-6"><h3>📐 설치소요일 분포 <small class="th-tgt" style="display:inline">최초컨택 주 기준</small></h3><div class="sub"><b>그 주에 최초컨택한 건들</b>이 출고→설치까지 며칠 걸렸는지 분포 · 전주 vs 금주 · 막대 위 %는 그 주 총건 대비 비중 (빠를수록 왼쪽)</div><div class="chart-wrap h240" style="height:240px"><canvas id="boardLead"></canvas></div></div>
       <div class="card col-6"><h3>🐢 D+7 지연사유 · 전주 대비 <span class="board-imp">핵심</span></h3><div class="sub">출고→설치 7일+ 완료건 사유 · 이번주 vs 전주(▲증가=악화·빨강) · 출고주 기준이라 최근주는 아직 누적중</div><div class="tbl-wrap"><table class="dtable" id="boardDelay"></table></div></div>
     </div>
   </section>
@@ -411,7 +419,7 @@
         <div class="gauge-wrap"><canvas id="perfGauge"></canvas><div class="gauge-center"><div class="g-val" id="gauge-val">–</div><div class="g-lab">설치 완료율</div></div></div>
       </div>
       <div class="card col-8"><h3>📈 월별 처리량 추세</h3><div class="sub">실적로그 · 통화시도(처리)량 vs 설치완료</div><div class="chart-wrap h260"><canvas id="perfMonthly"></canvas></div></div>
-      <div class="card col-5"><h3>🔌 설치 채널 비중</h3><div class="sub">자가설치 vs 문자발송 vs 상담원 콜</div><div class="chart-wrap h220" style="height:200px"><canvas id="perfChannel"></canvas></div><div class="legend" id="channel-legend"></div></div>
+      <div class="card col-5"><h3>🔌 설치 채널 비중</h3><div class="sub">자가설치 vs 상담원(문자발송 포함)</div><div class="chart-wrap h220" style="height:200px"><canvas id="perfChannel"></canvas></div><div class="legend" id="channel-legend"></div></div>
       <div class="card col-7"><h3>⏱️ 설치 소요일 분포</h3><div class="sub">출고 → 설치완료 (일). 평균 <b id="perf-avglead">–</b>일 · 5일 이내 <b id="perf-within5">–</b></div><div class="chart-wrap h220"><canvas id="perfSpeed"></canvas></div></div>
       <div class="card col-6"><h3>🔁 재컨택 주기 → 설치 속도</h3><div class="sub">메모 재컨택 간격이 짧을수록 실제로 빨리 설치되는가?</div><div class="chart-wrap h220"><canvas id="perfRetouch"></canvas></div><div class="insight" id="retouch-insight"></div></div>
       <div class="card col-6"><h3>🐢 7일+ 지연 사유</h3><div class="sub">설치완료됐지만 7일 이상 걸린 건 (메모 자동분류) · <b style="color:var(--s-blue-d)">기타 막대 클릭 시 세부내역</b></div><div class="chart-wrap" style="height:360px"><canvas id="perfDelay"></canvas></div></div>
@@ -449,7 +457,7 @@
       </div>
       <div class="card col-12"><h3>📊 2026 출고건 전체 상태 구성</h3><div class="sub">출고 <b id="coh-total">–</b>건이 지금 어떤 상태인지 세부 분류 (설치완료 외에도 반품·폐업, 위약금 등 종결건 분리)</div><div id="cohSummary" class="statgrid"></div></div>
       <div class="card col-7"><h3>📦 출고월별 진행률</h3><div class="sub">출고량 대비 설치완료 (자가설치 포함 전체)</div><div class="chart-wrap h260"><canvas id="cohMonth"></canvas></div></div>
-      <div class="card col-5"><h3>🧩 월별 설치 채널 구성</h3><div class="sub">자가/문자/상담원 완료 건수</div><div class="chart-wrap h260"><canvas id="cohChannel"></canvas></div></div>
+      <div class="card col-5"><h3>🧩 월별 설치 채널 구성</h3><div class="sub">자가설치 / 상담원(문자발송 포함) 완료 건수</div><div class="chart-wrap h260"><canvas id="cohChannel"></canvas></div></div>
       <div class="card col-7"><h3>📉 주별 설치 진행률</h3><div class="sub">최근 14주 · 최근 주는 진행중이라 낮게 나옴(정상)</div><div class="chart-wrap h240" style="height:240px"><canvas id="cohWeek"></canvas></div></div>
       <div class="card col-5"><h3>⏳ 미설치 잔여 경과일</h3><div class="sub">출고 후 경과 · 오래된 잔여건 관리</div><div class="chart-wrap h240" style="height:240px"><canvas id="cohAging"></canvas></div></div>
       <div class="card col-12"><h3>🗂️ 출고월별 현재 상태</h3><div class="sub">4월·5월 등 각 출고월 코호트가 지금 어떤 상태인지</div><div class="chart-wrap h260"><canvas id="cohStatus"></canvas></div></div>
@@ -461,7 +469,7 @@
     <div class="tiles" id="weekly-tiles"></div>
     <div class="grid">
       <div class="card col-12"><h3>📊 주별 업무량 · 속도 종합 비교</h3><div class="sub">막대=출고·통화건수, 초록선=설치완료 <b>(왼쪽축 건수)</b> · 점선=평균 설치속도·재컨택주기 <b>(오른쪽축 일, 낮을수록 빠름)</b>. 최근 16주 · 맨 오른쪽이 이번 주(진행중)</div><div class="chart-wrap" style="height:380px"><canvas id="wkVolume"></canvas></div></div>
-      <div class="card col-12"><h3>🔧 주별 설치 채널 구성</h3><div class="sub">자가설치 · 문자발송 · 상담원 콜 완료 건수(설치일 기준) · 막대 안 %는 그 주 설치완료 대비 비중</div><div class="chart-wrap h260"><canvas id="wkChannel"></canvas></div></div>
+      <div class="card col-12"><h3>🔧 주별 설치 채널 구성</h3><div class="sub">자가설치 · 상담원(문자발송 포함) 완료 건수(설치일 기준) · 막대 안 %는 그 주 설치완료 대비 비중</div><div class="chart-wrap h260"><canvas id="wkChannel"></canvas></div></div>
       <div class="card col-12"><h3>🗓️ 주차별 상세 비교표</h3><div class="sub">최근 12주 · 최신 주가 위 · <b>▲▼</b>는 직전 주 대비 증감(속도·재컨택주기는 낮을수록 개선)</div><div class="tbl-wrap"><table class="dtable" id="weeklyTable"></table></div></div>
     </div>
   </section>
@@ -471,7 +479,7 @@
     <div class="tiles" id="daily-tiles"></div>
     <div class="grid">
       <div class="card col-12"><h3>📊 일별 업무량 · 속도 종합 비교</h3><div class="sub">막대=출고·통화건수, 초록선=설치완료 <b>(왼쪽축 건수)</b> · 점선=평균 설치속도·재컨택주기 <b>(오른쪽축 일, 낮을수록 빠름)</b>. 최근 21일 · 맨 오른쪽이 오늘</div><div class="chart-wrap" style="height:380px"><canvas id="dyVolume"></canvas></div></div>
-      <div class="card col-12"><h3>🔧 일별 설치 채널 구성</h3><div class="sub">자가설치 · 문자발송 · 상담원 콜 완료 건수(설치일 기준) · 막대 안 %는 그 날 설치완료 대비 비중</div><div class="chart-wrap h260"><canvas id="dyChannel"></canvas></div></div>
+      <div class="card col-12"><h3>🔧 일별 설치 채널 구성</h3><div class="sub">자가설치 · 상담원(문자발송 포함) 완료 건수(설치일 기준) · 막대 안 %는 그 날 설치완료 대비 비중</div><div class="chart-wrap h260"><canvas id="dyChannel"></canvas></div></div>
       <div class="card col-12"><h3>📆 일자별 상세 비교표</h3><div class="sub">최근 14일 · 최신 일이 위 · <b>▲▼</b>는 직전 일 대비 증감(속도·재컨택주기는 낮을수록 개선)</div><div class="tbl-wrap"><table class="dtable" id="dailyTable"></table></div></div>
     </div>
   </section>
@@ -760,7 +768,7 @@ function renderPerf(p) {
     options:{ scales:axes(), plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"line",color:C["--text-secondary"]}}, datalabels:{display:false} }, interaction:{mode:"index",intersect:false} } });
 
   // Channel doughnut + custom legend (relief: visible labels)
-  var ch=[["자가설치",ins.bySource.자가설치,C["--s-aqua"]],["문자발송",ins.bySource.문자발송,C["--s-yellow"]],["상담원 콜",ins.bySource.상담원,C["--s-blue"]]];
+  var ch=[["자가설치",ins.bySource.자가설치,C["--s-aqua"]],["상담원(문자 포함)",(ins.bySource.상담원||0)+(ins.bySource.문자발송||0),C["--s-blue"]]];
   mk("perfChannel", { type:"doughnut",
     data:{ labels:ch.map(function(x){return x[0];}), datasets:[{ data:ch.map(function(x){return x[1];}), backgroundColor:ch.map(function(x){return x[2];}), borderColor:C["--surface-1"], borderWidth:2 }] },
     options:{ cutout:"64%", plugins:{ datalabels: dl({color:"#fff", formatter:function(v){return Math.round(v/ins.completed*100)+"%";}}) } } });
@@ -951,8 +959,7 @@ function renderWeekly(p){
     data:{ labels:labels,
       datasets:[
         { label:"자가설치", data:rows.map(function(x){return x.self;}), backgroundColor:C["--s-aqua"], stack:"w", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
-        { label:"문자발송", data:rows.map(function(x){return x.sms;}), backgroundColor:C["--s-yellow"], stack:"w", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
-        { label:"상담원", data:rows.map(function(x){return x.agent;}), backgroundColor:C["--s-blue"], stack:"w", borderRadius:{topLeft:5,topRight:5}, borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL }
+        { label:"상담원(문자 포함)", data:rows.map(function(x){return (x.agent||0)+(x.sms||0);}), backgroundColor:C["--s-blue"], stack:"w", borderRadius:{topLeft:5,topRight:5}, borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL }
       ] },
     options:{ scales:{ x:{stacked:true,grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:16}}, y:{stacked:true,beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
       interaction:{mode:"index",intersect:false},
@@ -988,7 +995,7 @@ function renderWeeklyTable(rows){
       + wowCell(w.firstContacts, prev&&prev.firstContacts)
       + wowCell(w.installs, prev&&prev.installs)
       + wowCell(w.self, prev&&prev.self, {share: w.installs>0 ? Math.round(w.self/w.installs*100) : null})
-      + wowCell(w.agent, prev&&prev.agent, {share: w.installs>0 ? Math.round(w.agent/w.installs*100) : null})
+      + wowCell((w.agent||0)+(w.sms||0), prev&&((prev.agent||0)+(prev.sms||0)), {share: w.installs>0 ? Math.round(((w.agent||0)+(w.sms||0))/w.installs*100) : null})
       + wowCell(w.avgSpeed, prev?prev.avgSpeed:null, {valFn:round1, unit:"일", lowerBetter:true, target:SPD_TGT})
       + wowCell(w.avgRetouch, prev?prev.avgRetouch:null, {valFn:round1, unit:"일", lowerBetter:true, target:RTC_TGT})
       + '</tr>';
@@ -1075,8 +1082,7 @@ function renderDaily(p){
     data:{ labels:labels,
       datasets:[
         { label:"자가설치", data:rows.map(function(x){return x.self;}), backgroundColor:C["--s-aqua"], stack:"d", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
-        { label:"문자발송", data:rows.map(function(x){return x.sms;}), backgroundColor:C["--s-yellow"], stack:"d", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
-        { label:"상담원", data:rows.map(function(x){return x.agent;}), backgroundColor:C["--s-blue"], stack:"d", borderRadius:{topLeft:5,topRight:5}, borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL }
+        { label:"상담원(문자 포함)", data:rows.map(function(x){return (x.agent||0)+(x.sms||0);}), backgroundColor:C["--s-blue"], stack:"d", borderRadius:{topLeft:5,topRight:5}, borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL }
       ] },
     options:{ scales:{ x:{stacked:true,grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:21}}, y:{stacked:true,beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
       interaction:{mode:"index",intersect:false},
@@ -1111,7 +1117,7 @@ function renderDailyTable(rows){
       + wowCell(w.firstContacts, prev&&prev.firstContacts)
       + wowCell(w.installs, prev&&prev.installs)
       + wowCell(w.self, prev&&prev.self, {share: w.installs>0 ? Math.round(w.self/w.installs*100) : null})
-      + wowCell(w.agent, prev&&prev.agent, {share: w.installs>0 ? Math.round(w.agent/w.installs*100) : null})
+      + wowCell((w.agent||0)+(w.sms||0), prev&&((prev.agent||0)+(prev.sms||0)), {share: w.installs>0 ? Math.round(((w.agent||0)+(w.sms||0))/w.installs*100) : null})
       + wowCell(w.avgSpeed, prev?prev.avgSpeed:null, {valFn:round1, unit:"일", lowerBetter:true, target:SPD_TGT})
       + wowCell(w.avgRetouch, prev?prev.avgRetouch:null, {valFn:round1, unit:"일", lowerBetter:true, target:RTC_TGT})
       + '</tr>';
@@ -1171,8 +1177,7 @@ function renderCohort(c) {
     data:{ labels:m.map(function(x){return x.ym.slice(2);}),
       datasets:[
         { label:"자가설치", data:m.map(function(x){return x.self;}), backgroundColor:C["--s-aqua"], borderRadius:{topLeft:0,topRight:0}, stack:"s", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels: dlSeg() },
-        { label:"문자발송", data:m.map(function(x){return x.sms;}), backgroundColor:C["--s-yellow"], stack:"s", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels: dlSeg() },
-        { label:"상담원", data:m.map(function(x){return x.agent;}), backgroundColor:C["--s-blue"], borderRadius:{topLeft:5,topRight:5}, stack:"s", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels: dlSeg() }
+        { label:"상담원(문자 포함)", data:m.map(function(x){return (x.agent||0)+(x.sms||0);}), backgroundColor:C["--s-blue"], borderRadius:{topLeft:5,topRight:5}, stack:"s", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels: dlSeg() }
       ] },
     options:{ scales:{ x:{stacked:true,grid:{display:false},ticks:{color:C["--muted"]}}, y:{stacked:true,beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
       plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false} } } });
@@ -1359,7 +1364,7 @@ function paintReport(rows, notes){
   line("평균 설치속도","avgSpeed",true,true,"일");
   line("평균 재컨택주기","avgRetouch",true,true,"일");
   var chTot=(cur.self||0)+(cur.sms||0)+(cur.agent||0);
-  if(chTot>0){ var sp=Math.round((cur.self||0)/chTot*100), ap=Math.round((cur.agent||0)/chTot*100); lines.push('<li>설치 채널 — 자가 <b>'+sp+'%</b> · 상담원 <b>'+ap+'%</b> · 문자 <b>'+(100-sp-ap)+'%</b></li>'); }
+  if(chTot>0){ var sp=Math.round((cur.self||0)/chTot*100); lines.push('<li>설치 채널 — 자가 <b>'+sp+'%</b> · 상담원(문자 포함) <b>'+(100-sp)+'%</b></li>'); }
   if(prev===null) lines.unshift('<li class="flat">가장 오래된 주라 전주 비교가 없습니다.</li>');
   document.getElementById("rptSummary").innerHTML=lines.join("")||'<li class="flat">표시할 지표가 없습니다.</li>';
   var ta=document.getElementById("rptNote"); ta.value=notes[RPT.week]||"";
@@ -1422,14 +1427,18 @@ function renderBoard(d){
   var n=rows.length, cur=rows[n-1], prev=n>1?rows[n-2]:null;
   var wkEl=document.getElementById("board-week");
   if(wkEl) wkEl.textContent="· "+rptWeekLabel(cur.week)+"주"+(prev?(" (전주 "+rptWeekLabel(prev.week)+" 대비)"):"");
-  // KPI 타일: weekTile 재사용(이번주 vs 전주). 속도·재컨택은 목표 색상/배지 포함.
+  // 상담원설치 = 상담원 + 문자발송(병합) 파생필드
+  rows.forEach(function(r){ if(r.agentAll==null) r.agentAll=(r.agent||0)+(r.sms||0); });
+  // KPI 타일: weekTile 재사용(이번주 vs 전주). 순서=설치완료·자가·상담원·출고·통화·속도·재컨택
   tbox.innerHTML =
     weekTile("이번주 설치완료","✅", rows, "installs", {accent:true}) +
-    weekTile("통화","📞", rows, "calls") +
-    weekTile("출고","📦", rows, "shipped") +
     weekTile("자가설치","🔧", rows, "self") +
+    weekTile("상담원설치","🎧", rows, "agentAll") +
+    weekTile("출고","📦", rows, "shipped") +
+    weekTile("통화","📞", rows, "calls") +
     weekTile("평균 설치속도","⏱️", rows, "avgSpeed", {valFn:round1, unit:"일", lowerBetter:true, target:SPD_TGT}) +
     weekTile("평균 재컨택주기","🔁", rows, "avgRetouch", {valFn:round1, unit:"일", lowerBetter:true, target:RTC_TGT});
+  renderBoardTarget(d.achievement, d.meta&&d.meta.today);
   renderBoardChannel(cur, prev);
   renderBoardNote(cur.week, notes);
   // 미설치 잔여 경과일(배송완료 기준)
@@ -1438,17 +1447,51 @@ function renderBoard(d){
     data:{ labels:["0~6일","7~13일","14~29일","30일+"], datasets:[{ data:[agd["0-6"],agd["7-13"],agd["14-29"],agd["30+"]],
       backgroundColor:[C["--s-blue-l"],C["--s-blue"],C["--s-yellow"],C["--critical"]], borderRadius:6 }] },
     options:{ scales:axes(), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
-  // 설치소요일 분포
-  var bk=(d.perf&&d.perf.speed&&d.perf.speed.buckets)||{};
-  mk("boardLead", { type:"bar",
-    data:{ labels:["0~2일","3~4일","5~6일","7~13일","14일+"], datasets:[{ data:[bk["0-2"]||0,bk["3-4"]||0,bk["5-6"]||0,bk["7-13"]||0,bk["14+"]||0],
-      backgroundColor:[C["--s-aqua"],C["--s-blue-l"],C["--s-blue"],C["--s-yellow"],C["--critical"]], borderRadius:6 }] },
-    options:{ scales:axes(), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
+  // 설치소요일 분포 (최초컨택 주 기준 · 전주 vs 금주 · 건수+%)
+  var lcw=(d.perf&&d.perf.leadDistByContactWeek)||[];
+  var lc=lcw[lcw.length-1], lp=lcw.length>1?lcw[lcw.length-2]:null;
+  var lkeys=["0-2","3-4","5-6","7-13","14+"], llabels=["0~2일","3~4일","5~6일","7~13일","14일+"];
+  function lPct(o){ var t=o?(o.total||0):0; return lkeys.map(function(k){ return (o&&t>0)?Math.round((o[k]||0)/t*1000)/10:0; }); }
+  var lds=[];
+  if(lp) lds.push({ label:rptWeekLabel(lp.week)+"주 (n="+(lp.total||0)+")", data:lkeys.map(function(k){return lp[k]||0;}), backgroundColor:C["--s-blue-l"], borderRadius:4, _pct:lPct(lp) });
+  if(lc) lds.push({ label:rptWeekLabel(lc.week)+"주 (n="+(lc.total||0)+")", data:lkeys.map(function(k){return lc[k]||0;}), backgroundColor:C["--s-blue"], borderRadius:4, _pct:lPct(lc) });
+  if(!lds.length){ document.getElementById("boardLead").parentNode.innerHTML='<div class="ach-nums" style="padding:40px 0;text-align:center">표시할 데이터가 없습니다.</div>'; }
+  else mk("boardLead", { type:"bar",
+    data:{ labels:llabels, datasets:lds },
+    options:{ scales:axes(),
+      plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}},
+        datalabels:{ display:true, anchor:"end", align:"end", color:C["--text-secondary"], font:{weight:"600",size:9}, formatter:function(v,ctx){ if(!v) return ""; var p=ctx.dataset._pct?ctx.dataset._pct[ctx.dataIndex]:null; return p!=null?[String(v),"("+p+"%)"]:String(v); } },
+        tooltip:{ callbacks:{ label:function(ct){ var p=ct.dataset._pct?ct.dataset._pct[ct.dataIndex]:null; return ct.dataset.label+": "+ct.parsed.y+"건"+(p!=null?(" ("+p+"%)"):""); } } } } } });
   renderBoardDelay(d.reasons);
+}
+function renderBoardTarget(a, today){
+  var box=document.getElementById("achBoardBox"); if(!box) return;
+  a=a||{}; var ibm=a.installByMonth||{}, tgts=a.targets||{};
+  var ym=(today||"").slice(0,7);
+  var seen={}, list=[]; Object.keys(ibm).concat(Object.keys(tgts)).forEach(function(m){ if(m&&!seen[m]){seen[m]=1;list.push(m);} }); list.sort();
+  if(!list.length){ box.innerHTML='<div class="ach-nums">표시할 설치 데이터가 없습니다.</div>'; return; }
+  var m=(ym&&list.indexOf(ym)>=0)?ym:list[list.length-1];
+  var done=ibm[m]||0, target=tgts[m], hasT=(typeof target==="number"&&target>0);
+  var pctv=hasT?Math.round(done/target*1000)/10:0, over=hasT&&done>=target;
+  var pace="";
+  if(hasT){
+    if(over){ pace='🎉 <b class="pace-hl">목표 달성!</b> (초과 '+fmt(done-target)+'개)'; }
+    else if(ym&&m<ym){ pace='기간 종료 · <b class="pace-bad">미달 '+fmt(target-done)+'개</b>'; }
+    else {
+      var y=+m.slice(0,4), mo=+m.slice(5), dim=new Date(y,mo,0).getDate();
+      var daysLeft=(ym&&m===ym)?(dim-(+today.slice(8,10))+1):dim; if(daysLeft<1) daysLeft=1;
+      pace='📅 남은 <b>'+daysLeft+'일</b> 동안 <b class="pace-hl">하루 평균 '+fmt(Math.ceil((target-done)/daysLeft))+'개</b> 설치해야 목표를 달성할 수 있어요 <span class="ach-remain">(잔여 '+fmt(target-done)+'개)</span>';
+    }
+  }
+  box.innerHTML=
+    '<div class="ach-top"><div class="board-tmon">'+m+' 목표</div><div class="ach-pct'+(over?' over':'')+'">'+(hasT?(pctv+'%'):'목표 미설정')+'</div></div>'
+    +'<div class="ach-track"><div class="ach-fill'+(over?' over':'')+'" style="width:'+(hasT?Math.min(100,pctv):0)+'%"></div></div>'
+    +'<div class="ach-foot"><div class="ach-nums">설치 <b>'+fmt(done)+'</b> / 목표 <b>'+(hasT?fmt(target):'–')+'</b>'+(hasT?(over?' <span class="ach-remain">· 초과 '+fmt(done-target)+'</span>':' <span class="ach-remain">· 잔여 '+fmt(target-done)+'</span>'):'')+'</div></div>'
+    +(pace?('<div class="ach-pace">'+pace+'</div>'):'');
 }
 function renderBoardChannel(cur, prev){
   var box=document.getElementById("boardChannel"); if(!box) return;
-  function ratio(w){ if(!w) return null; var t=(w.self||0)+(w.sms||0)+(w.agent||0); return t>0?{self:Math.round(w.self/t*100), agent:Math.round(w.agent/t*100), sms:Math.round(w.sms/t*100)}:null; }
+  function ratio(w){ if(!w) return null; var t=(w.self||0)+(w.sms||0)+(w.agent||0); return t>0?{self:Math.round(w.self/t*100), agent:Math.round(((w.agent||0)+(w.sms||0))/t*100)}:null; }
   var r=ratio(cur), p=ratio(prev);
   if(!r){ box.innerHTML='<div class="ach-nums">이번 주 설치완료 없음</div>'; return; }
   function row(label, cv, pv, color){
@@ -1457,25 +1500,36 @@ function renderBoardChannel(cur, prev){
     var prevTxt=(pv!=null)?' <span class="bch-prev">전주 '+pv+'%</span>':'';
     return '<div class="bch-row"><span class="bch-l">'+label+'</span><div class="bch-bar"><span style="width:'+cv+'%;background:'+color+'"></span></div><span class="bch-v"><b>'+cv+'%</b>'+prevTxt+wow+'</span></div>';
   }
-  box.innerHTML = row("자가설치", r.self, p&&p.self, C["--s-aqua"]) + row("상담원", r.agent, p&&p.agent, C["--s-blue"]) + row("문자발송", r.sms, p&&p.sms, C["--s-yellow"]);
+  box.innerHTML = row("자가설치", r.self, p&&p.self, C["--s-aqua"]) + row("상담원(문자 포함)", r.agent, p&&p.agent, C["--s-blue"]);
 }
+var BOARD_DELAY_SORT="desc"; // 이번주 건수 기준 정렬
 function renderBoardDelay(reasons){
   var tbl=document.getElementById("boardDelay"); if(!tbl) return;
   var wk=(reasons&&reasons.delayWeekly)||[];
   if(!wk.length){ tbl.innerHTML='<tbody><tr><td>데이터 없음</td></tr></tbody>'; return; }
   var cur=wk[wk.length-1], prev=wk.length>1?wk[wk.length-2]:null;
-  var cats=(reasons.delayCats||[]).slice().sort(function(a,b){ return (cur.reasons[b]||0)-(cur.reasons[a]||0); });
-  function delt(diff){ return diff>0?('<span class="delta-dn">▲'+diff+'</span>'):diff<0?('<span class="delta-up">▼'+Math.abs(diff)+'</span>'):'<span class="delta-flat">–</span>'; }
+  var ct=cur.total||0, pt=prev?(prev.total||0):0;
+  var cats=(reasons.delayCats||[]).slice().filter(function(cat){ var c=cur.reasons[cat]||0, pv=prev?(prev.reasons[cat]||0):0; return !(c===0&&pv===0); });
+  cats.sort(function(a,b){ var d=(cur.reasons[b]||0)-(cur.reasons[a]||0); return BOARD_DELAY_SORT==="asc"?-d:d; });
+  function pctOf(v,t){ return t>0?Math.round(v/t*100):0; }
+  function delt(c,pv){ // 증감 건수 + 증감율
+    if(pv==null) return "–";
+    var diff=c-pv; if(diff===0) return '<span class="delta-flat">–</span>';
+    var rate=pv>0?((diff>0?"+":"")+Math.round(diff/pv*100)+"%"):"신규";
+    return diff>0?('<span class="delta-dn">▲'+diff+' <small>'+rate+'</small></span>'):('<span class="delta-up">▼'+Math.abs(diff)+' <small>'+Math.round(diff/pv*100)+'%</small></span>');
+  }
+  function cell(v,t){ return '<b>'+v+'</b> <span class="cell-pct">'+pctOf(v,t)+'%</span>'; }
   var curL=rptWeekLabel(cur.week)+"주", prevL=prev?(rptWeekLabel(prev.week)+"주"):"전주";
-  var head='<thead><tr><th>지연 사유</th><th>'+curL+'</th><th>'+prevL+'</th><th>증감</th></tr></thead>';
+  var arrow=BOARD_DELAY_SORT==="asc"?"▲ 오름":"▼ 내림";
+  var head='<thead><tr><th>지연 사유</th><th>'+curL+' <button class="sort-btn" id="boardDelaySort" title="이번주 건수 정렬">'+arrow+'</button></th><th>'+prevL+'</th><th>증감(율)</th></tr></thead>';
   var body=cats.map(function(cat){
     var c=cur.reasons[cat]||0, pv=prev?(prev.reasons[cat]||0):null;
-    if(c===0 && (pv==null||pv===0)) return "";
-    return '<tr><td>'+cat+'</td><td><b>'+c+'</b></td><td>'+(pv==null?"–":pv)+'</td><td>'+(pv==null?"–":delt(c-pv))+'</td></tr>';
+    return '<tr><td>'+cat+'</td><td>'+cell(c,ct)+'</td><td>'+(pv==null?"–":cell(pv,pt))+'</td><td>'+delt(c,pv)+'</td></tr>';
   }).join("");
-  var ct=cur.total||0, pt=prev?(prev.total||0):null;
-  body+='<tr class="cur"><td><b>합계</b></td><td><b>'+ct+'</b></td><td>'+(pt==null?"–":pt)+'</td><td>'+(pt==null?"–":delt(ct-pt))+'</td></tr>';
+  body+='<tr class="cur"><td><b>합계</b></td><td><b>'+ct+'</b> <span class="cell-pct">100%</span></td><td>'+(prev?('<b>'+pt+'</b>'):"–")+'</td><td>'+(prev?delt(ct,pt):"–")+'</td></tr>';
   tbl.innerHTML=head+'<tbody>'+body+'</tbody>';
+  var sb=document.getElementById("boardDelaySort");
+  if(sb) sb.addEventListener("click", function(){ BOARD_DELAY_SORT=(BOARD_DELAY_SORT==="desc"?"asc":"desc"); renderBoardDelay(reasons); });
 }
 function renderBoardNote(week, notes){
   var box=document.getElementById("boardNote"); if(!box) return;
