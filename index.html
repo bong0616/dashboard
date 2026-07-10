@@ -692,8 +692,8 @@ function renderWeekly(p){
 
 function renderWeeklyTable(rows){
   var head = '<thead><tr>'
-    + '<th>주 (월요일)</th><th>출고</th><th>통화</th><th>최초컨택</th><th>설치완료</th>'
-    + '<th>자가설치</th><th>상담원</th><th>평균 설치속도</th><th>평균 재컨택주기</th>'
+    + '<th>주 (월요일)</th><th>출고</th><th>일통화량</th><th>최초컨택</th><th>설치완료</th>'
+    + '<th>자가설치</th><th>상담원컨택후설치</th><th>평균 설치속도</th><th>평균 재컨택주기</th>'
     + '</tr></thead>';
   var recent = rows.slice(-12);            // 최근 12주(오름차순)
   var lastIdx = recent.length - 1;
@@ -810,8 +810,8 @@ function renderDaily(p){
 
 function renderDailyTable(rows){
   var head = '<thead><tr>'
-    + '<th>일자</th><th>출고</th><th>통화</th><th>최초컨택</th><th>설치완료</th>'
-    + '<th>자가설치</th><th>상담원</th><th>평균 설치속도</th><th>평균 재컨택주기</th>'
+    + '<th>일자</th><th>출고</th><th>일통화량</th><th>최초컨택</th><th>설치완료</th>'
+    + '<th>자가설치</th><th>상담원컨택후설치</th><th>평균 설치속도</th><th>평균 재컨택주기</th>'
     + '</tr></thead>';
   var recent = rows.slice(-14);            // 최근 14일(오름차순)
   var lastIdx = recent.length - 1;
