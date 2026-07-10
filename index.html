@@ -1466,7 +1466,8 @@ function renderBoardDelay(reasons){
   var cur=wk[wk.length-1], prev=wk.length>1?wk[wk.length-2]:null;
   var cats=(reasons.delayCats||[]).slice().sort(function(a,b){ return (cur.reasons[b]||0)-(cur.reasons[a]||0); });
   function delt(diff){ return diff>0?('<span class="delta-dn">▲'+diff+'</span>'):diff<0?('<span class="delta-up">▼'+Math.abs(diff)+'</span>'):'<span class="delta-flat">–</span>'; }
-  var head='<thead><tr><th>지연 사유</th><th>이번주</th><th>전주</th><th>증감</th></tr></thead>';
+  var curL=rptWeekLabel(cur.week)+"주", prevL=prev?(rptWeekLabel(prev.week)+"주"):"전주";
+  var head='<thead><tr><th>지연 사유</th><th>'+curL+'</th><th>'+prevL+'</th><th>증감</th></tr></thead>';
   var body=cats.map(function(cat){
     var c=cur.reasons[cat]||0, pv=prev?(prev.reasons[cat]||0):null;
     if(c===0 && (pv==null||pv===0)) return "";
