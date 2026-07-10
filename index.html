@@ -319,7 +319,7 @@
       <div class="card col-5"><h3>📵 부재 단계별</h3><div class="sub">재컨택 우선순위 판단용</div><div class="chart-wrap h220"><canvas id="opsAbsent"></canvas></div></div>
       <div class="card col-7"><h3>🧾 미설치 사유 (현재 잔여)</h3><div class="sub">로우데이터 L열 코드화 사유 · 반품/폐업 제외 · 사유미기재는 배송중 제외(배송완료 기준)</div><div class="chart-wrap h260"><canvas id="opsReason"></canvas></div></div>
       <div class="card col-12"><h3>🔎 사유코드 없는 미설치 — 배송상태 구성</h3><div class="sub">L열 사유 없는 미설치 <b id="ops-unspec-cnt">–</b>건 중, <b>배송중은 아직 설치 전이라 위 '사유미기재'에서 제외</b> · 배송완료 건이 실제 관리 대상</div><div class="chart-wrap h220"><canvas id="opsUnspecDelivery"></canvas></div></div>
-      <div class="card col-12"><h3>🔑 미설치 사유 (메모 키워드 분류)</h3><div class="sub">현재 미설치 잔여건(반품·폐업 제외)의 <b>메모를 키워드 자동분류</b> · 설치일 무관 · 7일+ 지연 사유와 동일 로직(부재·문자안내/미룸/방문설치 접수/원격접수/전산·결제단말 등)</div><div class="chart-wrap" style="height:380px"><canvas id="opsReasonKw"></canvas></div></div>
+      <div class="card col-12"><h3>🔑 미설치 사유 (메모 키워드 분류)</h3><div class="sub">현재 미설치 잔여건(반품·폐업 제외)의 <b>메모를 키워드 자동분류</b> · 설치일 무관 · 7일+ 지연 사유와 동일 로직(부재·문자안내/미룸/방문설치 접수/원격접수/전산·결제단말 등) · <b>기타 막대 클릭 시 세부내역</b></div><div class="chart-wrap" style="height:380px"><canvas id="opsReasonKw"></canvas></div></div>
     </div>
   </section>
 
@@ -545,14 +545,21 @@ function renderOps(o, reasons) {
         backgroundColor:[C["--muted"],C["--s-red"],C["--s-orange"]], borderRadius:6 }] },
     options:{ scales:axes(), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
 
-  // 미설치 잔여건 메모 키워드 분류(보조)
+  // 미설치 잔여건 메모 키워드 분류(보조) · '기타'는 클릭 시 2차 키워드 세분(D+7과 동일)
   var kz = (reasons.uninstallReasonKw||[]).slice(0,11);
+  var kwEtc = reasons.uninstallReasonKwEtc||[];
+  var kwEtcTotal = kwEtc.reduce(function(s,r){return s+r.count;},0);
+  var isKwEtc=function(i){ return kz[i] && kz[i].label==="기타"; };
   var kwSc=axes({horizontal:true});
   kwSc.y.ticks.autoSkip=false; kwSc.y.ticks.font={size:11.5}; kwSc.y.ticks.crossAlign="far";
   mk("opsReasonKw", { type:"bar",
     data:{ labels:kz.map(function(r){return r.label;}),
       datasets:[{ data:kz.map(function(r){return r.count;}), backgroundColor:kz.map(function(r){return delayCatColor(r.label);}), borderRadius:5, categoryPercentage:.74, barPercentage:.82 }] },
-    options:{ indexAxis:"y", scales:kwSc, plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
+    options:{ indexAxis:"y", scales:kwSc,
+      onClick:function(evt, els){ if(els&&els.length&&isKwEtc(els[0].index)) openDelayModal(kwEtc, kwEtcTotal, "미설치 사유 · 기타 세부내역", "현재 미설치 잔여건 메모 키워드 자동분류 · 개인정보 미포함"); },
+      onHover:function(evt, els){ if(evt.native&&evt.native.target) evt.native.target.style.cursor=(els.length&&isKwEtc(els[0].index))?"pointer":"default"; },
+      plugins:{ datalabels: dl({anchor:"end",align:"end"}),
+        tooltip:{ callbacks:{ afterLabel:function(ct){ return isKwEtc(ct.dataIndex)?"▶ 클릭 시 세부내역":undefined; } } } } } });
 }
 
 // D+7 지연/미설치 사유 카테고리 → 색상(운영 보조차트·주별 분석탭 공용)
@@ -1161,8 +1168,8 @@ function renderDelay(reasons, ins) {
         tooltip:{ callbacks:{ afterLabel:function(ct){ return isEtc(ct.dataIndex)?"▶ 클릭 시 세부내역":undefined; } } } } } });
 }
 
-// '기타' 세부내역 팝업 — 메모 키워드 분류(개인정보 미포함)
-function openDelayModal(rows, total){
+// '기타' 세부내역 팝업 — 메모 키워드 분류(개인정보 미포함). title/sub 생략 시 D+7 기본값.
+function openDelayModal(rows, total, title, sub){
   var body;
   if(!rows || !rows.length){
     body='<div class="modal-empty">세부 분류할 기타 건이 없습니다.</div>';
@@ -1175,8 +1182,8 @@ function openDelayModal(rows, total){
         + '<td class="mv">'+fmt(r.count)+'건 <b>'+p+'%</b></td></tr>';
     }).join('')+'</tbody></table>';
   }
-  document.getElementById("modal-title").textContent="7일+ 지연 · 기타 세부내역 ("+fmt(total)+"건)";
-  document.getElementById("modal-sub").textContent="메모 키워드 자동분류 · 개인정보 미포함";
+  document.getElementById("modal-title").textContent=(title||"7일+ 지연 · 기타 세부내역")+" ("+fmt(total)+"건)";
+  document.getElementById("modal-sub").textContent=sub||"메모 키워드 자동분류 · 개인정보 미포함";
   document.getElementById("modal-body").innerHTML=body;
   document.getElementById("modal").classList.add("open");
 }
