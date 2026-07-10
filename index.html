@@ -171,6 +171,16 @@
   .tgt-badge.tgt-over { background: color-mix(in srgb, var(--critical) 14%, transparent); }
   .th-tgt { display:block; font-weight:600; font-size:10px; color: var(--s-blue); margin-top:2px; }
   .rt-tgt { margin-top:5px; }
+  /* KPI 목표 설정 */
+  .kpi-edit { margin-top:6px; display:flex; flex-direction:column; gap:10px; }
+  .kpi-row { display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+  .kpi-row label { font-size:13px; font-weight:600; color: var(--text-primary); min-width:150px; }
+  .kpi-input { font-family: var(--font); font-size:13px; width:80px; text-align:right; color: var(--text-primary); background: var(--page); border:1px solid var(--border); border-radius:8px; padding:6px 9px; font-variant-numeric:tabular-nums; }
+  .kpi-input:focus { outline:2px solid var(--s-blue); border-color:transparent; }
+  .kpi-u { font-size:12.5px; color: var(--muted); }
+  .kpi-save { font-family: var(--font); font-size:12px; font-weight:600; color:#fff; background: var(--s-blue); border:1px solid transparent; border-radius:8px; padding:6px 12px; cursor:pointer; }
+  .kpi-save:disabled { opacity:.55; cursor:default; }
+  .kpi-msg { font-size:12px; font-weight:600; } .kpi-msg.ok { color:#1f9e57; } .kpi-msg.err { color: var(--critical); }
   .col-4 { grid-column: span 4; } .col-5 { grid-column: span 5; } .col-6 { grid-column: span 6; }
   .col-7 { grid-column: span 7; } .col-8 { grid-column: span 8; } .col-12 { grid-column: span 12; }
   .chart-wrap { position: relative; width: 100%; }
@@ -435,6 +445,11 @@
   <section class="tab-content" id="tab-report">
     <div class="grid">
       <div class="card col-12">
+        <h3>🎯 KPI 목표 설정</h3>
+        <div class="sub">평균 설치속도·재컨택주기 목표(일) · 저장 시 <b>주간·일간·리포트 전 화면</b>에 반영 · 모든 사용자 공유</div>
+        <div id="kpiBox" class="kpi-edit"></div>
+      </div>
+      <div class="card col-12">
         <h3>📝 주차별 리포트</h3>
         <div class="sub">주(월요일 시작) 선택 · <b>전주 대비 자동 요약</b> + 수기 코멘트(저장 시 모든 사용자 공유)</div>
         <div id="reportBox" class="rpt"></div>
@@ -514,6 +529,9 @@ var dlSeg = function () { return { display:true, color:"#fff", clamp:true, font:
 function render(d) {
   document.getElementById("foot-time").textContent = d.meta.generatedAt;
   document.getElementById("foot-sheet").textContent = d.meta.sheetTitle;
+  // KPI 목표(조정형) — 이후 타일·표·리포트 렌더 전에 반영
+  if (d.kpiTargets) { SPD_TGT = d.kpiTargets.speed; RTC_TGT = d.kpiTargets.retouch; }
+  renderKpi(d.kpiTargets);
   renderOps(d.ops, d.reasons);
   renderPerf(d.perf);
   renderFlow(d.perf);
@@ -916,7 +934,7 @@ function renderWeeklyTable(rows){
     + '<tr>'
     +   '<th rowspan="2">주 (월요일)</th><th rowspan="2">출고</th><th rowspan="2">주통화량</th><th rowspan="2">최초컨택</th>'
     +   '<th colspan="3" class="grp grp-top gl gr">설치완료 <small>합계 = 자가설치 + 상담원컨택후설치</small></th>'
-    +   '<th rowspan="2">평균 설치속도<br><small class="th-tgt">목표 ≤3.5일</small></th><th rowspan="2">평균 재컨택주기<br><small class="th-tgt">목표 ≤3일</small></th>'
+    +   '<th rowspan="2">평균 설치속도<br><small class="th-tgt">목표 ≤'+SPD_TGT+'일</small></th><th rowspan="2">평균 재컨택주기<br><small class="th-tgt">목표 ≤'+RTC_TGT+'일</small></th>'
     + '</tr>'
     + '<tr><th class="grp gl">합계</th><th class="grp">자가설치</th><th class="grp gr">상담원컨택후설치</th></tr>'
     + '</thead>';
@@ -1040,7 +1058,7 @@ function renderDailyTable(rows){
     + '<tr>'
     +   '<th rowspan="2">일자</th><th rowspan="2">출고</th><th rowspan="2">일통화량</th><th rowspan="2">최초컨택</th>'
     +   '<th colspan="3" class="grp grp-top gl gr">설치완료 <small>합계 = 자가설치 + 상담원컨택후설치</small></th>'
-    +   '<th rowspan="2">평균 설치속도<br><small class="th-tgt">목표 ≤3.5일</small></th><th rowspan="2">평균 재컨택주기<br><small class="th-tgt">목표 ≤3일</small></th>'
+    +   '<th rowspan="2">평균 설치속도<br><small class="th-tgt">목표 ≤'+SPD_TGT+'일</small></th><th rowspan="2">평균 재컨택주기<br><small class="th-tgt">목표 ≤'+RTC_TGT+'일</small></th>'
     + '</tr>'
     + '<tr><th class="grp gl">합계</th><th class="grp">자가설치</th><th class="grp gr">상담원컨택후설치</th></tr>'
     + '</thead>';
@@ -1298,6 +1316,38 @@ function saveReportNote(notes){
     } else { msg.textContent=(res&&res.error)||"저장 실패"; msg.className="rpt-msg err"; }
   }, function(){ btn.disabled=false; msg.textContent="통신 오류"; msg.className="rpt-msg err"; },
   { params:{ action:"setnote", week:w, note:ta.value } });
+}
+
+// ===== 🎯 KPI 목표(조정형) 설정 UI =====
+function renderKpi(kpi){
+  kpi = kpi || { speed:SPD_TGT, retouch:RTC_TGT };
+  var box=document.getElementById("kpiBox"); if(!box) return;
+  box.innerHTML=
+    '<div class="kpi-row"><label>⏱️ 평균 설치속도 목표</label><input class="kpi-input" id="kpiSpeed" type="number" min="0.1" max="100" step="0.1" value="'+kpi.speed+'"><span class="kpi-u">일 이하</span><button class="kpi-save" data-kind="speed">저장</button><span class="kpi-msg" id="kpiMsgSpeed"></span></div>'
+    +'<div class="kpi-row"><label>🔁 평균 재컨택주기 목표</label><input class="kpi-input" id="kpiRetouch" type="number" min="0.1" max="100" step="0.1" value="'+kpi.retouch+'"><span class="kpi-u">일 이하</span><button class="kpi-save" data-kind="retouch">저장</button><span class="kpi-msg" id="kpiMsgRetouch"></span></div>';
+  Array.prototype.forEach.call(box.querySelectorAll(".kpi-save"), function(b){ b.addEventListener("click", function(){ saveKpi(b.getAttribute("data-kind")); }); });
+}
+function saveKpi(kind){
+  if(!LAST_PASS) return;
+  var isSpeed=(kind==="speed");
+  var inp=document.getElementById(isSpeed?"kpiSpeed":"kpiRetouch");
+  var msg=document.getElementById(isSpeed?"kpiMsgSpeed":"kpiMsgRetouch");
+  var btns=document.querySelectorAll(".kpi-save");
+  var v=parseFloat(inp.value);
+  if(isNaN(v)||v<=0||v>100){ msg.textContent="0 초과 100 이하"; msg.className="kpi-msg err"; return; }
+  Array.prototype.forEach.call(btns,function(b){b.disabled=true;});
+  msg.textContent="저장 중…"; msg.className="kpi-msg";
+  fetchData(LAST_PASS, function(res){
+    Array.prototype.forEach.call(btns,function(b){b.disabled=false;});
+    if(res&&res.ok){
+      SPD_TGT=res.kpiTargets.speed; RTC_TGT=res.kpiTargets.retouch;
+      if(LAST_DATA) LAST_DATA.kpiTargets=res.kpiTargets;
+      msg.textContent="저장됨 ✓ (전 화면 반영)"; msg.className="kpi-msg ok";
+      // 목표 반영해 관련 화면 재렌더
+      if(LAST_DATA){ renderWeekly(LAST_DATA.perf); renderDaily(LAST_DATA.perf); renderReport(LAST_DATA.perf, LAST_DATA.weeklyNotes); }
+    } else { msg.textContent=(res&&res.error)||"저장 실패"; msg.className="kpi-msg err"; }
+  }, function(){ Array.prototype.forEach.call(btns,function(b){b.disabled=false;}); msg.textContent="통신 오류"; msg.className="kpi-msg err"; },
+  { params:{ action:"setkpi", kind:kind, value:v } });
 }
 
 // delay reasons chart needs reasons object; render it here with access to full payload
