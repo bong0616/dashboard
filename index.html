@@ -565,7 +565,7 @@ function trendCombo(id, rows, labelFn) {
   mk(id, { type:"bar",
     data:{ labels: rows.map(labelFn),
       datasets:[
-        { type:"bar", label:"통화시도량", data:rows.map(function(x){return x.calls;}), backgroundColor:C["--s-blue-l"], borderRadius:3, barPercentage:.9, categoryPercentage:.9, order:3 },
+        { type:"bar", label:"통화시도량", data:rows.map(function(x){return x.calls;}), backgroundColor:C["--s-blue-l"], borderRadius:3, barPercentage:.9, categoryPercentage:.9, order:3, datalabels: dlBarTop({font:{weight:"600",size:9}}) },
         { type:"line", label:"설치완료", data:rows.map(function(x){return x.installs;}), borderColor:C["--s-aqua"], backgroundColor:"transparent", borderWidth:2.4, tension:.3, pointRadius:2, pointBackgroundColor:C["--s-aqua"], order:1 },
         { type:"line", label:"최초컨택", data:rows.map(function(x){return x.firstContacts;}), borderColor:C["--s-yellow"], backgroundColor:"transparent", borderWidth:2, tension:.3, pointRadius:0, borderDash:[4,3], order:2 }
       ] },
