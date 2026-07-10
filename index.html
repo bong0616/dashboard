@@ -115,6 +115,28 @@
   .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 18px 16px; box-shadow: var(--shadow); min-width: 0; }
   .card h3 { font-size: 14.5px; letter-spacing: -.3px; display:flex; align-items:center; gap:8px; }
   .card .sub { font-size: 12px; color: var(--muted); margin-top: 3px; margin-bottom: 8px; }
+  /* 월 목표 달성률 카드 */
+  .ach { margin-top: 4px; }
+  .ach-top { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .ach-month { font-family: var(--font); font-size: 13px; font-weight: 600; color: var(--text-primary); background: var(--page); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+  .ach-month:focus { outline: 2px solid var(--s-blue); border-color: transparent; }
+  .ach-pct { font-size: 30px; font-weight: 800; letter-spacing:-.5px; color: var(--s-blue); font-variant-numeric: tabular-nums; line-height:1; }
+  .ach-pct.over { color: #1f9e57; }
+  .ach-track { position:relative; height: 16px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 22%, transparent); overflow:hidden; margin: 12px 0 10px; }
+  .ach-fill { position:absolute; inset:0 auto 0 0; height:100%; border-radius:999px; background: linear-gradient(90deg, var(--s-blue-l), var(--s-blue)); transition: width .5s ease; }
+  .ach-fill.over { background: linear-gradient(90deg, #34c47b, #1f9e57); }
+  .ach-foot { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+  .ach-nums { font-size: 13px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .ach-nums b { color: var(--text-primary); font-weight: 700; }
+  .ach-remain { color: var(--muted); }
+  .ach-edit { display:flex; align-items:center; gap:7px; }
+  .ach-edit label { font-size:12px; color: var(--muted); font-weight:600; }
+  .ach-input { font-family: var(--font); font-size:13px; width:100px; text-align:right; color: var(--text-primary); background: var(--page); border:1px solid var(--border); border-radius:8px; padding:6px 9px; font-variant-numeric: tabular-nums; }
+  .ach-input:focus { outline: 2px solid var(--s-blue); border-color: transparent; }
+  .ach-save { font-family: var(--font); font-size:12px; font-weight:600; color:#fff; background: var(--s-blue); border:1px solid transparent; border-radius:8px; padding:6px 12px; cursor:pointer; }
+  .ach-save:disabled { opacity:.55; cursor:default; }
+  .ach-msg { font-size:12px; font-weight:600; }
+  .ach-msg.ok { color:#1f9e57; } .ach-msg.err { color: var(--critical); }
   .col-4 { grid-column: span 4; } .col-5 { grid-column: span 5; } .col-6 { grid-column: span 6; }
   .col-7 { grid-column: span 7; } .col-8 { grid-column: span 8; } .col-12 { grid-column: span 12; }
   .chart-wrap { position: relative; width: 100%; }
@@ -340,6 +362,11 @@
   <section class="tab-content" id="tab-cohort">
     <div class="tiles" id="cohort-tiles"></div>
     <div class="grid">
+      <div class="card col-12">
+        <h3>🎯 월 목표 달성률</h3>
+        <div class="sub">로우데이터 <b>U열(설치일)</b> 기준 월별 설치완료 vs 수기 입력 목표 · 목표는 저장 시 모든 사용자에게 공유됩니다</div>
+        <div id="achBox" class="ach"></div>
+      </div>
       <div class="card col-12"><h3>📊 2026 출고건 전체 상태 구성</h3><div class="sub">출고 <b id="coh-total">–</b>건이 지금 어떤 상태인지 세부 분류 (설치완료 외에도 반품·폐업, 위약금 등 종결건 분리)</div><div id="cohSummary" class="statgrid"></div></div>
       <div class="card col-7"><h3>📦 출고월별 진행률</h3><div class="sub">출고량 대비 설치완료 (자가설치 포함 전체)</div><div class="chart-wrap h260"><canvas id="cohMonth"></canvas></div></div>
       <div class="card col-5"><h3>🧩 월별 설치 채널 구성</h3><div class="sub">자가/문자/상담원 완료 건수</div><div class="chart-wrap h260"><canvas id="cohChannel"></canvas></div></div>
@@ -1052,6 +1079,69 @@ function renderCohort(c) {
       plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"],padding:12}}, datalabels:{display:false} } } });
 }
 
+// ===== 🎯 월 목표 달성률 (U열 설치일 기준 월별 설치완료 vs 수기 목표) =====
+var ACH = { installByMonth:{}, targets:{}, month:null };
+function renderAchievement(a, todayYm){
+  a = a || {};
+  ACH.installByMonth = a.installByMonth || {};
+  ACH.targets = a.targets || {};
+  // 월 목록: 설치 발생 월 ∪ 목표 설정 월
+  var seen={}, list=[];
+  Object.keys(ACH.installByMonth).concat(Object.keys(ACH.targets)).forEach(function(m){ if(m && !seen[m]){ seen[m]=1; list.push(m); } });
+  list.sort();
+  var box=document.getElementById("achBox");
+  if(!box) return;
+  if(!list.length){ box.innerHTML='<div class="ach-nums">표시할 설치 데이터가 없습니다.</div>'; return; }
+  // 선택월 유지 · 없으면 이번 달 → 최신월
+  if(!ACH.month || list.indexOf(ACH.month)<0)
+    ACH.month = (todayYm && list.indexOf(todayYm)>=0) ? todayYm : list[list.length-1];
+  var opts=list.map(function(m){ return '<option value="'+m+'"'+(m===ACH.month?' selected':'')+'>'+m+'</option>'; }).join("");
+  box.innerHTML=
+    '<div class="ach-top"><select class="ach-month" id="achMonth">'+opts+'</select><div class="ach-pct" id="achPct">–</div></div>'
+    +'<div class="ach-track"><div class="ach-fill" id="achFill" style="width:0%"></div></div>'
+    +'<div class="ach-foot"><div class="ach-nums" id="achNums"></div>'
+    +'<div class="ach-edit"><label for="achInput">목표</label>'
+    +'<input class="ach-input" id="achInput" type="number" min="0" step="1" inputmode="numeric" placeholder="미설정">'
+    +'<button class="ach-save" id="achSave">목표 저장</button><span class="ach-msg" id="achMsg"></span></div></div>';
+  document.getElementById("achMonth").addEventListener("change", function(){ ACH.month=this.value; paintAchievement(); });
+  document.getElementById("achSave").addEventListener("click", saveAchTarget);
+  document.getElementById("achInput").addEventListener("keydown", function(e){ if(e.key==="Enter") saveAchTarget(); });
+  paintAchievement();
+}
+function paintAchievement(){
+  var m=ACH.month, done=ACH.installByMonth[m]||0, target=ACH.targets[m];
+  var hasT=(typeof target==="number" && target>0);
+  var pct=hasT?Math.round(done/target*1000)/10:0, over=hasT&&done>=target;
+  var pctEl=document.getElementById("achPct"), fillEl=document.getElementById("achFill");
+  if(!pctEl) return;
+  pctEl.textContent=hasT?(pct+"%"):"목표 미설정";
+  pctEl.className="ach-pct"+(over?" over":"");
+  fillEl.style.width=(hasT?Math.min(100,pct):0)+"%";
+  fillEl.className="ach-fill"+(over?" over":"");
+  var nums='설치 <b>'+fmt(done)+'</b> / 목표 <b>'+(hasT?fmt(target):"–")+'</b>';
+  if(hasT) nums+= over ? ' <span class="ach-remain">· 초과 '+fmt(done-target)+'</span>' : ' <span class="ach-remain">· 잔여 '+fmt(target-done)+'</span>';
+  document.getElementById("achNums").innerHTML=nums;
+  var inp=document.getElementById("achInput"); inp.value=hasT?target:"";
+  var msg=document.getElementById("achMsg"); msg.textContent=""; msg.className="ach-msg";
+}
+function saveAchTarget(){
+  if(!LAST_PASS) return;
+  var m=ACH.month, inp=document.getElementById("achInput"), msg=document.getElementById("achMsg");
+  var raw=String(inp.value).replace(/[, ]/g,"").trim();
+  if(raw===""||isNaN(parseInt(raw,10))||parseInt(raw,10)<0){ msg.textContent="0 이상 정수 입력"; msg.className="ach-msg err"; return; }
+  var val=parseInt(raw,10), btn=document.getElementById("achSave");
+  btn.disabled=true; msg.textContent="저장 중…"; msg.className="ach-msg";
+  fetchData(LAST_PASS, function(res){
+    btn.disabled=false;
+    if(res && res.ok){
+      ACH.targets=res.targets||ACH.targets;
+      if(LAST_DATA && LAST_DATA.achievement) LAST_DATA.achievement.targets=ACH.targets;
+      paintAchievement(); msg.textContent="저장됨 ✓"; msg.className="ach-msg ok";
+    } else { msg.textContent=(res&&res.error)||"저장 실패"; msg.className="ach-msg err"; }
+  }, function(){ btn.disabled=false; msg.textContent="통신 오류"; msg.className="ach-msg err"; },
+  { params:{ action:"settarget", month:m, target:val } });
+}
+
 // delay reasons chart needs reasons object; render it here with access to full payload
 function renderDelay(reasons, ins) {
   var dz=reasons.delayReason.slice(0,10);
@@ -1102,9 +1192,12 @@ function fetchData(passcode, cb, err, opts) {
   window[name]=function(data){ cleanup(); cb(data); };
   var s=document.createElement("script");
   s.onerror=function(){ cleanup(); err("데이터 로드 실패."); };
+  var extra="";
+  if(opts.params){ for(var k in opts.params){ if(opts.params.hasOwnProperty(k)) extra+="&"+k+"="+encodeURIComponent(opts.params[k]); } }
   s.src=API_BASE+"?key="+encodeURIComponent(passcode)+"&callback="+name
     +(opts.fresh?"&fresh=1":"")
     +((opts.start&&opts.end)?("&start="+opts.start+"&end="+opts.end):"")
+    +extra
     +"&_="+Date.now();
   document.body.appendChild(s);
 }
@@ -1121,6 +1214,7 @@ function applyData(d){
   LAST_DATA=d;
   render(d);
   renderDelay(d.reasons, d.perf.install);
+  renderAchievement(d.achievement, (d.meta && d.meta.today || "").slice(0,7));
   document.getElementById("page-badge").textContent = CUR_PERIOD.start ? ("● "+CUR_PERIOD.label) : "● 전체 기간";
 }
 function boot(passcode) {
