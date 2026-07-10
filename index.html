@@ -137,6 +137,33 @@
   .ach-save:disabled { opacity:.55; cursor:default; }
   .ach-msg { font-size:12px; font-weight:600; }
   .ach-msg.ok { color:#1f9e57; } .ach-msg.err { color: var(--critical); }
+  /* 주차별 리포트 */
+  .rpt { margin-top: 4px; }
+  .rpt-head { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+  .rpt-week { font-family: var(--font); font-size:14px; font-weight:700; color: var(--text-primary); background: var(--page); border:1px solid var(--border); border-radius:8px; padding:7px 11px; cursor:pointer; }
+  .rpt-week:focus { outline:2px solid var(--s-blue); border-color:transparent; }
+  .rpt-range { font-size:12.5px; color: var(--muted); font-weight:500; }
+  .rpt-tiles { display:grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap:10px; margin-bottom:16px; }
+  .rt { background: var(--surface-1); border:1px solid var(--border); border-radius:12px; padding:12px 14px; }
+  .rt .rt-l { font-size:12px; color: var(--text-secondary); font-weight:500; display:flex; align-items:center; gap:6px; }
+  .rt .rt-v { font-size:23px; font-weight:800; letter-spacing:-.4px; margin-top:5px; font-variant-numeric:tabular-nums; }
+  .rt .rt-v .u { font-size:13px; font-weight:600; color: var(--text-secondary); margin-left:2px; }
+  .rt .rt-d { font-size:11.5px; margin-top:4px; font-weight:600; }
+  .rt-d.good { color:#1f9e57; } .rt-d.bad { color: var(--critical); } .rt-d.muted { color: var(--muted); font-weight:500; }
+  .rpt-summary { background: color-mix(in srgb, var(--s-blue) 7%, transparent); border-left:3px solid var(--s-blue); border-radius:8px; padding:13px 15px; margin-bottom:16px; }
+  .rpt-summary .rs-head { font-size:13px; font-weight:700; color: var(--text-primary); margin-bottom:8px; }
+  .rpt-summary ul { list-style:none; margin:0; padding:0; }
+  .rpt-summary li { font-size:12.5px; color: var(--text-secondary); line-height:1.7; }
+  .rpt-summary li b { color: var(--text-primary); font-variant-numeric:tabular-nums; }
+  .rpt-summary .up { color:#1f9e57; font-weight:700; } .rpt-summary .down { color: var(--critical); font-weight:700; } .rpt-summary .flat { color: var(--muted); }
+  .rpt-note label { display:block; font-size:12.5px; font-weight:700; color: var(--text-primary); margin-bottom:6px; }
+  .rpt-note textarea { width:100%; min-height:90px; font-family: var(--font); font-size:13px; line-height:1.6; color: var(--text-primary); background: var(--page); border:1px solid var(--border); border-radius:10px; padding:10px 12px; resize:vertical; box-sizing:border-box; }
+  .rpt-note textarea:focus { outline:2px solid var(--s-blue); border-color:transparent; }
+  .rpt-note-foot { display:flex; align-items:center; gap:10px; margin-top:8px; }
+  .rpt-save { font-family: var(--font); font-size:12.5px; font-weight:600; color:#fff; background: var(--s-blue); border:1px solid transparent; border-radius:8px; padding:7px 14px; cursor:pointer; }
+  .rpt-save:disabled { opacity:.55; cursor:default; }
+  .rpt-cnt { font-size:11.5px; color: var(--muted); font-variant-numeric:tabular-nums; }
+  .rpt-msg { font-size:12px; font-weight:600; } .rpt-msg.ok { color:#1f9e57; } .rpt-msg.err { color: var(--critical); }
   .col-4 { grid-column: span 4; } .col-5 { grid-column: span 5; } .col-6 { grid-column: span 6; }
   .col-7 { grid-column: span 7; } .col-8 { grid-column: span 8; } .col-12 { grid-column: span 12; }
   .chart-wrap { position: relative; width: 100%; }
@@ -281,6 +308,7 @@
   <div class="navitem" data-tab="cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div></div>
   <div class="navitem" data-tab="weekly" id="nav-weekly"><span class="ic">🗓️</span><div>주간 비교<small>주차별 스코어보드</small></div><span class="navcaret" id="weekly-caret">▸</span></div>
   <div class="navitem navchild" data-tab="daily" id="nav-daily" style="display:none"><span class="ic">📆</span><div>일간 비교<small>일자별 스코어보드</small></div></div>
+  <div class="navitem" data-tab="report"><span class="ic">📝</span><div>주차별 리포트<small>전주 대비 요약·코멘트</small></div></div>
   <div class="side-foot">
     <div>업데이트 <b id="foot-time">–</b></div>
     <div id="foot-sheet" style="margin-top:4px;"></div>
@@ -395,6 +423,17 @@
       <div class="card col-12"><h3>📆 일자별 상세 비교표</h3><div class="sub">최근 14일 · 최신 일이 위 · <b>▲▼</b>는 직전 일 대비 증감(속도·재컨택주기는 낮을수록 개선)</div><div class="tbl-wrap"><table class="dtable" id="dailyTable"></table></div></div>
     </div>
   </section>
+
+  <!-- REPORT (주차별 리포트) -->
+  <section class="tab-content" id="tab-report">
+    <div class="grid">
+      <div class="card col-12">
+        <h3>📝 주차별 리포트</h3>
+        <div class="sub">주(월요일 시작) 선택 · <b>전주 대비 자동 요약</b> + 수기 코멘트(저장 시 모든 사용자 공유)</div>
+        <div id="reportBox" class="rpt"></div>
+      </div>
+    </div>
+  </section>
 </main>
 
 <!-- 상세 팝업(모달) — 7일+ 지연 '기타' 세부내역 등 -->
@@ -475,6 +514,7 @@ function render(d) {
   renderWeekly(d.perf);
   renderDaily(d.perf);
   renderDelayWeekly(d.reasons);
+  renderReport(d.perf, d.weeklyNotes);
 }
 
 function tile(label, ic, val, unit, sub, accent, tip) {
@@ -1149,6 +1189,93 @@ function saveAchTarget(){
   { params:{ action:"settarget", month:m, target:val } });
 }
 
+// ===== 📝 주차별 리포트 (전주 대비 자동 요약 + 수기 코멘트) =====
+var RPT = { week:null };
+function rptR1(v){ return v==null?null:Math.round(v*10)/10; }
+function rptFmt(r1){ return r1 ? function(v){ return v==null?"–":rptR1(v); } : fmt; }
+function rptWeekLabel(w){ var s=w.split("-"); var mon=new Date(+s[0],+s[1]-1,+s[2]); var sun=new Date(mon); sun.setDate(mon.getDate()+6); return (mon.getMonth()+1)+"/"+mon.getDate()+"~"+(sun.getMonth()+1)+"/"+sun.getDate(); }
+function rptDelta(cur, prev, low, vf, unit){
+  vf=vf||fmt; unit=unit||"";
+  if(cur==null||prev==null) return {cls:"muted", arrow:"", pct:null, diff:null, txt:"전주 비교 불가"};
+  if(prev===0) return {cls:"muted", arrow:"", pct:null, diff:cur-prev, txt:"전주 "+vf(prev)+unit};
+  var pct=Math.round((cur-prev)/prev*100), up=cur>=prev, better=low?(cur<prev):(cur>prev);
+  var cls=(cur===prev)?"muted":(better?"good":"bad"), arrow=(cur===prev)?"–":(up?"▲":"▼");
+  return {cls:cls, arrow:arrow, pct:Math.abs(pct), diff:cur-prev, better:better, txt:arrow+" "+Math.abs(pct)+"% (전주 "+vf(prev)+unit+")"};
+}
+function renderReport(perf, notesIn){
+  var rows=(perf&&perf.weekly)||[]; var notes=notesIn||{};
+  var box=document.getElementById("reportBox"); if(!box) return;
+  if(!rows.length){ box.innerHTML='<div class="rt-l">주간 데이터가 없습니다.</div>'; return; }
+  var weeks=rows.map(function(x){return x.week;});
+  if(!RPT.week || weeks.indexOf(RPT.week)<0) RPT.week=weeks[weeks.length-1];
+  var latest=weeks[weeks.length-1];
+  var opts=weeks.slice().reverse().map(function(w){ return '<option value="'+w+'"'+(w===RPT.week?' selected':'')+'>'+rptWeekLabel(w)+'주'+(w===latest?' (이번주·진행중)':'')+'</option>'; }).join("");
+  box.innerHTML=
+    '<div class="rpt-head"><select class="rpt-week" id="rptWeek">'+opts+'</select><span class="rpt-range" id="rptRange"></span></div>'
+    +'<div class="rpt-tiles" id="rptTiles"></div>'
+    +'<div class="rpt-summary"><div class="rs-head">📌 전주 대비 요약</div><ul id="rptSummary"></ul></div>'
+    +'<div class="rpt-note"><label for="rptNote">✍️ 코멘트 (이 주차 메모 · 저장 시 공유)</label>'
+    +'<textarea id="rptNote" maxlength="1000" placeholder="예: 이번 주 자가설치 비중 늘어 상담원 부하 감소. 다음 주 설치예정 급증 예상."></textarea>'
+    +'<div class="rpt-note-foot"><button class="rpt-save" id="rptSave">코멘트 저장</button><span class="rpt-cnt" id="rptCnt"></span><span class="rpt-msg" id="rptMsg"></span></div></div>';
+  document.getElementById("rptWeek").addEventListener("change", function(){ RPT.week=this.value; paintReport(rows, notes); });
+  document.getElementById("rptSave").addEventListener("click", function(){ saveReportNote(notes); });
+  var ta=document.getElementById("rptNote");
+  ta.addEventListener("input", function(){ document.getElementById("rptCnt").textContent=ta.value.length+"/1000"; });
+  paintReport(rows, notes);
+}
+function paintReport(rows, notes){
+  var idx=-1; for(var i=0;i<rows.length;i++){ if(rows[i].week===RPT.week){ idx=i; break; } }
+  if(idx<0) return;
+  var cur=rows[idx], prev=idx>0?rows[idx-1]:null;
+  document.getElementById("rptRange").textContent=rptWeekLabel(cur.week)+" 주"+(prev?(" · 전주("+rptWeekLabel(prev.week)+") 대비"):" · 전주 데이터 없음");
+  var defs=[
+    {k:"installs",l:"설치완료",ic:"✅",u:"건"},{k:"calls",l:"통화",ic:"📞",u:"건"},
+    {k:"shipped",l:"출고",ic:"📦",u:"건"},{k:"self",l:"자가설치",ic:"🔧",u:"건"},
+    {k:"avgSpeed",l:"평균 설치속도",ic:"⏱️",u:"일",low:true,r1:true},{k:"avgRetouch",l:"평균 재컨택주기",ic:"🔁",u:"일",low:true,r1:true}
+  ];
+  document.getElementById("rptTiles").innerHTML=defs.map(function(d){
+    var c=cur[d.k], pv=prev?prev[d.k]:null, del=rptDelta(c,pv,d.low,rptFmt(d.r1),d.u);
+    var valTxt=(c==null)?"–":rptFmt(d.r1)(c);
+    return '<div class="rt"><div class="rt-l">'+d.ic+' '+d.l+'</div><div class="rt-v">'+valTxt+'<span class="u">'+d.u+'</span></div><div class="rt-d '+del.cls+'">'+del.txt+'</div></div>';
+  }).join("");
+  var lines=[];
+  function line(label, k, low, r1, unit){
+    var c=cur[k], pv=prev?prev[k]:null; if(c==null) return;
+    var del=rptDelta(c,pv,low,rptFmt(r1),unit), val=rptFmt(r1)(c), tail;
+    if(!prev||pv==null) tail='<span class="flat">전주 비교 불가</span>';
+    else if(del.diff===0) tail='<span class="flat">전주와 동일</span>';
+    else { var dir=del.diff>0?"증가":"감소", gb=del.better?"up":"down", dt=(r1?Math.abs(rptR1(del.diff)):fmt(Math.abs(del.diff)))+unit;
+      tail='<span class="'+gb+'">'+del.arrow+' '+dt+' '+dir+'</span> (전주 '+rptFmt(r1)(pv)+unit+', '+del.arrow+del.pct+'%)'+(low?' · 낮을수록 개선':''); }
+    lines.push('<li>'+label+' <b>'+val+unit+'</b> — '+tail+'</li>');
+  }
+  line("설치완료","installs",false,false,"건");
+  line("통화","calls",false,false,"건");
+  line("출고","shipped",false,false,"건");
+  line("평균 설치속도","avgSpeed",true,true,"일");
+  line("평균 재컨택주기","avgRetouch",true,true,"일");
+  var chTot=(cur.self||0)+(cur.sms||0)+(cur.agent||0);
+  if(chTot>0){ var sp=Math.round((cur.self||0)/chTot*100), ap=Math.round((cur.agent||0)/chTot*100); lines.push('<li>설치 채널 — 자가 <b>'+sp+'%</b> · 상담원 <b>'+ap+'%</b> · 문자 <b>'+(100-sp-ap)+'%</b></li>'); }
+  if(prev===null) lines.unshift('<li class="flat">가장 오래된 주라 전주 비교가 없습니다.</li>');
+  document.getElementById("rptSummary").innerHTML=lines.join("")||'<li class="flat">표시할 지표가 없습니다.</li>';
+  var ta=document.getElementById("rptNote"); ta.value=notes[RPT.week]||"";
+  document.getElementById("rptCnt").textContent=ta.value.length+"/1000";
+  var msg=document.getElementById("rptMsg"); msg.textContent=""; msg.className="rpt-msg";
+}
+function saveReportNote(notes){
+  if(!LAST_PASS) return;
+  var w=RPT.week, ta=document.getElementById("rptNote"), msg=document.getElementById("rptMsg"), btn=document.getElementById("rptSave");
+  btn.disabled=true; msg.textContent="저장 중…"; msg.className="rpt-msg";
+  fetchData(LAST_PASS, function(res){
+    btn.disabled=false;
+    if(res&&res.ok){
+      notes[w]=res.note||"";
+      if(LAST_DATA&&LAST_DATA.weeklyNotes) LAST_DATA.weeklyNotes[w]=notes[w];
+      msg.textContent="저장됨 ✓"; msg.className="rpt-msg ok";
+    } else { msg.textContent=(res&&res.error)||"저장 실패"; msg.className="rpt-msg err"; }
+  }, function(){ btn.disabled=false; msg.textContent="통신 오류"; msg.className="rpt-msg err"; },
+  { params:{ action:"setnote", week:w, note:ta.value } });
+}
+
 // delay reasons chart needs reasons object; render it here with access to full payload
 function renderDelay(reasons, ins) {
   var dz=reasons.delayReason.slice(0,10);
@@ -1338,7 +1465,7 @@ document.getElementById("f-reset").addEventListener("click", function(){
   loadPeriod("","","전체 기간");
 });
 
-var TABMETA={ ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], flow:["월·주·일 흐름","실적로그 기준 · 통화시도·설치완료·최초컨택의 월별/주별/일별 추이"], delayweek:["D+7 초과 설치지연분석","출고→설치 7일+ 완료건을 출고 주(월요일)별로 · 사유 메모 키워드 자동분류"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주간 비교 스코어보드","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일간 비교 스코어보드","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"] };
+var TABMETA={ ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], flow:["월·주·일 흐름","실적로그 기준 · 통화시도·설치완료·최초컨택의 월별/주별/일별 추이"], delayweek:["D+7 초과 설치지연분석","출고→설치 7일+ 완료건을 출고 주(월요일)별로 · 사유 메모 키워드 자동분류"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주간 비교 스코어보드","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일간 비교 스코어보드","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
