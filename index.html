@@ -1208,6 +1208,12 @@ function renderCohort(c) {
 }
 
 // ===== 🎯 월 목표 달성률 (U열 설치일 기준 월별 설치완료 vs 수기 목표) =====
+// 해당 월에서 fromDay(1~)부터 말일까지 평일(월~금) 수
+function weekdaysLeftInMonth(y, mo, fromDay){
+  var dim=new Date(y,mo,0).getDate(), cnt=0;
+  for(var dd=fromDay; dd<=dim; dd++){ var wd=new Date(y,mo-1,dd).getDay(); if(wd!==0 && wd!==6) cnt++; }
+  return cnt;
+}
 var ACH = { installByMonth:{}, targets:{}, month:null, today:"" };
 function renderAchievement(a, today){
   a = a || {};
@@ -1260,12 +1266,11 @@ function paintAchievement(){
     if(over){ paceHtml='🎉 <b class="pace-hl">목표 달성!</b> (초과 '+fmt(done-target)+'개)'; }
     else if(curYm && m<curYm){ paceHtml='기간 종료 · <b class="pace-bad">미달 '+fmt(remaining)+'개</b> (달성 '+pct+'%)'; }
     else {
-      var daysLeft;
-      if(curYm && m===curYm){ var td=+(ACH.today.slice(8,10)); daysLeft=dim-td+1; }
-      else { daysLeft=dim; }
-      if(daysLeft<1) daysLeft=1;
-      var perDay=Math.ceil(remaining/daysLeft);
-      paceHtml='📅 남은 <b>'+daysLeft+'일</b> 동안 <b class="pace-hl">하루 평균 '+fmt(perDay)+'개</b> 설치해야 목표를 달성할 수 있어요 <span class="ach-remain">(잔여 '+fmt(remaining)+'개)</span>';
+      var fromDay=(curYm && m===curYm)?(+ACH.today.slice(8,10)):1;
+      var daysLeft=(curYm && m===curYm)?(dim-fromDay+1):dim; if(daysLeft<1) daysLeft=1;
+      var wkLeft=weekdaysLeftInMonth(y,mo,fromDay); if(wkLeft<1) wkLeft=1;
+      paceHtml='📅 남은 <b>'+daysLeft+'일</b> 동안 <b class="pace-hl">하루 평균 '+fmt(Math.ceil(remaining/daysLeft))+'개</b> 설치해야 목표를 달성할 수 있어요 <span class="ach-remain">(잔여 '+fmt(remaining)+'개)</span>'
+        +'<br>🗓️ 평일(주말 제외) <b>'+wkLeft+'일</b> 기준 <b class="pace-hl">하루 평균 '+fmt(Math.ceil(remaining/wkLeft))+'개</b> 설치해야 달성할 수 있어요';
     }
   }
   paceEl.innerHTML=paceHtml;
@@ -1479,8 +1484,11 @@ function renderBoardTarget(a, today){
     else if(ym&&m<ym){ pace='기간 종료 · <b class="pace-bad">미달 '+fmt(target-done)+'개</b>'; }
     else {
       var y=+m.slice(0,4), mo=+m.slice(5), dim=new Date(y,mo,0).getDate();
-      var daysLeft=(ym&&m===ym)?(dim-(+today.slice(8,10))+1):dim; if(daysLeft<1) daysLeft=1;
-      pace='📅 남은 <b>'+daysLeft+'일</b> 동안 <b class="pace-hl">하루 평균 '+fmt(Math.ceil((target-done)/daysLeft))+'개</b> 설치해야 목표를 달성할 수 있어요 <span class="ach-remain">(잔여 '+fmt(target-done)+'개)</span>';
+      var fromDay=(ym&&m===ym)?(+today.slice(8,10)):1;
+      var daysLeft=(ym&&m===ym)?(dim-fromDay+1):dim; if(daysLeft<1) daysLeft=1;
+      var wkLeft=weekdaysLeftInMonth(y,mo,fromDay); if(wkLeft<1) wkLeft=1;
+      pace='📅 남은 <b>'+daysLeft+'일</b> · <b class="pace-hl">하루 평균 '+fmt(Math.ceil((target-done)/daysLeft))+'개</b> 설치해야 목표 달성 <span class="ach-remain">(잔여 '+fmt(target-done)+'개)</span>'
+        +'<br>🗓️ 평일(주말 제외) <b>'+wkLeft+'일</b> 기준 <b class="pace-hl">하루 평균 '+fmt(Math.ceil((target-done)/wkLeft))+'개</b> 설치해야 달성';
     }
   }
   box.innerHTML=
