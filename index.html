@@ -372,8 +372,10 @@ function setDefaults() {
   Chart.defaults.plugins.tooltip.bodyColor = C["--surface-1"];
   Chart.defaults.maintainAspectRatio = false;
   // 막대 끝/차트 경계에서 데이터라벨이 캔버스 밖으로 잘리지 않도록 전역 여백
-  Chart.defaults.layout = { padding: { top: 14, right: 18, bottom: 2, left: 2 } };
+  Chart.defaults.layout = { padding: { top: 18, right: 18, bottom: 2, left: 2 } };
   Chart.defaults.plugins.datalabels.clamp = true; // 라벨을 차트 영역 안으로 고정
+  // 축 최댓값에 데이터 범위 기반 여백(약 10%) → 최고 막대가 상단에 닿지 않아 위 수치·범례와 겹치지 않음(수치별 자동 변동)
+  Chart.defaults.scales.linear.grace = "10%";
 }
 function axes(opts) {
   opts = opts || {};
