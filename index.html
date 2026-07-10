@@ -228,8 +228,8 @@
     <div><b>아이샵케어</b><span>설치 운영 대시보드</span></div>
   </div>
   <div class="navitem active" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량</small></div></div>
-  <div class="navitem" data-tab="perf"><span class="ic">⚡</span><div>성과<small>설치속도·작업량</small></div></div>
-  <div class="navitem navchild" data-tab="flow"><span class="ic">📈</span><div>월·주·일 흐름<small>기간별 추이</small></div></div>
+  <div class="navitem" data-tab="perf" id="nav-perf"><span class="ic">⚡</span><div>성과<small>설치속도·작업량</small></div><span class="navcaret" id="perf-caret">▸</span></div>
+  <div class="navitem navchild" data-tab="flow" id="nav-flow" style="display:none"><span class="ic">📈</span><div>월·주·일 흐름<small>기간별 추이</small></div></div>
   <div class="navitem" data-tab="cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div></div>
   <div class="navitem" data-tab="weekly" id="nav-weekly"><span class="ic">🗓️</span><div>주간 비교<small>주차별 스코어보드</small></div><span class="navcaret" id="weekly-caret">▸</span></div>
   <div class="navitem navchild" data-tab="daily" id="nav-daily" style="display:none"><span class="ic">📆</span><div>일간 비교<small>일자별 스코어보드</small></div></div>
@@ -1077,12 +1077,13 @@ document.querySelectorAll(".navitem").forEach(function(n){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
     n.classList.add("active");
     var t=n.dataset.tab;
-    // 주간 비교 클릭 시 하위 '일간 비교' 메뉴 토글(펼침/접힘)
-    if (t === "weekly") {
-      var child = document.getElementById("nav-daily");
+    // 상위 메뉴 클릭 시 하위 메뉴 토글(펼침/접힘) — 성과→흐름, 주간비교→일간비교
+    var TOGGLE = { perf:{child:"nav-flow", caret:"perf-caret"}, weekly:{child:"nav-daily", caret:"weekly-caret"} };
+    if (TOGGLE[t]) {
+      var child = document.getElementById(TOGGLE[t].child);
       var open = (child.style.display === "none");
       child.style.display = open ? "flex" : "none";
-      document.getElementById("weekly-caret").classList.toggle("open", open);
+      document.getElementById(TOGGLE[t].caret).classList.toggle("open", open);
     }
     document.querySelectorAll(".tab-content").forEach(function(x){x.classList.remove("active");});
     document.getElementById("tab-"+t).classList.add("active");
