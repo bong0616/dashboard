@@ -392,7 +392,7 @@
     <div class="grid">
       <div class="card col-12"><h3>📝 회의 코멘트 <span id="board-week" class="board-wk"></span></h3><div class="sub">이번 주 회의 메모 · 저장 시 공유(주차별 리포트와 동일 저장소)</div><div id="boardNote" class="rpt-note"></div></div>
       <div class="card col-6"><h3>🔧 설치 채널 비율</h3><div class="sub">자가설치 vs 상담원 vs 문자 · 이번주(전주 대비 %p)</div><div id="boardChannel" class="bch"></div></div>
-      <div class="card col-6"><h3>⏳ 미설치 잔여 경과일 <small class="th-tgt" style="display:inline">배송완료 기준</small></h3><div class="sub">배송완료됐지만 미설치인 건의 출고 후 경과일(배송중 제외)</div><div class="chart-wrap h240" style="height:240px"><canvas id="boardAging"></canvas></div></div>
+      <div class="card col-6"><h3>⏳ 미설치 잔여 경과일 <small class="th-tgt" style="display:inline">배송완료 기준</small></h3><div class="sub">설치예정·보류·부재(1~4회)만 · 배송완료 기준(배송중 제외) · 출고 후 경과일 · 장기미설치·위약금·반품/폐업 제외</div><div class="chart-wrap h240" style="height:240px"><canvas id="boardAging"></canvas></div></div>
       <div class="card col-6"><h3>📐 설치소요일 분포 <small class="th-tgt" style="display:inline">최초컨택 주 기준</small></h3><div class="sub"><b>그 주에 최초컨택한 건들</b>이 출고→설치까지 며칠 걸렸는지 분포 · 전주 vs 금주 · 막대 위 %는 그 주 총건 대비 비중 (빠를수록 왼쪽)</div><div class="chart-wrap h240" style="height:240px"><canvas id="boardLead"></canvas></div></div>
       <div class="card col-6"><h3>🐢 D+7 지연사유 · 전주 대비 <span class="board-imp">핵심</span></h3><div class="sub">출고→설치 7일+ 완료건 사유 · 이번주 vs 전주(▲증가=악화·빨강) · 출고주 기준이라 최근주는 아직 누적중</div><div class="tbl-wrap"><table class="dtable" id="boardDelay"></table></div></div>
     </div>
