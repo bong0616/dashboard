@@ -297,7 +297,7 @@
       <div class="card col-5"><h3>📵 부재 단계별</h3><div class="sub">재컨택 우선순위 판단용</div><div class="chart-wrap h220"><canvas id="opsAbsent"></canvas></div></div>
       <div class="card col-7"><h3>🧾 미설치 사유 (현재 잔여)</h3><div class="sub">로우데이터 L열 코드화 사유 · 반품/폐업 제외 · 사유미기재는 배송중 제외(배송완료 기준)</div><div class="chart-wrap h260"><canvas id="opsReason"></canvas></div></div>
       <div class="card col-12"><h3>🔎 사유코드 없는 미설치 — 배송상태 구성</h3><div class="sub">L열 사유 없는 미설치 <b id="ops-unspec-cnt">–</b>건 중, <b>배송중은 아직 설치 전이라 위 '사유미기재'에서 제외</b> · 배송완료 건이 실제 관리 대상</div><div class="chart-wrap h220"><canvas id="opsUnspecDelivery"></canvas></div></div>
-      <div class="card col-12"><h3>🔑 미설치 사유 (메모 키워드 분류)</h3><div class="sub">현재 미설치 잔여건(반품·폐업 제외)의 <b>메모를 키워드 자동분류</b> · 설치일 무관 · 7일+ 지연 사유와 동일 로직(부재·문자안내/미룸/방문설치 접수/원격접수/전산·결제단말 등)</div><div class="chart-wrap h260"><canvas id="opsReasonKw"></canvas></div></div>
+      <div class="card col-12"><h3>🔑 미설치 사유 (메모 키워드 분류)</h3><div class="sub">현재 미설치 잔여건(반품·폐업 제외)의 <b>메모를 키워드 자동분류</b> · 설치일 무관 · 7일+ 지연 사유와 동일 로직(부재·문자안내/미룸/방문설치 접수/원격접수/전산·결제단말 등)</div><div class="chart-wrap" style="height:380px"><canvas id="opsReasonKw"></canvas></div></div>
     </div>
   </section>
 
@@ -312,7 +312,7 @@
       <div class="card col-5"><h3>🔌 설치 채널 비중</h3><div class="sub">자가설치 vs 문자발송 vs 상담원 콜</div><div class="chart-wrap h220" style="height:200px"><canvas id="perfChannel"></canvas></div><div class="legend" id="channel-legend"></div></div>
       <div class="card col-7"><h3>⏱️ 설치 소요일 분포</h3><div class="sub">출고 → 설치완료 (일). 평균 <b id="perf-avglead">–</b>일 · 5일 이내 <b id="perf-within5">–</b></div><div class="chart-wrap h220"><canvas id="perfSpeed"></canvas></div></div>
       <div class="card col-6"><h3>🔁 재컨택 주기 → 설치 속도</h3><div class="sub">메모 재컨택 간격이 짧을수록 실제로 빨리 설치되는가?</div><div class="chart-wrap h220"><canvas id="perfRetouch"></canvas></div><div class="insight" id="retouch-insight"></div></div>
-      <div class="card col-6"><h3>🐢 7일+ 지연 사유</h3><div class="sub">설치완료됐지만 7일 이상 걸린 건 (메모 자동분류) · <b style="color:var(--s-blue-d)">기타 막대 클릭 시 세부내역</b></div><div class="chart-wrap h220"><canvas id="perfDelay"></canvas></div></div>
+      <div class="card col-6"><h3>🐢 7일+ 지연 사유</h3><div class="sub">설치완료됐지만 7일 이상 걸린 건 (메모 자동분류) · <b style="color:var(--s-blue-d)">기타 막대 클릭 시 세부내역</b></div><div class="chart-wrap" style="height:360px"><canvas id="perfDelay"></canvas></div></div>
       <div class="card col-12"><h3>📅 일별 처리량</h3><div class="sub">최근 45영업일 · 통화시도량 & 설치완료</div><div class="chart-wrap h260"><canvas id="perfDaily"></canvas></div></div>
     </div>
   </section>
@@ -520,10 +520,12 @@ function renderOps(o, reasons) {
 
   // 미설치 잔여건 메모 키워드 분류(보조)
   var kz = (reasons.uninstallReasonKw||[]).slice(0,11);
+  var kwSc=axes({horizontal:true});
+  kwSc.y.ticks.autoSkip=false; kwSc.y.ticks.font={size:11.5}; kwSc.y.ticks.crossAlign="far";
   mk("opsReasonKw", { type:"bar",
     data:{ labels:kz.map(function(r){return r.label;}),
-      datasets:[{ data:kz.map(function(r){return r.count;}), backgroundColor:kz.map(function(r){return delayCatColor(r.label);}), borderRadius:5 }] },
-    options:{ indexAxis:"y", scales:axes({horizontal:true}), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
+      datasets:[{ data:kz.map(function(r){return r.count;}), backgroundColor:kz.map(function(r){return delayCatColor(r.label);}), borderRadius:5, categoryPercentage:.74, barPercentage:.82 }] },
+    options:{ indexAxis:"y", scales:kwSc, plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
 }
 
 // D+7 지연/미설치 사유 카테고리 → 색상(운영 보조차트·주별 분석탭 공용)
@@ -1048,11 +1050,13 @@ function renderDelay(reasons, ins) {
   var etc=reasons.delayEtcDetail||[];
   var etcTotal=etc.reduce(function(s,r){return s+r.count;},0);
   var isEtc=function(i){ return dz[i] && dz[i].label==="기타"; };
+  var dSc=axes({horizontal:true});
+  dSc.y.ticks.autoSkip=false; dSc.y.ticks.font={size:11.5}; dSc.y.ticks.crossAlign="far"; // 모든 사유 라벨 강제 표시
   mk("perfDelay", { type:"bar",
     data:{ labels:dz.map(function(r){return r.label;}),
       datasets:[{ data:dz.map(function(r){return r.count;}),
-        backgroundColor:dz.map(function(r){return r.label==="기타"?C["--s-blue"]:C["--s-orange"];}), borderRadius:5 }] },
-    options:{ indexAxis:"y", scales:axes({horizontal:true}),
+        backgroundColor:dz.map(function(r){return r.label==="기타"?C["--s-blue"]:C["--s-orange"];}), borderRadius:5, categoryPercentage:.74, barPercentage:.82 }] },
+    options:{ indexAxis:"y", scales:dSc,
       onClick:function(evt, els){ if(els&&els.length&&isEtc(els[0].index)) openDelayModal(etc, etcTotal); },
       onHover:function(evt, els){ if(evt.native&&evt.native.target) evt.native.target.style.cursor=(els.length&&isEtc(els[0].index))?"pointer":"default"; },
       plugins:{ datalabels: dl({anchor:"end",align:"end"}),
