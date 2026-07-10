@@ -383,6 +383,10 @@ function axes(opts) {
   return opts.horizontal ? { x:g, y:cat } : { x:cat, y:g };
 }
 var dl = function (extra) { return Object.assign({ display:true, color:C["--text-secondary"], font:{weight:"600",size:11}, formatter:function(v){return fmt(v);} }, extra||{}); };
+// 막대 위 개수 라벨(공통) — 0/공란은 생략. 선·점선·도넛은 미적용(막대그래프 전용)
+var dlBarTop = function (extra) { return dl(Object.assign({ anchor:"end", align:"end", formatter:function(v){ return (v==null||v===0)?"":fmt(v); } }, extra||{})); };
+// 누적막대 세그먼트 안 개수 라벨(공통) — 0은 생략
+var dlSeg = function () { return { display:true, color:"#fff", clamp:true, font:{weight:"700",size:9.5}, formatter:function(v){ return (v>0)?fmt(v):""; } }; };
 
 // =================== render ===================
 function render(d) {
@@ -531,7 +535,7 @@ function renderPerf(p) {
   mk("perfDaily", { type:"bar",
     data:{ labels:dd.map(function(x){return x.date.slice(5);}),
       datasets:[
-        { type:"bar", label:"통화시도량", data:dd.map(function(x){return x.calls;}), backgroundColor:C["--s-blue-l"], borderRadius:3, barPercentage:.9, categoryPercentage:.9, order:2 },
+        { type:"bar", label:"통화시도량", data:dd.map(function(x){return x.calls;}), backgroundColor:C["--s-blue-l"], borderRadius:3, barPercentage:.9, categoryPercentage:.9, order:2, datalabels: dlBarTop({font:{weight:"600",size:9}}) },
         { type:"line", label:"설치완료", data:dd.map(function(x){return x.installs;}), borderColor:C["--s-blue"], backgroundColor:"transparent", borderWidth:2, tension:.3, pointRadius:0, order:1 }
       ] },
     options:{ scales:{ x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:12}}, y:{beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
@@ -639,8 +643,8 @@ function renderWeekly(p){
   mk("wkVolume", { type:"bar",
     data:{ labels:labels,
       datasets:[
-        { type:"bar", label:"출고건수", data:rows.map(function(x){return x.shipped;}), backgroundColor:C["--s-blue-l"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:5 },
-        { type:"bar", label:"통화건수", data:rows.map(function(x){return x.calls;}), backgroundColor:C["--s-yellow"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:5 },
+        { type:"bar", label:"출고건수", data:rows.map(function(x){return x.shipped;}), backgroundColor:C["--s-blue-l"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:5, datalabels: dlBarTop({font:{weight:"600",size:9}}) },
+        { type:"bar", label:"통화건수", data:rows.map(function(x){return x.calls;}), backgroundColor:C["--s-yellow"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:5, datalabels: dlBarTop({font:{weight:"600",size:9}}) },
         { type:"line", label:"설치완료", data:rows.map(function(x){return x.installs;}), borderColor:C["--s-aqua"], backgroundColor:"transparent", yAxisID:"y", borderWidth:2.6, tension:.3, pointRadius:2, pointBackgroundColor:C["--s-aqua"], order:3 },
         { type:"line", label:"설치속도(일)", data:rows.map(function(x){return r1(x.avgSpeed);}), borderColor:C["--s-blue-d"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--s-blue-d"], spanGaps:true, order:1 },
         { type:"line", label:"재컨택주기(일)", data:rows.map(function(x){return r1(x.avgRetouch);}), borderColor:C["--s-orange"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--s-orange"], spanGaps:true, order:1 }
@@ -758,8 +762,8 @@ function renderDaily(p){
   mk("dyVolume", { type:"bar",
     data:{ labels:labels,
       datasets:[
-        { type:"bar", label:"출고건수", data:rows.map(function(x){return x.shipped;}), backgroundColor:C["--s-blue-l"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:5 },
-        { type:"bar", label:"통화건수", data:rows.map(function(x){return x.calls;}), backgroundColor:C["--s-yellow"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:5 },
+        { type:"bar", label:"출고건수", data:rows.map(function(x){return x.shipped;}), backgroundColor:C["--s-blue-l"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:5, datalabels: dlBarTop({font:{weight:"600",size:9}}) },
+        { type:"bar", label:"통화건수", data:rows.map(function(x){return x.calls;}), backgroundColor:C["--s-yellow"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:5, datalabels: dlBarTop({font:{weight:"600",size:9}}) },
         { type:"line", label:"설치완료", data:rows.map(function(x){return x.installs;}), borderColor:C["--s-aqua"], backgroundColor:"transparent", yAxisID:"y", borderWidth:2.6, tension:.3, pointRadius:2, pointBackgroundColor:C["--s-aqua"], order:3 },
         { type:"line", label:"설치속도(일)", data:rows.map(function(x){return r1(x.avgSpeed);}), borderColor:C["--s-blue-d"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--s-blue-d"], spanGaps:true, order:1 },
         { type:"line", label:"재컨택주기(일)", data:rows.map(function(x){return r1(x.avgRetouch);}), borderColor:C["--s-orange"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--s-orange"], spanGaps:true, order:1 }
@@ -872,7 +876,7 @@ function renderCohort(c) {
   mk("cohMonth", { type:"bar",
     data:{ labels:m.map(function(x){return x.ym.slice(2);}),
       datasets:[
-        { label:"출고", data:m.map(function(x){return x.shipped;}), backgroundColor:C["--s-blue-l"], borderRadius:5, categoryPercentage:.62, barPercentage:.82 },
+        { label:"출고", data:m.map(function(x){return x.shipped;}), backgroundColor:C["--s-blue-l"], borderRadius:5, categoryPercentage:.62, barPercentage:.82, datalabels: dlBarTop({font:{weight:"600",size:10}}) },
         { label:"설치완료", data:m.map(function(x){return x.completed;}), backgroundColor:C["--s-blue"], borderRadius:5, categoryPercentage:.62, barPercentage:.82,
           datalabels: Object.assign(dl(),{anchor:"end",align:"end",formatter:function(v,ctx){var mm=m[ctx.dataIndex];return Math.round(mm.rate*100)+"%";},color:C["--good"],font:{weight:"700",size:10.5}}) }
       ] },
@@ -881,9 +885,9 @@ function renderCohort(c) {
   mk("cohChannel", { type:"bar",
     data:{ labels:m.map(function(x){return x.ym.slice(2);}),
       datasets:[
-        { label:"자가설치", data:m.map(function(x){return x.self;}), backgroundColor:C["--s-aqua"], borderRadius:{topLeft:0,topRight:0}, stack:"s", borderColor:C["--surface-1"], borderWidth:{top:2} },
-        { label:"문자발송", data:m.map(function(x){return x.sms;}), backgroundColor:C["--s-yellow"], stack:"s", borderColor:C["--surface-1"], borderWidth:{top:2} },
-        { label:"상담원", data:m.map(function(x){return x.agent;}), backgroundColor:C["--s-blue"], borderRadius:{topLeft:5,topRight:5}, stack:"s", borderColor:C["--surface-1"], borderWidth:{top:2} }
+        { label:"자가설치", data:m.map(function(x){return x.self;}), backgroundColor:C["--s-aqua"], borderRadius:{topLeft:0,topRight:0}, stack:"s", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels: dlSeg() },
+        { label:"문자발송", data:m.map(function(x){return x.sms;}), backgroundColor:C["--s-yellow"], stack:"s", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels: dlSeg() },
+        { label:"상담원", data:m.map(function(x){return x.agent;}), backgroundColor:C["--s-blue"], borderRadius:{topLeft:5,topRight:5}, stack:"s", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels: dlSeg() }
       ] },
     options:{ scales:{ x:{stacked:true,grid:{display:false},ticks:{color:C["--muted"]}}, y:{stacked:true,beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
       plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false} } } });
@@ -908,7 +912,7 @@ function renderCohort(c) {
   var cats=[["설치완료",C["--s-aqua"]],["설치예정",C["--s-blue"]],["미설치",C["--s-red"]],["부재",C["--s-orange"]],["반품·폐업",C["--muted"]],["기타",C["--s-violet"]]];
   mk("cohStatus", { type:"bar",
     data:{ labels:keys.map(function(k){return k.slice(2);}),
-      datasets:cats.map(function(cat){ return { label:cat[0], data:keys.map(function(k){return ms[k][cat[0]]||0;}), backgroundColor:cat[1], stack:"st", borderColor:C["--surface-1"], borderWidth:{top:2} }; }) },
+      datasets:cats.map(function(cat){ return { label:cat[0], data:keys.map(function(k){return ms[k][cat[0]]||0;}), backgroundColor:cat[1], stack:"st", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels: dlSeg() }; }) },
     options:{ scales:{ x:{stacked:true,grid:{display:false},ticks:{color:C["--muted"]}}, y:{stacked:true,beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
       plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"],padding:12}}, datalabels:{display:false} } } });
 }
