@@ -191,6 +191,18 @@
   .kpi-save { font-family: var(--font); font-size:12px; font-weight:600; color:#fff; background: var(--s-blue); border:1px solid transparent; border-radius:8px; padding:6px 12px; cursor:pointer; }
   .kpi-save:disabled { opacity:.55; cursor:default; }
   .kpi-msg { font-size:12px; font-weight:600; } .kpi-msg.ok { color:#1f9e57; } .kpi-msg.err { color: var(--critical); }
+  /* 현황판 */
+  .board-wk { font-size:12.5px; font-weight:600; color: var(--muted); margin-left:6px; }
+  .board-imp { font-size:11px; font-weight:700; color:#fff; background: var(--critical); border-radius:6px; padding:2px 7px; margin-left:6px; vertical-align:middle; }
+  .bch { margin-top:6px; display:flex; flex-direction:column; gap:13px; }
+  .bch-row { display:flex; align-items:center; gap:10px; }
+  .bch-l { font-size:13px; font-weight:600; color: var(--text-primary); min-width:66px; }
+  .bch-bar { flex:1; height:14px; border-radius:999px; background: color-mix(in srgb, var(--muted) 20%, transparent); overflow:hidden; min-width:50px; }
+  .bch-bar span { display:block; height:100%; border-radius:999px; transition:width .5s ease; }
+  .bch-v { font-size:12.5px; color: var(--text-secondary); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .bch-v b { color: var(--text-primary); font-weight:800; }
+  .bch-prev { color: var(--muted); font-size:11.5px; }
+  .delta-up { color:#1f9e57; font-weight:700; } .delta-dn { color: var(--critical); font-weight:700; } .delta-flat { color: var(--muted); }
   .col-4 { grid-column: span 4; } .col-5 { grid-column: span 5; } .col-6 { grid-column: span 6; }
   .col-7 { grid-column: span 7; } .col-8 { grid-column: span 8; } .col-12 { grid-column: span 12; }
   .chart-wrap { position: relative; width: 100%; }
@@ -328,7 +340,8 @@
     <div class="logo">📊</div>
     <div><b>아이샵케어</b><span>설치 운영 대시보드</span></div>
   </div>
-  <div class="navitem active" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량</small></div></div>
+  <div class="navitem active" data-tab="board"><span class="ic">📊</span><div>현황판<small>주간 회의용 요약</small></div></div>
+  <div class="navitem" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량</small></div></div>
   <div class="navitem" data-tab="perf" id="nav-perf"><span class="ic">⚡</span><div>성과<small>설치속도·작업량</small></div><span class="navcaret" id="perf-caret">▸</span></div>
   <div class="navitem navchild" data-tab="flow" id="nav-flow" style="display:none"><span class="ic">📈</span><div>월·주·일 흐름<small>기간별 추이</small></div></div>
   <div class="navitem navchild" data-tab="delayweek" id="nav-delayweek" style="display:none"><span class="ic">🐢</span><div>D+7 초과 지연분석<small>출고 주별 사유</small></div></div>
@@ -346,8 +359,8 @@
 <main id="main" style="display:none">
   <div class="page-head">
     <div>
-      <h1 id="page-title">운영 대시보드</h1>
-      <p id="page-desc">콜리스트 기준 · 현재 처리해야 할 잔여 업무량</p>
+      <h1 id="page-title">주간 현황판</h1>
+      <p id="page-desc">주간 회의용 핵심 지표 한눈에 · 전주 대비</p>
     </div>
     <div class="head-right">
       <div class="filters">
@@ -365,8 +378,20 @@
     </div>
   </div>
 
+  <!-- BOARD (주간 현황판) -->
+  <section class="tab-content active" id="tab-board">
+    <div class="tiles" id="board-tiles"></div>
+    <div class="grid">
+      <div class="card col-12"><h3>📝 회의 코멘트 <span id="board-week" class="board-wk"></span></h3><div class="sub">이번 주 회의 메모 · 저장 시 공유(주차별 리포트와 동일 저장소)</div><div id="boardNote" class="rpt-note"></div></div>
+      <div class="card col-6"><h3>🔧 설치 채널 비율</h3><div class="sub">자가설치 vs 상담원 vs 문자 · 이번주(전주 대비 %p)</div><div id="boardChannel" class="bch"></div></div>
+      <div class="card col-6"><h3>⏳ 미설치 잔여 경과일 <small class="th-tgt" style="display:inline">배송완료 기준</small></h3><div class="sub">배송완료됐지만 미설치인 건의 출고 후 경과일(배송중 제외)</div><div class="chart-wrap h240" style="height:240px"><canvas id="boardAging"></canvas></div></div>
+      <div class="card col-6"><h3>📐 설치소요일 분포</h3><div class="sub">출고→설치 소요일 구간별 건수(2026 완료 전체)</div><div class="chart-wrap h240" style="height:240px"><canvas id="boardLead"></canvas></div></div>
+      <div class="card col-6"><h3>🐢 D+7 지연사유 · 전주 대비 <span class="board-imp">핵심</span></h3><div class="sub">출고→설치 7일+ 완료건 사유 · 이번주 vs 전주(▲증가=악화·빨강) · 출고주 기준이라 최근주는 아직 누적중</div><div class="tbl-wrap"><table class="dtable" id="boardDelay"></table></div></div>
+    </div>
+  </section>
+
   <!-- OPS -->
-  <section class="tab-content active" id="tab-ops">
+  <section class="tab-content" id="tab-ops">
     <div class="tiles" id="ops-tiles"></div>
     <div class="grid">
       <div class="card col-5"><h3>📊 상태 분포</h3><div class="sub">콜리스트 점주의사 기준 · 미설치는 배송완료/배송중으로 분리</div><div class="chart-wrap h260"><canvas id="opsStatus"></canvas></div></div>
@@ -542,6 +567,7 @@ function render(d) {
   // KPI 목표(조정형) — 이후 타일·표·리포트 렌더 전에 반영
   if (d.kpiTargets) { SPD_TGT = d.kpiTargets.speed; RTC_TGT = d.kpiTargets.retouch; }
   renderKpi(d.kpiTargets);
+  renderBoard(d);
   renderOps(d.ops, d.reasons);
   renderPerf(d.perf);
   renderFlow(d.perf);
@@ -1381,10 +1407,97 @@ function saveKpi(kind){
       if(LAST_DATA) LAST_DATA.kpiTargets=res.kpiTargets;
       msg.textContent="저장됨 ✓ (전 화면 반영)"; msg.className="kpi-msg ok";
       // 목표 반영해 관련 화면 재렌더
-      if(LAST_DATA){ renderWeekly(LAST_DATA.perf); renderDaily(LAST_DATA.perf); renderReport(LAST_DATA.perf, LAST_DATA.weeklyNotes); }
+      if(LAST_DATA){ renderWeekly(LAST_DATA.perf); renderDaily(LAST_DATA.perf); renderReport(LAST_DATA.perf, LAST_DATA.weeklyNotes); renderBoard(LAST_DATA); }
     } else { msg.textContent=(res&&res.error)||"저장 실패"; msg.className="kpi-msg err"; }
   }, function(){ Array.prototype.forEach.call(btns,function(b){b.disabled=false;}); msg.textContent="통신 오류"; msg.className="kpi-msg err"; },
   { params:{ action:"setkpi", kind:kind, value:v } });
+}
+
+// ===== 📊 주간 현황판 (원페이지 · 이번주 vs 전주) =====
+function renderBoard(d){
+  var rows=(d.perf&&d.perf.weekly)||[];
+  var notes=d.weeklyNotes||{};
+  var tbox=document.getElementById("board-tiles"); if(!tbox) return;
+  if(!rows.length){ tbox.innerHTML='<div class="tile"><div class="t-label">주간 데이터 없음</div></div>'; return; }
+  var n=rows.length, cur=rows[n-1], prev=n>1?rows[n-2]:null;
+  var wkEl=document.getElementById("board-week");
+  if(wkEl) wkEl.textContent="· "+rptWeekLabel(cur.week)+"주"+(prev?(" (전주 "+rptWeekLabel(prev.week)+" 대비)"):"");
+  // KPI 타일: weekTile 재사용(이번주 vs 전주). 속도·재컨택은 목표 색상/배지 포함.
+  tbox.innerHTML =
+    weekTile("이번주 설치완료","✅", rows, "installs", {accent:true}) +
+    weekTile("통화","📞", rows, "calls") +
+    weekTile("출고","📦", rows, "shipped") +
+    weekTile("자가설치","🔧", rows, "self") +
+    weekTile("평균 설치속도","⏱️", rows, "avgSpeed", {valFn:round1, unit:"일", lowerBetter:true, target:SPD_TGT}) +
+    weekTile("평균 재컨택주기","🔁", rows, "avgRetouch", {valFn:round1, unit:"일", lowerBetter:true, target:RTC_TGT});
+  renderBoardChannel(cur, prev);
+  renderBoardNote(cur.week, notes);
+  // 미설치 잔여 경과일(배송완료 기준)
+  var agd=(d.cohort&&d.cohort.agingDelivered)||{"0-6":0,"7-13":0,"14-29":0,"30+":0};
+  mk("boardAging", { type:"bar",
+    data:{ labels:["0~6일","7~13일","14~29일","30일+"], datasets:[{ data:[agd["0-6"],agd["7-13"],agd["14-29"],agd["30+"]],
+      backgroundColor:[C["--s-blue-l"],C["--s-blue"],C["--s-yellow"],C["--critical"]], borderRadius:6 }] },
+    options:{ scales:axes(), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
+  // 설치소요일 분포
+  var bk=(d.perf&&d.perf.speed&&d.perf.speed.buckets)||{};
+  mk("boardLead", { type:"bar",
+    data:{ labels:["0~2일","3~4일","5~6일","7~13일","14일+"], datasets:[{ data:[bk["0-2"]||0,bk["3-4"]||0,bk["5-6"]||0,bk["7-13"]||0,bk["14+"]||0],
+      backgroundColor:[C["--s-aqua"],C["--s-blue-l"],C["--s-blue"],C["--s-yellow"],C["--critical"]], borderRadius:6 }] },
+    options:{ scales:axes(), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
+  renderBoardDelay(d.reasons);
+}
+function renderBoardChannel(cur, prev){
+  var box=document.getElementById("boardChannel"); if(!box) return;
+  function ratio(w){ if(!w) return null; var t=(w.self||0)+(w.sms||0)+(w.agent||0); return t>0?{self:Math.round(w.self/t*100), agent:Math.round(w.agent/t*100), sms:Math.round(w.sms/t*100)}:null; }
+  var r=ratio(cur), p=ratio(prev);
+  if(!r){ box.innerHTML='<div class="ach-nums">이번 주 설치완료 없음</div>'; return; }
+  function row(label, cv, pv, color){
+    var wow="";
+    if(pv!=null){ var diff=cv-pv; wow=' <span class="delta-flat">'+(diff>0?"▲":diff<0?"▼":"–")+(diff!==0?(Math.abs(diff)+"%p"):"")+'</span>'; }
+    var prevTxt=(pv!=null)?' <span class="bch-prev">전주 '+pv+'%</span>':'';
+    return '<div class="bch-row"><span class="bch-l">'+label+'</span><div class="bch-bar"><span style="width:'+cv+'%;background:'+color+'"></span></div><span class="bch-v"><b>'+cv+'%</b>'+prevTxt+wow+'</span></div>';
+  }
+  box.innerHTML = row("자가설치", r.self, p&&p.self, C["--s-aqua"]) + row("상담원", r.agent, p&&p.agent, C["--s-blue"]) + row("문자발송", r.sms, p&&p.sms, C["--s-yellow"]);
+}
+function renderBoardDelay(reasons){
+  var tbl=document.getElementById("boardDelay"); if(!tbl) return;
+  var wk=(reasons&&reasons.delayWeekly)||[];
+  if(!wk.length){ tbl.innerHTML='<tbody><tr><td>데이터 없음</td></tr></tbody>'; return; }
+  var cur=wk[wk.length-1], prev=wk.length>1?wk[wk.length-2]:null;
+  var cats=(reasons.delayCats||[]).slice().sort(function(a,b){ return (cur.reasons[b]||0)-(cur.reasons[a]||0); });
+  function delt(diff){ return diff>0?('<span class="delta-dn">▲'+diff+'</span>'):diff<0?('<span class="delta-up">▼'+Math.abs(diff)+'</span>'):'<span class="delta-flat">–</span>'; }
+  var head='<thead><tr><th>지연 사유</th><th>이번주</th><th>전주</th><th>증감</th></tr></thead>';
+  var body=cats.map(function(cat){
+    var c=cur.reasons[cat]||0, pv=prev?(prev.reasons[cat]||0):null;
+    if(c===0 && (pv==null||pv===0)) return "";
+    return '<tr><td>'+cat+'</td><td><b>'+c+'</b></td><td>'+(pv==null?"–":pv)+'</td><td>'+(pv==null?"–":delt(c-pv))+'</td></tr>';
+  }).join("");
+  var ct=cur.total||0, pt=prev?(prev.total||0):null;
+  body+='<tr class="cur"><td><b>합계</b></td><td><b>'+ct+'</b></td><td>'+(pt==null?"–":pt)+'</td><td>'+(pt==null?"–":delt(ct-pt))+'</td></tr>';
+  tbl.innerHTML=head+'<tbody>'+body+'</tbody>';
+}
+function renderBoardNote(week, notes){
+  var box=document.getElementById("boardNote"); if(!box) return;
+  box.innerHTML='<textarea id="boardNoteTa" maxlength="1000" placeholder="이번 주 회의 메모 · 예: 김규리님 미설치 투입, 하루 40건 처리중"></textarea>'
+    +'<div class="rpt-note-foot"><button class="rpt-save" id="boardNoteSave">코멘트 저장</button><span class="rpt-cnt" id="boardNoteCnt"></span><span class="rpt-msg" id="boardNoteMsg"></span></div>';
+  var ta=document.getElementById("boardNoteTa"); ta.value=notes[week]||"";
+  document.getElementById("boardNoteCnt").textContent=ta.value.length+"/1000";
+  ta.addEventListener("input", function(){ document.getElementById("boardNoteCnt").textContent=ta.value.length+"/1000"; });
+  document.getElementById("boardNoteSave").addEventListener("click", function(){ saveBoardNote(week, notes); });
+}
+function saveBoardNote(week, notes){
+  if(!LAST_PASS) return;
+  var ta=document.getElementById("boardNoteTa"), msg=document.getElementById("boardNoteMsg"), btn=document.getElementById("boardNoteSave");
+  btn.disabled=true; msg.textContent="저장 중…"; msg.className="rpt-msg";
+  fetchData(LAST_PASS, function(res){
+    btn.disabled=false;
+    if(res&&res.ok){
+      notes[week]=res.note||"";
+      if(LAST_DATA&&LAST_DATA.weeklyNotes){ LAST_DATA.weeklyNotes[week]=notes[week]; renderReport(LAST_DATA.perf, LAST_DATA.weeklyNotes); }
+      msg.textContent="저장됨 ✓ (리포트 탭도 동기화)"; msg.className="rpt-msg ok";
+    } else { msg.textContent=(res&&res.error)||"저장 실패"; msg.className="rpt-msg err"; }
+  }, function(){ btn.disabled=false; msg.textContent="통신 오류"; msg.className="rpt-msg err"; },
+  { params:{ action:"setnote", week:week, note:ta.value } });
 }
 
 // delay reasons chart needs reasons object; render it here with access to full payload
@@ -1576,7 +1689,7 @@ document.getElementById("f-reset").addEventListener("click", function(){
   loadPeriod("","","전체 기간");
 });
 
-var TABMETA={ ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], flow:["월·주·일 흐름","실적로그 기준 · 통화시도·설치완료·최초컨택의 월별/주별/일별 추이"], delayweek:["D+7 초과 설치지연분석","출고→설치 7일+ 완료건을 출고 주(월요일)별로 · 사유 메모 키워드 자동분류"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주간 비교 스코어보드","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일간 비교 스코어보드","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"] };
+var TABMETA={ board:["주간 현황판","주간 회의용 핵심 지표 한눈에 · 전주 대비 · 회의 코멘트"], ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], flow:["월·주·일 흐름","실적로그 기준 · 통화시도·설치완료·최초컨택의 월별/주별/일별 추이"], delayweek:["D+7 초과 설치지연분석","출고→설치 7일+ 완료건을 출고 주(월요일)별로 · 사유 메모 키워드 자동분류"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주간 비교 스코어보드","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일간 비교 스코어보드","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
