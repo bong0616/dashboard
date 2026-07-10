@@ -210,6 +210,7 @@
   .board-tmon { font-size:14px; font-weight:700; color: var(--text-primary); }
   .sort-btn { cursor:pointer; border:1px solid var(--border); background: var(--page); color: var(--text-secondary); border-radius:5px; font-size:10.5px; font-weight:600; padding:1px 6px; margin-left:5px; font-family:var(--font); }
   .sort-btn:hover { border-color: var(--s-blue); color: var(--s-blue); }
+  .sort-btn.active { border-color: var(--s-blue); color:#fff; background: var(--s-blue); }
   .col-4 { grid-column: span 4; } .col-5 { grid-column: span 5; } .col-6 { grid-column: span 6; }
   .col-7 { grid-column: span 7; } .col-8 { grid-column: span 8; } .col-12 { grid-column: span 12; }
   .chart-wrap { position: relative; width: 100%; }
@@ -1514,15 +1515,16 @@ function renderBoardChannel(cur, prev){
   box.innerHTML = row("자가설치", r.self, p&&p.self, C["--s-aqua"]) + row("상담원", r.agent, p&&p.agent, C["--s-blue"])
     + '<div class="bch-foot">이번주 설치완료 <b>'+fmt(totN)+'건</b> = 자가 <b>'+fmt(selfN)+'</b> + 상담원 <b>'+fmt(agentN)+'</b> <span class="bch-prev">(상담원=상담원+문자발송)</span></div>';
 }
-var BOARD_DELAY_SORT="desc"; // 이번주 건수 기준 정렬
+var BOARD_DELAY_SORTBY="cur", BOARD_DELAY_SORT="desc"; // 정렬 기준 컬럼(cur=이번주/prev=전주) + 방향
 function renderBoardDelay(reasons){
   var tbl=document.getElementById("boardDelay"); if(!tbl) return;
   var wk=(reasons&&reasons.delayWeekly)||[];
   if(!wk.length){ tbl.innerHTML='<tbody><tr><td>데이터 없음</td></tr></tbody>'; return; }
   var cur=wk[wk.length-1], prev=wk.length>1?wk[wk.length-2]:null;
   var ct=cur.total||0, pt=prev?(prev.total||0):0;
+  if(BOARD_DELAY_SORTBY==="prev" && !prev) BOARD_DELAY_SORTBY="cur";
   var cats=(reasons.delayCats||[]).slice().filter(function(cat){ var c=cur.reasons[cat]||0, pv=prev?(prev.reasons[cat]||0):0; return !(c===0&&pv===0); });
-  cats.sort(function(a,b){ var d=(cur.reasons[b]||0)-(cur.reasons[a]||0); return BOARD_DELAY_SORT==="asc"?-d:d; });
+  cats.sort(function(a,b){ var pick=function(cat){ return BOARD_DELAY_SORTBY==="prev"?(prev?(prev.reasons[cat]||0):0):(cur.reasons[cat]||0); }; var d=pick(b)-pick(a); return BOARD_DELAY_SORT==="asc"?-d:d; });
   function pctOf(v,t){ return t>0?Math.round(v/t*100):0; }
   function delt(c,pv){ // 증감 건수 + 증감율
     if(pv==null) return "–";
@@ -1531,17 +1533,23 @@ function renderBoardDelay(reasons){
     return diff>0?('<span class="delta-dn">▲'+diff+' <small>'+rate+'</small></span>'):('<span class="delta-up">▼'+Math.abs(diff)+' <small>'+Math.round(diff/pv*100)+'%</small></span>');
   }
   function cell(v,t){ return '<b>'+v+'</b> <span class="cell-pct">'+pctOf(v,t)+'%</span>'; }
+  function sortBtn(col){ var on=(BOARD_DELAY_SORTBY===col); var lbl=on?(BOARD_DELAY_SORT==="asc"?"▲ 오름":"▼ 내림"):"↕"; return '<button class="sort-btn'+(on?" active":"")+'" data-col="'+col+'" title="이 주 건수로 정렬">'+lbl+'</button>'; }
   var curL=rptWeekLabel(cur.week)+"주", prevL=prev?(rptWeekLabel(prev.week)+"주"):"전주";
-  var arrow=BOARD_DELAY_SORT==="asc"?"▲ 오름":"▼ 내림";
-  var head='<thead><tr><th>지연 사유</th><th>'+curL+' <button class="sort-btn" id="boardDelaySort" title="이번주 건수 정렬">'+arrow+'</button></th><th>'+prevL+'</th><th>증감(율)</th></tr></thead>';
+  var head='<thead><tr><th>지연 사유</th><th>'+curL+' '+sortBtn("cur")+'</th><th>'+prevL+(prev?(' '+sortBtn("prev")):"")+'</th><th>증감(율)</th></tr></thead>';
   var body=cats.map(function(cat){
     var c=cur.reasons[cat]||0, pv=prev?(prev.reasons[cat]||0):null;
     return '<tr><td>'+cat+'</td><td>'+cell(c,ct)+'</td><td>'+(pv==null?"–":cell(pv,pt))+'</td><td>'+delt(c,pv)+'</td></tr>';
   }).join("");
   body+='<tr class="cur"><td><b>합계</b></td><td><b>'+ct+'</b> <span class="cell-pct">100%</span></td><td>'+(prev?('<b>'+pt+'</b>'):"–")+'</td><td>'+(prev?delt(ct,pt):"–")+'</td></tr>';
   tbl.innerHTML=head+'<tbody>'+body+'</tbody>';
-  var sb=document.getElementById("boardDelaySort");
-  if(sb) sb.addEventListener("click", function(){ BOARD_DELAY_SORT=(BOARD_DELAY_SORT==="desc"?"asc":"desc"); renderBoardDelay(reasons); });
+  Array.prototype.forEach.call(tbl.querySelectorAll(".sort-btn"), function(b){
+    b.addEventListener("click", function(){
+      var col=b.getAttribute("data-col");
+      if(BOARD_DELAY_SORTBY===col){ BOARD_DELAY_SORT=(BOARD_DELAY_SORT==="desc"?"asc":"desc"); }
+      else { BOARD_DELAY_SORTBY=col; BOARD_DELAY_SORT="desc"; }
+      renderBoardDelay(reasons);
+    });
+  });
 }
 function renderBoardNote(week, notes){
   var box=document.getElementById("boardNote"); if(!box) return;
