@@ -556,7 +556,7 @@ function renderOps(o, reasons) {
     data:{ labels:kz.map(function(r){return r.label;}),
       datasets:[{ data:kz.map(function(r){return r.count;}), backgroundColor:kz.map(function(r){return delayCatColor(r.label);}), borderRadius:5, categoryPercentage:.74, barPercentage:.82 }] },
     options:{ indexAxis:"y", scales:kwSc,
-      onClick:function(evt, els){ if(els&&els.length&&isKwEtc(els[0].index)) openDelayModal(kwEtc, kwEtcTotal, "미설치 사유 · 기타 세부내역", "현재 미설치 잔여건 메모 키워드 자동분류 · 개인정보 미포함"); },
+      onClick:function(evt, els){ if(els&&els.length&&isKwEtc(els[0].index)) openDelayModal(kwEtc, kwEtcTotal, "미설치 사유 · 기타 세부내역", "메모 키워드 우선 · 메모 없으면 L열 코드 사유로 대체 · 개인정보 미포함"); },
       onHover:function(evt, els){ if(evt.native&&evt.native.target) evt.native.target.style.cursor=(els.length&&isKwEtc(els[0].index))?"pointer":"default"; },
       plugins:{ datalabels: dl({anchor:"end",align:"end"}),
         tooltip:{ callbacks:{ afterLabel:function(ct){ return isKwEtc(ct.dataIndex)?"▶ 클릭 시 세부내역":undefined; } } } } } });
