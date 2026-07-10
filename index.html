@@ -543,6 +543,14 @@ function delayCatColor(cat){
 function renderDelayWeekly(reasons){
   var rows = (reasons && reasons.delayWeekly) || [];
   var cats = (reasons && reasons.delayCats) || [];
+  // 데이터 없음(캐시 구버전 등) 방어: 빈 화면 대신 안내 표시
+  if (!rows.length || !cats.length) {
+    document.getElementById("delayweek-tiles").innerHTML =
+      '<div class="tile" style="grid-column:1/-1"><div class="t-label">🐢 D+7 초과 지연분석</div><div class="t-sub" style="margin-top:6px">데이터를 불러오는 중이거나 아직 집계 전입니다. 잠시 후 <b>새로고침(Ctrl+Shift+R)</b> 해주세요.</div></div>';
+    if (charts["dwBar"]) { charts["dwBar"].destroy(); delete charts["dwBar"]; }
+    var dwt = document.getElementById("delayWeekTable"); if (dwt) dwt.innerHTML = "";
+    return;
+  }
   // 타일: 최근16주 총건 · 최다 사유 · 이번(최근)주 · 평균/주
   var sum = rows.reduce(function(s,x){return s+x.total;},0);
   var catSum = {}; cats.forEach(function(c){ catSum[c]=rows.reduce(function(s,x){return s+(x.reasons[c]||0);},0); });
