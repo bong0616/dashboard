@@ -427,7 +427,7 @@
         <div class="gauge-wrap"><canvas id="perfGauge"></canvas><div class="gauge-center"><div class="g-val" id="gauge-val">–</div><div class="g-lab">설치 완료율</div></div></div>
       </div>
       <div class="card col-8"><h3>📈 월별 처리량 추세</h3><div class="sub">실적로그 · 통화시도(처리)량 vs 설치완료</div><div class="chart-wrap h260"><canvas id="perfMonthly"></canvas></div></div>
-      <div class="card col-5"><h3>🔌 설치 채널 비중</h3><div class="sub">자가설치 vs 상담원</div><div class="chart-wrap h220" style="height:200px"><canvas id="perfChannel"></canvas></div><div class="legend" id="channel-legend"></div></div>
+      <div class="card col-5"><h3>🔌 설치 채널 비중</h3><div class="sub">자가설치 vs 상담원 · 5/6 출고건부터(채널 분류 시작일 기준)</div><div class="chart-wrap h220" style="height:200px"><canvas id="perfChannel"></canvas></div><div class="legend" id="channel-legend"></div></div>
       <div class="card col-7"><h3>⏱️ 설치 소요일 분포</h3><div class="sub">출고 → 설치완료 (일). 평균 <b id="perf-avglead">–</b>일 · 5일 이내 <b id="perf-within5">–</b></div><div class="chart-wrap h220"><canvas id="perfSpeed"></canvas></div></div>
       <div class="card col-6"><h3>🔁 재컨택 주기 → 설치 속도</h3><div class="sub">메모 재컨택 간격이 짧을수록 실제로 빨리 설치되는가?</div><div class="chart-wrap h220"><canvas id="perfRetouch"></canvas></div><div class="insight" id="retouch-insight"></div></div>
       <div class="card col-6"><h3>🐢 7일+ 지연 사유</h3><div class="sub">설치완료됐지만 7일 이상 걸린 건 (메모 자동분류) · <b style="color:var(--s-blue-d)">기타 막대 클릭 시 세부내역</b></div><div class="chart-wrap" style="height:360px"><canvas id="perfDelay"></canvas></div></div>
@@ -750,12 +750,14 @@ function renderDelayWeekTable(rows, cats){
 // ---------- PERF ----------
 function renderPerf(p) {
   var ins = p.install, sp = p.speed;
+  // 채널 비율 모수 기준일 라벨(예 "5/6 출고~") — 5/6부터 자가/상담원 분류 시작
+  var cs=(ins.channelSince||"2026-05-06").split("-"), csLbl=(+cs[1])+"/"+(+cs[2])+" 출고~";
   document.getElementById("perf-tiles").innerHTML =
     tile("설치 완료율","🎯", pct(ins.completionRate,1), "", "완료 "+fmt(ins.completed)+" / 출고 "+fmt(ins.total2026), true) +
     tile("평균 설치소요일","⏱️", round1(sp.avgShipToInstall), "일", "출고 → 설치완료") +
     tile("5일 이내 설치율","🚀", pct(sp.within5Rate,1), "", "빠른 설치 비중") +
-    tile("자가설치율","🔧", pct(ins.selfRate,1), "", "무인 자가설치") +
-    tile("상담원 설치율","📞", pct(ins.agentRate + ins.smsRate,1), "", "상담원(문자발송 포함)") +
+    tile("자가설치율","🔧", pct(ins.selfRate,1), "", "무인 자가설치 · "+csLbl) +
+    tile("상담원 설치율","📞", pct(ins.agentRate + ins.smsRate,1), "", "상담원+문자발송 · "+csLbl) +
     tile("이번주 처리량","📆", fmt(p.thisWeek.calls), "건", "설치완료 "+fmt(p.thisWeek.installs)+"건");
 
   // Gauge
@@ -776,12 +778,14 @@ function renderPerf(p) {
     options:{ scales:axes(), plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"line",color:C["--text-secondary"]}}, datalabels:{display:false} }, interaction:{mode:"index",intersect:false} } });
 
   // Channel doughnut + custom legend (relief: visible labels)
-  var ch=[["자가설치",ins.bySource.자가설치,C["--s-aqua"]],["상담원",(ins.bySource.상담원||0)+(ins.bySource.문자발송||0),C["--s-blue"]]];
+  // 채널 비율은 분류 시작(5/6) 이후 출고 완료건만 모수(정합) — 구 캐시 대비 폴백
+  var bs=ins.bySourceClassified||ins.bySource, cComp=ins.completedClassified||ins.completed;
+  var ch=[["자가설치",bs.자가설치,C["--s-aqua"]],["상담원",(bs.상담원||0)+(bs.문자발송||0),C["--s-blue"]]];
   mk("perfChannel", { type:"doughnut",
     data:{ labels:ch.map(function(x){return x[0];}), datasets:[{ data:ch.map(function(x){return x[1];}), backgroundColor:ch.map(function(x){return x[2];}), borderColor:C["--surface-1"], borderWidth:2 }] },
-    options:{ cutout:"64%", plugins:{ datalabels: dl({color:"#fff", formatter:function(v){return Math.round(v/ins.completed*100)+"%";}}) } } });
+    options:{ cutout:"64%", plugins:{ datalabels: dl({color:"#fff", formatter:function(v){return Math.round(v/cComp*100)+"%";}}) } } });
   document.getElementById("channel-legend").innerHTML = ch.map(function(x){
-    return '<span class="li"><span class="dot" style="background:'+x[2]+'"></span>'+x[0]+' <b>'+fmt(x[1])+'</b> ('+Math.round(x[1]/ins.completed*100)+'%)</span>';
+    return '<span class="li"><span class="dot" style="background:'+x[2]+'"></span>'+x[0]+' <b>'+fmt(x[1])+'</b> ('+Math.round(x[1]/cComp*100)+'%)</span>';
   }).join("");
 
   document.getElementById("perf-avglead").textContent = round1(sp.avgShipToInstall);
