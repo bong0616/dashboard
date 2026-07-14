@@ -1756,11 +1756,23 @@ function boot(passcode) {
 function loadPeriod(start,end,label,fresh){
   if(!LAST_PASS) return;
   CUR_PERIOD={start:start,end:end,label:label};
-  setLoading(true, fresh ? "최신 데이터 다시 계산 중… (최대 1~2분 소요)" : (start ? (label+" 집계 중… (해당 기간 최초 조회는 30~40초, 이후 즉시)") : "불러오는 중…"));
-  fetchData(LAST_PASS, function(d){
+  setLoading(true, fresh ? "최신 데이터 다시 계산 중… (약 10초)" : (start ? (label+" 집계 중…") : "불러오는 중…"));
+  function done(d){
     setLoading(false);
-    if(d && !d.error) applyData(d);
-  }, function(msg){ setLoading(false); alert(msg); }, {start:start,end:end,fresh:fresh?1:0});
+    if(d && d.error){ alert("데이터 오류: "+d.error); return; }   // 예전엔 조용히 무시돼 원인 파악이 안 됐음
+    if(d) applyData(d);
+  }
+  fetchData(LAST_PASS, done, function(msg){
+    // 앱스스크립트는 같은 사용자의 실행을 직렬화한다 → 다른 실행 뒤에 줄서면 대기가 길어져
+    // 서버는 재계산·캐시 저장을 마쳤는데 클라이언트만 먼저 끊기는 경우가 생긴다.
+    // 이땐 캐시를 그냥 한 번 더 읽으면 방금 계산된 최신 데이터가 즉시 나온다.
+    if(fresh){
+      setLoading(true, "재계산 결과 확인 중…");
+      fetchData(LAST_PASS, done, function(m2){ setLoading(false); alert(m2); }, {start:start,end:end});
+      return;
+    }
+    setLoading(false); alert(msg);
+  }, {start:start,end:end,fresh:fresh?1:0});
 }
 
 // ===== 기간 필터 =====
