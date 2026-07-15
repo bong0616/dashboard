@@ -264,6 +264,10 @@
   .lca-split table.dtable { min-width: 0; }
   .lca-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; }
   table.dtable td.lca-cum { color: var(--muted); font-size: 11.5px; font-weight: 500; }
+  /* 부서별 지연원인 표: 행 클릭 = 드릴다운 · 고객사정/미분류는 액션 대상이 아니라 흐리게 */
+  table.dtable tr.dept-row { cursor: pointer; }
+  table.dtable tr.dept-dim td { opacity: .55; }
+  table.dtable tr.dept-dim:hover td { opacity: 1; }
   @media (max-width: 1100px) { .lca-split { grid-template-columns: 1fr; } }
 
   /* Weekly comparison table */
@@ -376,6 +380,7 @@
   </div>
   <div class="navitem active" data-tab="board"><span class="ic">📊</span><div>현황판<small>주간 회의용 요약</small></div></div>
   <div class="navitem" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량</small></div></div>
+  <div class="navitem" data-tab="dept"><span class="ic">🏢</span><div>부서별 지연원인<small>영업·물류·전산·온보딩</small></div></div>
   <div class="navitem" data-tab="perf" id="nav-perf"><span class="ic">⚡</span><div>성과<small>설치속도·작업량</small></div><span class="navcaret" id="perf-caret">▸</span></div>
   <div class="navitem navchild" data-tab="flow" id="nav-flow" style="display:none"><span class="ic">📈</span><div>월·주·일 흐름<small>기간별 추이</small></div></div>
   <div class="navitem navchild" data-tab="delayweek" id="nav-delayweek" style="display:none"><span class="ic">🐢</span><div>D+7 초과 지연분석<small>출고 주별 사유</small></div></div>
@@ -450,6 +455,28 @@
       </div>
       <div class="card col-12"><h3>🔎 사유코드 없는 미설치 — 배송상태 구성</h3><div class="sub">L열 사유 없는 미설치 <b id="ops-unspec-cnt">–</b>건 중, <b>배송중은 아직 설치 전이라 위 '사유미기재'에서 제외</b> · 배송완료 건이 실제 관리 대상</div><div class="chart-wrap h220"><canvas id="opsUnspecDelivery"></canvas></div></div>
       <div class="card col-12"><h3>🔑 미설치 사유 (메모 키워드 분류)</h3><div class="sub">현재 미설치 잔여건(반품·폐업 제외)의 <b>메모를 키워드 자동분류</b> · 설치일 무관 · 7일+ 지연 사유와 동일 로직(부재·문자안내/미룸/방문설치 접수/원격접수/전산·결제단말 등) · <b>기타 막대 클릭 시 세부내역</b></div><div class="chart-wrap" style="height:380px"><canvas id="opsReasonKw"></canvas></div></div>
+    </div>
+  </section>
+
+  <!-- DEPT -->
+  <section class="tab-content" id="tab-dept">
+    <div class="tiles" id="dept-tiles"></div>
+    <div class="grid">
+      <div class="card col-5"><h3>🏢 부서별 원인 건수</h3>
+        <div class="sub">로우데이터 L열 사유코드 → 부서 매핑 · <b>고객사정</b>은 부서가 손쓰기 어려운 축이라 참고용</div>
+        <div class="chart-wrap h260"><canvas id="deptBar"></canvas></div>
+      </div>
+      <div class="card col-7"><h3>📈 출고월별 추이 <small class="th-tgt" style="display:inline">개선대상만</small></h3>
+        <div class="sub">고객사정 제외 · 출고월 기준 · 최근 월은 아직 누적중이라 낮게 보일 수 있음</div>
+        <div class="chart-wrap h260"><canvas id="deptMonth"></canvas></div>
+      </div>
+      <div class="card col-12"><h3>🔧 원인별 상세 <span class="board-imp">클릭</span></h3>
+        <div class="sub"><b>행을 클릭하면</b> 해당 주문번호·메모를 볼 수 있습니다 · 미완료율이 높을수록 그 원인이 설치를 끝까지 막고 있다는 뜻 · 개선대상 부서 먼저 정렬</div>
+        <div class="tbl-wrap"><table class="dtable" id="deptTbl"></table></div>
+      </div>
+      <div class="card col-12"><h3>⚠️ 데이터 품질</h3><div class="sub">집계 신뢰도에 영향을 주는 원천 이슈</div>
+        <div class="insight" id="dept-quality"></div>
+      </div>
     </div>
   </section>
 
@@ -633,6 +660,7 @@ function render(d) {
   renderWeekly(d.perf);
   renderDaily(d.perf);
   renderDelayWeekly(d.reasons);
+  renderDept(d.reasons);
   renderReport(d.perf, d.weeklyNotes);
 }
 
@@ -772,6 +800,106 @@ function renderOps(o, reasons) {
       onHover:function(evt, els){ if(evt.native&&evt.native.target) evt.native.target.style.cursor=(els.length&&isKwEtc(els[0].index))?"pointer":"default"; },
       plugins:{ datalabels: dl({anchor:"end",align:"end"}),
         tooltip:{ callbacks:{ afterLabel:function(ct){ return isKwEtc(ct.dataIndex)?"▶ 클릭 시 세부내역":undefined; } } } } } });
+}
+
+// ---------- DEPT (부서별 지연원인) ----------
+// 부서 색: 개선대상 4개는 유채색, 고객사정·미분류는 회색(=액션 대상이 아님을 색으로 구분)
+var DEPT_COLOR = { "영업":"--s-red", "물류":"--s-orange", "전산":"--s-violet", "온보딩":"--s-blue", "고객사정":"--muted", "미분류":"--grid" };
+var DEPT_CAUSES_SEEN = [];  // 표 행 index → {dept,cause} (클릭 드릴다운용)
+
+function renderDept(reasons){
+  var d = reasons && reasons.deptDelay;
+  if(!d){ document.getElementById("dept-tiles").innerHTML=""; return; }
+  var pctS=function(x){ return (x*100).toFixed(1)+"%"; };
+  var act=d.byDept.filter(function(x){return x.actionable;});
+  var top=act.slice().sort(function(a,b){return b.total-a.total;})[0];
+
+  document.getElementById("dept-tiles").innerHTML =
+    tile("부서 개선대상","🏢", fmt(d.actionableTotal), "건", "고객사정 제외 · "+d.since+" 출고~", true,
+      "각 부서가 <b>줄일 수 있는</b> 지연 원인만 센 건수입니다.<br>영업·물류·전산·온보딩 4개 부서에 매핑된 사유코드의 합이며, 창업지연·개인사유·미룸 같은 <b>고객사정은 제외</b>했습니다.") +
+    tile("아직 미완료","⛔", fmt(d.actionableOpen), "건", "개선대상 중 설치 안 끝난 건") +
+    (top ? tile("최다 부서","🔺", top.dept, "", fmt(top.total)+"건 · 미완료 "+pctS(top.openRate)) : "") +
+    tile("사유 기재율","📝", pctS(d.coverage.rate), "", fmt(d.coverage.hasReason)+"/"+fmt(d.coverage.rows)+"건 기재", false,
+      "L열에 사유코드가 적힌 비율입니다. 나머지는 사유가 비어 있어 <b>원인을 알 수 없는 건</b>이라, 이 비율이 낮으면 아래 집계도 그만큼만 설명합니다.");
+
+  // 부서별 막대(개선대상 → 고객사정 순, DEPT_ORDER 유지)
+  mk("deptBar", { type:"bar",
+    data:{ labels:d.byDept.map(function(x){return x.dept;}),
+      datasets:[{ data:d.byDept.map(function(x){return x.total;}),
+        backgroundColor:d.byDept.map(function(x){return C[DEPT_COLOR[x.dept]]||C["--grid"];}), borderRadius:6 }] },
+    options:{ scales:axes(), plugins:{
+      tooltip:{ callbacks:{ label:function(ctx){ var x=d.byDept[ctx.dataIndex];
+        return fmt(x.total)+"건 · 미완료 "+fmt(x.open)+" ("+pctS(x.openRate)+")"; } } },
+      datalabels: dlBarTop() } } });
+
+  // 출고월별 추이(개선대상 부서만 누적)
+  var actDepts=d.actionableDepts.filter(function(dep){ return d.byDept.some(function(x){return x.dept===dep;}); });
+  mk("deptMonth", { type:"bar",
+    data:{ labels:d.byMonth.map(function(m){return m.ym;}),
+      datasets:actDepts.map(function(dep){ return { label:dep,
+        data:d.byMonth.map(function(m){return m[dep]||0;}),
+        backgroundColor:C[DEPT_COLOR[dep]], borderRadius:4, stack:"s" }; }) },
+    options:{ scales:{ x:{ stacked:true, grid:{display:false}, ticks:{color:C["--muted"]} },
+                       y:{ stacked:true, beginAtZero:true, grace:"12%", grid:{color:C["--grid"]}, ticks:{color:C["--muted"]} } },
+      plugins:{ legend:{display:true, labels:{usePointStyle:true, pointStyle:"rectRounded", color:C["--text-secondary"]}},
+        datalabels: dlSeg() } } });
+
+  // 원인별 상세표
+  DEPT_CAUSES_SEEN = d.byCause.map(function(c){ return {dept:c.dept, cause:c.cause}; });
+  document.getElementById("deptTbl").innerHTML =
+    "<thead><tr><th>부서</th><th>원인 (L열 사유코드)</th><th>건수</th><th>완료</th><th>미완료</th><th>미완료율</th></tr></thead><tbody>"+
+    d.byCause.map(function(c,i){
+      var warn = c.openRate>=0.5 && c.total>=5; // 절반 이상 미완료 = 설치를 끝까지 막는 원인
+      return "<tr class='dept-row"+(c.actionable?"":" dept-dim")+"' data-i='"+i+"'>"+
+        "<td><span class='lca-dot' style='background:"+(C[DEPT_COLOR[c.dept]]||C["--grid"])+"'></span>"+c.dept+"</td>"+
+        "<td>"+esc(c.cause)+"</td>"+
+        "<td class='cell-main'>"+fmt(c.total)+"</td>"+
+        "<td class='lca-cum'>"+fmt(c.done)+"</td>"+
+        "<td>"+fmt(c.open)+"</td>"+
+        "<td class='"+(warn?"tgt-over":"")+"'>"+pctS(c.openRate)+"</td></tr>";
+    }).join("")+"</tbody>";
+  Array.prototype.forEach.call(document.querySelectorAll("#deptTbl .dept-row"), function(tr){
+    tr.addEventListener("click", function(){ openDeptDetail(parseInt(tr.getAttribute("data-i"),10)); });
+  });
+
+  // 데이터 품질: 사유 미기재 + 원천 코드번호 충돌
+  var blank=d.coverage.rows-d.coverage.hasReason;
+  document.getElementById("dept-quality").innerHTML =
+    "출고 <b>"+fmt(d.coverage.rows)+"건</b> 중 <b>"+fmt(blank)+"건("+pctS(1-d.coverage.rate)+")</b>은 L열 사유가 비어 있어 원인을 알 수 없습니다. "+
+    "이 집계는 사유가 적힌 <b>"+fmt(d.coverage.hasReason)+"건</b>만 설명합니다.<br>"+
+    "원천 코드번호가 겹칩니다 — <b>10</b>번(비용부담/비용문제), <b>4</b>번(설치중도포기/바쁨). "+
+    "대시보드는 번호가 아닌 <b>라벨</b>로 매핑해 영향은 없지만, 시트에서 번호를 정리하면 더 안전합니다.";
+}
+
+function openDeptDetail(i){
+  var t=DEPT_CAUSES_SEEN[i];
+  if(!t || !LAST_PASS) return;
+  document.getElementById("modal-box").classList.add("wide");
+  document.getElementById("modal-title").textContent=t.dept+" · "+t.cause;
+  document.getElementById("modal-sub").textContent="불러오는 중…";
+  document.getElementById("modal-body").innerHTML='<div class="modal-empty">불러오는 중…</div>';
+  document.getElementById("modal").classList.add("open");
+  fetchData(LAST_PASS, function(r){
+    if(!r || !r.ok){ failLastCallDetail((r && r.error)||"조회 실패"); return; }
+    paintDeptDetail(t, r);
+  }, failLastCallDetail, { params:{ action:"deptdetail", cause:t.cause, dept:t.dept } });
+}
+function paintDeptDetail(t, r){
+  var rows=r.rows||[];
+  document.getElementById("modal-title").textContent=t.dept+" · "+t.cause+" ("+fmt(r.count||0)+"건)";
+  document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · K열 메모 원문 · 미완료 "+fmt(r.open||0)+"건 먼저 · 오래된 출고순";
+  if(!rows.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">해당 원인에 건이 없습니다.</div>'; return; }
+  document.getElementById("modal-body").innerHTML=
+    '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
+    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>출고</th><th>설치</th><th>메모 (K열)</th></tr></thead><tbody>'+
+    rows.map(function(x){
+      var memo=String(x.memo||"").trim();
+      var inst = x.installed ? esc(x.installed)+' <span class="lca-cum">D+'+x.lead+'</span>' : '<b style="color:'+C["--s-red"]+'">미완료</b>';
+      return '<tr><td class="lcd-ord">'+esc(x.order)+'</td>'+
+        '<td class="lcd-date">'+esc(x.ship)+'</td>'+
+        '<td class="lcd-date">'+inst+'</td>'+
+        '<td class="lcd-memo'+(memo?'':' empty')+'">'+(memo?esc(memo):"(메모 없음)")+'</td></tr>';
+    }).join('')+'</tbody></table>';
 }
 
 // D+7 지연/미설치 사유 카테고리 → 색상(운영 보조차트·주별 분석탭 공용)
@@ -2070,7 +2198,7 @@ document.getElementById("f-reset").addEventListener("click", function(){
   loadPeriod("","","전체 기간");
 });
 
-var TABMETA={ board:["주간 현황판","주간 회의용 핵심 지표 한눈에 · 전주 대비 · 회의 코멘트"], ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], flow:["월·주·일 흐름","실적로그 기준 · 통화시도·설치완료·최초컨택의 월별/주별/일별 추이"], delayweek:["D+7 초과 설치지연분석","출고→설치 7일+ 완료건을 출고 주(월요일)별로 · 사유 메모 키워드 자동분류"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주간 비교 스코어보드","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일간 비교 스코어보드","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"] };
+var TABMETA={ board:["주간 현황판","주간 회의용 핵심 지표 한눈에 · 전주 대비 · 회의 코멘트"], ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], dept:["부서별 지연원인","로우데이터 L열 사유코드 → 부서별 · 각 부서가 줄일 수 있는 지연 원인"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], flow:["월·주·일 흐름","실적로그 기준 · 통화시도·설치완료·최초컨택의 월별/주별/일별 추이"], delayweek:["D+7 초과 설치지연분석","출고→설치 7일+ 완료건을 출고 주(월요일)별로 · 사유 메모 키워드 자동분류"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주간 비교 스코어보드","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일간 비교 스코어보드","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
