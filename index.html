@@ -476,8 +476,9 @@
         <div class="sub">개선대상 197건을 <b>어떤 액션으로 막을 수 있나</b>로 묶음 · L열 코드 + K열 메모 병합 판정 · <b>정상 대기·고객 변심·사유 미기재</b>는 액션 대상이 아니라 회색</div>
         <div class="chart-wrap h260"><canvas id="rootBar"></canvas></div>
       </div>
-      <div class="card col-7"><h3>🧩 세분류 상세 <span class="board-imp">클릭</span></h3>
-        <div class="sub">행 클릭 시 주문번호·메모 · 규칙은 영업 93건 메모 전수 판독으로 도출 · 미완료율이 높을수록 그 원인은 <b>되살아나지 않고 반품으로 끝난다</b></div>
+      <div class="card col-7"><h3>🧩 세분류 상세 <span class="board-imp">클릭</span>
+          <select id="root-mo-sel" style="font-size:12.5px;padding:3px 8px;margin-left:auto"></select></h3>
+        <div class="sub">행 클릭 시 주문번호·메모 · 규칙은 영업 93건 메모 전수 판독으로 도출 · 미완료율이 높을수록 그 원인은 <b>되살아나지 않고 반품으로 끝난다</b> · <span id="root-scope"></span></div>
         <div class="tbl-wrap"><table class="dtable" id="rootTbl"></table></div>
         <div class="insight" id="root-insight"></div>
       </div>
@@ -900,11 +901,35 @@ function renderDept(reasons){
 var ROOT_COLOR = { "판매 전 검증":"--s-red", "판매 시 구성·안내":"--s-orange", "출고·배송 오류":"--s-blue",
   "전산·등록":"--s-violet", "설치 가이드":"--s-aqua", "정상 대기":"--muted", "고객 변심":"--baseline", "사유 미기재":"--grid" };
 var ROOT_MINORS_SEEN = [];
+var ROOT_SEL_MO = ""; // ""=전체, 아니면 "YYYY-MM" — 세분류 상세표 + 드릴다운이 같이 따라간다
 
 function renderRoot(reasons){
   var d = reasons && reasons.deptDelay;
   if(!d || !d.rootMajor){ return; }
   var pctS=function(x){ return (x*100).toFixed(1)+"%"; };
+
+  // ---- 출고월 드롭다운(세분류 상세표 전용) ----
+  var byMo = d.rootMinorByMonth || [];
+  // 선택월이 현재 기간필터 결과에 없으면(필터 변경 등) 전체로 리셋
+  if (ROOT_SEL_MO && !byMo.some(function(m){ return m.ym===ROOT_SEL_MO; })) ROOT_SEL_MO = "";
+  var sel = document.getElementById("root-mo-sel");
+  if (sel){
+    var allTot = d.rootMinor.reduce(function(s,x){ return s+x.total; },0);
+    var html = '<option value="">전체 ('+fmt(allTot)+'건)</option>';
+    for (var i=byMo.length-1; i>=0; i--){  // 최신월 위
+      html += '<option value="'+byMo[i].ym+'">'+(+byMo[i].ym.slice(5))+'월 ('+fmt(byMo[i].total)+'건)</option>';
+    }
+    sel.innerHTML = html;
+    sel.value = ROOT_SEL_MO;
+    sel.style.display = byMo.length ? "" : "none"; // 구버전 캐시(rootMinorByMonth 없음)면 숨김
+  }
+  var minorRows = ROOT_SEL_MO
+    ? ((byMo.filter(function(m){ return m.ym===ROOT_SEL_MO; })[0] || {}).minor || [])
+    : d.rootMinor;
+  var scope = document.getElementById("root-scope");
+  if (scope) scope.innerHTML = ROOT_SEL_MO
+    ? '모수=<b>'+ROOT_SEL_MO.slice(0,4)+'년 '+(+ROOT_SEL_MO.slice(5))+'월 출고</b>'
+    : '모수=<b>'+d.since+' 이후 출고 전체</b>';
 
   mk("rootBar", { type:"bar",
     data:{ labels:d.rootMajor.map(function(x){return x.major;}),
@@ -915,10 +940,10 @@ function renderRoot(reasons){
         return fmt(x.total)+"건 · 미완료 "+fmt(x.open)+" ("+pctS(x.openRate)+")"+(x.avgLead!=null?" · 완료평균 D+"+x.avgLead.toFixed(1):""); } } },
         datalabels: dl({anchor:"end",align:"end"}) } } });
 
-  ROOT_MINORS_SEEN = d.rootMinor.map(function(x){ return {major:x.major, minor:x.minor}; });
+  ROOT_MINORS_SEEN = minorRows.map(function(x){ return {major:x.major, minor:x.minor}; });
   document.getElementById("rootTbl").innerHTML =
     "<thead><tr><th>대분류</th><th>세분류</th><th>부서</th><th>건수</th><th>미완료</th><th>미완료율</th><th>완료평균</th></tr></thead><tbody>"+
-    d.rootMinor.map(function(x,i){
+    (minorRows.length ? minorRows.map(function(x,i){
       var warn = x.openRate>=0.5 && x.total>=5;
       return "<tr class='dept-row"+(x.actionable?"":" dept-dim")+"' data-i='"+i+"'>"+
         "<td><span class='lca-dot' style='background:"+(C[ROOT_COLOR[x.major]]||C["--grid"])+"'></span>"+esc(x.major)+"</td>"+
@@ -928,7 +953,7 @@ function renderRoot(reasons){
         "<td>"+fmt(x.open)+"</td>"+
         "<td class='"+(warn?"tgt-over":"")+"'>"+pctS(x.openRate)+"</td>"+
         "<td class='lca-cum'>"+(x.avgLead!=null?"D+"+x.avgLead.toFixed(1):"–")+"</td></tr>";
-    }).join("")+"</tbody>";
+    }).join("") : "<tr><td colspan='7' style='text-align:center;color:var(--muted);padding:18px'>해당 월에 개선대상 건이 없습니다.</td></tr>")+"</tbody>";
   Array.prototype.forEach.call(document.querySelectorAll("#rootTbl .dept-row"), function(tr){
     tr.addEventListener("click", function(){ openRootDetail(parseInt(tr.getAttribute("data-i"),10)); });
   });
@@ -949,14 +974,18 @@ function openRootDetail(i){
   document.getElementById("modal-sub").textContent="불러오는 중…";
   document.getElementById("modal-body").innerHTML='<div class="modal-empty">불러오는 중…</div>';
   document.getElementById("modal").classList.add("open");
+  // 표에 걸린 월 필터를 드릴다운에도 그대로 넘긴다(표는 6월인데 팝업은 전체 = 건수 불일치 방지)
+  var params={ action:"rootdetail", major:t.major, minor:t.minor };
+  if(ROOT_SEL_MO) params.ym=ROOT_SEL_MO;
   fetchData(LAST_PASS, function(r){
     if(!r || !r.ok){ failLastCallDetail((r&&r.error)||"조회 실패"); return; }
     paintRootDetail(t, r);
-  }, failLastCallDetail, { params:{ action:"rootdetail", major:t.major, minor:t.minor } });
+  }, failLastCallDetail, { params:params });
 }
 function paintRootDetail(t, r){
   var rows=r.rows||[];
-  document.getElementById("modal-title").textContent=t.major+" · "+t.minor+" ("+fmt(r.count||0)+"건)";
+  var moTag = r.ym ? " · "+(+r.ym.slice(5))+"월 출고" : "";
+  document.getElementById("modal-title").textContent=t.major+" · "+t.minor+moTag+" ("+fmt(r.count||0)+"건)";
   document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · K열 메모 원문 · 미완료 "+fmt(r.open||0)+"건 먼저 · 오래된 출고순";
   if(!rows.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">해당 원인에 건이 없습니다.</div>'; return; }
   document.getElementById("modal-body").innerHTML=
@@ -2383,6 +2412,11 @@ function applyFilters(){
 (function(){ var msel=document.getElementById("delaylead-mo-sel");
   if(msel) msel.addEventListener("change", function(){ DELAYLEAD_SEL_MO=this.value;
     if(LAST_DATA&&LAST_DATA.reasons) renderDelayLead(LAST_DATA.reasons, LAST_DATA.reasons.delayCats||[]); });
+})();
+// 세분류 상세 출고월 드롭다운 — payload에 월별이 이미 있어 서버 왕복 없이 즉시 전환
+(function(){ var rsel=document.getElementById("root-mo-sel");
+  if(rsel) rsel.addEventListener("change", function(){ ROOT_SEL_MO=this.value;
+    if(LAST_DATA&&LAST_DATA.reasons) renderRoot(LAST_DATA.reasons); });
 })();
 document.getElementById("f-apply").addEventListener("click", applyFilters);
 document.getElementById("f-reset").addEventListener("click", function(){
