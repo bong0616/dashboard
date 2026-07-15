@@ -293,6 +293,21 @@
   .modal-x:hover { background: rgba(0,0,0,.06); color: var(--text-primary); }
   .modal-body { padding: 12px 20px 20px; }
   .modal-empty { color: var(--muted); text-align: center; padding: 24px 0; }
+
+  /* 마지막 통화일 상세(주문번호·메모 원문) — 메모가 길어 기본 520px보다 넓은 변형 */
+  .modal-box.wide { max-width: 900px; }
+  .lcd-warn { margin: 0 0 11px; padding: 9px 12px; border-radius: 8px; font-size: 11.5px; line-height: 1.5;
+    background: color-mix(in srgb, var(--s-orange) 10%, transparent); border-left: 3px solid var(--s-orange); color: var(--text-secondary); }
+  table.lcd-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.lcd-tbl th { position: sticky; top: 0; z-index: 1; background: var(--surface-1); color: var(--muted);
+    font-size: 11.5px; font-weight: 600; text-align: left; padding: 8px; border-bottom: 1.5px solid var(--baseline); white-space: nowrap; }
+  table.lcd-tbl td { padding: 9px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.lcd-tbl tbody tr:hover { background: color-mix(in srgb, var(--s-blue) 6%, transparent); }
+  table.lcd-tbl td.lcd-ord { font-weight: 700; color: var(--text-primary); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  table.lcd-tbl td.lcd-date { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  table.lcd-tbl td.lcd-st { color: var(--text-secondary); white-space: nowrap; }
+  table.lcd-tbl td.lcd-memo { color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap; word-break: break-word; min-width: 260px; }
+  table.lcd-tbl td.lcd-memo.empty { color: var(--muted); font-style: italic; }
   table.modal-tbl { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
   table.modal-tbl td { padding: 9px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
   table.modal-tbl td.mk { font-weight: 600; color: var(--text-primary); white-space: nowrap; }
@@ -538,7 +553,7 @@
 
 <!-- 상세 팝업(모달) — 7일+ 지연 '기타' 세부내역 등 -->
 <div id="modal" class="modal-overlay">
-  <div class="modal-box">
+  <div class="modal-box" id="modal-box">
     <div class="modal-head">
       <div><h3 id="modal-title">–</h3><div class="modal-sub" id="modal-sub"></div></div>
       <button class="modal-x" id="modal-x" aria-label="닫기">✕</button>
@@ -629,6 +644,17 @@ function tile(label, ic, val, unit, sub, accent, tip) {
 }
 
 // ---------- OPS ----------
+// 마지막 통화일 경과 구간 정의 [백엔드키, 라벨, 색]. 백엔드 api_lastCallBucket_ 키와 1:1로 맞출 것.
+// 차트 막대 index → 이 배열 index → bucket 키 순으로 모달이 상세를 조회하므로 순서가 계약이다.
+var LCA_DEFS = [
+  ["d0",  "오늘 통화",  "--s-aqua"],
+  ["d1",  "1일 경과",   "--s-blue-l"],
+  ["d2",  "2일 경과",   "--s-blue"],
+  ["d3",  "3일 경과",   "--s-yellow"],
+  ["d46", "4~6일 경과", "--s-orange"],
+  ["d7",  "7일 이상",   "--s-red"]
+];
+
 function renderOps(o, reasons) {
   var absentTotal = o.status.부재;
   document.getElementById("ops-tiles").innerHTML =
@@ -678,14 +704,7 @@ function renderOps(o, reasons) {
   // ---- 마지막 통화일 경과 현황 (콜리스트 T열) ----
   // 구간 색 = 방치 정도(초록:오늘 통화 → 빨강:7일+). 표의 '누적'은 해당 구간 이상 경과한 건의 합.
   var lca = o.lastCallAging || { total:0, d0:0, d1:0, d2:0, d3:0, d46:0, d7:0 };
-  var lcaRows = [
-    ["오늘 통화", lca.d0,  C["--s-aqua"]],
-    ["1일 경과",  lca.d1,  C["--s-blue-l"]],
-    ["2일 경과",  lca.d2,  C["--s-blue"]],
-    ["3일 경과",  lca.d3,  C["--s-yellow"]],
-    ["4~6일 경과",lca.d46, C["--s-orange"]],
-    ["7일 이상",  lca.d7,  C["--s-red"]]
-  ];
+  var lcaRows = LCA_DEFS.map(function(d){ return [d[1], lca[d[0]]||0, C[d[2]]]; });
   var lcaPct = function(n){ return lca.total ? (n*100/lca.total) : 0; };
   var lcaP1 = function(n){ return lcaPct(n).toFixed(1)+"%"; };
   // 누적(이 구간 이상 경과) — 뒤에서부터 합산
@@ -699,9 +718,14 @@ function renderOps(o, reasons) {
       datasets:[{ data: lcaRows.map(function(r){return r[1];}),
         backgroundColor: lcaRows.map(function(r){return r[2];}), borderRadius:6,
         categoryPercentage:.72, barPercentage:.86 }] },
-    options:{ scales:axes(), plugins:{
-      tooltip:{ callbacks:{ label:function(ctx){ return fmt(ctx.parsed.y)+"건 · 전체의 "+lcaP1(ctx.parsed.y); } } },
-      datalabels: dlBarTop() } } });
+    options:{ scales:axes(),
+      onClick:function(evt, els){ if(els && els.length) openLastCallDetail(els[0].index); },
+      onHover:function(evt, els){ if(evt.native && evt.native.target) evt.native.target.style.cursor = els.length?"pointer":"default"; },
+      plugins:{
+        tooltip:{ callbacks:{
+          label:function(ctx){ return fmt(ctx.parsed.y)+"건 · 전체의 "+lcaP1(ctx.parsed.y); },
+          afterLabel:function(ctx){ return ctx.parsed.y>0 ? "▶ 클릭 시 주문번호·메모" : undefined; } } },
+        datalabels: dlBarTop() } } });
 
   document.getElementById("opsLastCallTbl").innerHTML =
     "<thead><tr><th>구분</th><th>건수</th><th>비율</th><th>누적</th></tr></thead><tbody>" +
@@ -1816,6 +1840,7 @@ function renderDelay(reasons, ins) {
 
 // '기타' 세부내역 팝업 — 메모 키워드 분류(개인정보 미포함). title/sub 생략 시 D+7 기본값.
 function openDelayModal(rows, total, title, sub){
+  document.getElementById("modal-box").classList.remove("wide"); // 마지막통화 상세 모달이 켜둔 wide 해제
   var body;
   if(!rows || !rows.length){
     body='<div class="modal-empty">세부 분류할 기타 건이 없습니다.</div>';
@@ -1834,6 +1859,47 @@ function openDelayModal(rows, total, title, sub){
   document.getElementById("modal").classList.add("open");
 }
 function closeModal(){ document.getElementById("modal").classList.remove("open"); }
+
+// ---- 마지막 통화일 경과: 막대 클릭 → 해당 구간의 주문번호·메모 원문 ----
+// 메모는 payload에 없다(캐시에 PII를 남기지 않으려고). 클릭 시 action=calldetail 로 그때만 조회한다.
+function esc(s){ var d=document.createElement("span"); d.textContent=String(s==null?"":s); return d.innerHTML; }
+
+function openLastCallDetail(idx){
+  var def=LCA_DEFS[idx];
+  if(!def || !LAST_PASS) return;
+  var box=document.getElementById("modal-box");
+  box.classList.add("wide");
+  document.getElementById("modal-title").textContent="마지막 통화일 · "+def[1];
+  document.getElementById("modal-sub").textContent="불러오는 중…";
+  document.getElementById("modal-body").innerHTML='<div class="modal-empty">불러오는 중…</div>';
+  document.getElementById("modal").classList.add("open");
+
+  fetchData(LAST_PASS, function(d){
+    if(!d || !d.ok){ failLastCallDetail((d && d.error) || "조회 실패"); return; }
+    paintLastCallDetail(def, d);
+  }, failLastCallDetail, { params:{ action:"calldetail", bucket:def[0] } });
+}
+function failLastCallDetail(msg){
+  document.getElementById("modal-sub").textContent="";
+  document.getElementById("modal-body").innerHTML='<div class="modal-empty">'+esc(msg)+'</div>';
+}
+function paintLastCallDetail(def, d){
+  var rows=d.rows||[];
+  document.getElementById("modal-title").textContent="마지막 통화일 · "+def[1]+" ("+fmt(d.count||0)+"건)";
+  document.getElementById("modal-sub").textContent="콜리스트 A열 주문번호 · K열 메모 원문 · 오래 방치된 건 순";
+  if(!rows.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">해당 구간에 건이 없습니다.</div>'; return; }
+  // 메모는 시트 자유입력 → esc() 필수(HTML 주입 방지)
+  document.getElementById("modal-body").innerHTML=
+    '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
+    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>마지막통화</th><th>상태</th><th>메모 (K열)</th></tr></thead><tbody>'+
+    rows.map(function(r){
+      var memo=String(r.memo||"").trim();
+      return '<tr><td class="lcd-ord">'+esc(r.order)+'</td>'+
+        '<td class="lcd-date">'+esc(r.lastCall)+'</td>'+
+        '<td class="lcd-st">'+esc(r.status)+'</td>'+
+        '<td class="lcd-memo'+(memo?'':' empty')+'">'+(memo?esc(memo):"(메모 없음)")+'</td></tr>';
+    }).join('')+'</tbody></table>';
+}
 
 // =================== data loading (JSONP) ===================
 var _jsonpSeq=0;
