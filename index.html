@@ -455,6 +455,7 @@
     <div class="grid">
       <div class="card col-12"><h3>🐢 출고 주별 D+7 초과 지연건 · 사유 구성</h3><div class="sub">출고→설치 <b>7일 이상</b> 걸려 완료된 건을 <b>출고일 기준 주(월요일)</b>로 집계 · 사유는 메모 키워드 자동분류 · 최근 16주 · <b>최근 주는 아직 설치 진행중이라 낮게 나옴(정상)</b></div><div class="chart-wrap" style="height:360px"><canvas id="dwBar"></canvas></div></div>
       <div class="card col-12"><h3>📋 주차별 사유 상세표</h3><div class="sub">최근 12주 · 최신 주가 위 · 각 셀=그 출고주의 사유별 D+7 지연 건수</div><div class="tbl-wrap"><table class="dtable" id="delayWeekTable"></table></div></div>
+      <div class="card col-12"><h3>⏳ 지연일자별 사유</h3><div class="sub">출고→설치 <b>소요일 구간</b>별 사유 분포 · 각 셀=그 구간에서 해당 사유로 지연된 건수 · 괄호=구간 내 비중 · 굵게=그 구간 최다 사유 · 모수=<b>2026년 출고 D+7 초과 완료건 전체</b>(위 주차별 표는 최근 12주만 표시라 합계가 다름)</div><div class="tbl-wrap"><table class="dtable" id="delayLeadTable"></table></div></div>
     </div>
   </section>
 
@@ -704,6 +705,7 @@ function renderDelayWeekly(reasons){
       '<div class="tile" style="grid-column:1/-1"><div class="t-label">🐢 D+7 초과 지연분석</div><div class="t-sub" style="margin-top:6px">데이터를 불러오는 중이거나 아직 집계 전입니다. 잠시 후 <b>새로고침(Ctrl+Shift+R)</b> 해주세요.</div></div>';
     if (charts["dwBar"]) { charts["dwBar"].destroy(); delete charts["dwBar"]; }
     var dwt = document.getElementById("delayWeekTable"); if (dwt) dwt.innerHTML = "";
+    var dlt = document.getElementById("delayLeadTable"); if (dlt) dlt.innerHTML = "";
     return;
   }
   // 타일: 최근16주 총건 · 최다 사유 · 이번(최근)주 · 평균/주
@@ -731,6 +733,44 @@ function renderDelayWeekly(reasons){
         tooltip:{ callbacks:{ label:function(ct){ return ct.dataset.label+": "+fmt(ct.parsed.y||0)+"건"; } } } } } });
 
   renderDelayWeekTable(rows, cats);
+  renderDelayLeadTable((reasons && reasons.delayLead) || [], cats);
+}
+
+// 지연일자별(출고→설치 소요일 구간) 사유 분포표 · 구간 내 비중 병기 · 구간별 최다 사유 강조
+function renderDelayLeadTable(rows, cats){
+  var el = document.getElementById("delayLeadTable");
+  if (!el) return;
+  // 구버전 캐시(delayLead 없음) 방어
+  if (!rows.length) {
+    el.innerHTML = '<tbody><tr><td style="color:var(--muted)">아직 집계 전입니다. 잠시 후 새로고침(Ctrl+Shift+R) 해주세요.</td></tr></tbody>';
+    return;
+  }
+  var head = '<thead><tr><th>지연 구간</th><th>총계</th>'
+    + cats.map(function(c){ return '<th>'+c+'</th>'; }).join('') + '</tr></thead>';
+  var body = rows.map(function(b){
+    var top = cats.slice().sort(function(x,y){ return (b.reasons[y]||0)-(b.reasons[x]||0); })[0];
+    var topVal = b.reasons[top]||0;
+    return '<tr>'
+      + '<td>'+b.label+'</td>'
+      + '<td><span class="cell-main">'+fmt(b.total)+'</span></td>'
+      + cats.map(function(c){
+          var v = b.reasons[c]||0;
+          if (!v) return '<td><span style="color:var(--muted)">–</span></td>';
+          var share = b.total>0 ? Math.round(v/b.total*100) : 0;
+          var hot = (c===top && topVal>0);
+          return '<td>'+(hot?'<b>':'')+fmt(v)+(hot?'</b>':'')
+            + ' <span style="color:var(--muted);font-size:11px">('+share+'%)</span></td>';
+        }).join('')
+      + '</tr>';
+  }).join("");
+  // 합계행: 구간 전체 합 = 위 주차별 표의 모수와 동일
+  var grand = rows.reduce(function(s,b){ return s+b.total; },0);
+  var foot = '<tr class="cur"><td><b>합계</b></td><td><span class="cell-main">'+fmt(grand)+'</span></td>'
+    + cats.map(function(c){
+        var v = rows.reduce(function(s,b){ return s+(b.reasons[c]||0); },0);
+        return '<td>'+(v>0?fmt(v):'<span style="color:var(--muted)">–</span>')+'</td>';
+      }).join('') + '</tr>';
+  el.innerHTML = head + '<tbody>' + body + foot + '</tbody>';
 }
 
 function renderDelayWeekTable(rows, cats){
