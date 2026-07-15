@@ -470,6 +470,15 @@
         <div class="sub">고객사정 제외 · 출고월 기준 · 최근 월은 아직 누적중이라 낮게 보일 수 있음</div>
         <div class="chart-wrap h260"><canvas id="deptMonth"></canvas></div>
       </div>
+      <div class="card col-5"><h3>🔁 지연 성격 <span class="board-imp">클릭</span></h3>
+        <div class="sub">K열 메모 파생 · L열 사유코드와 <b>별개 축</b> · 막대 클릭 시 주문번호·메모 · <b>반복미룸</b>=설치를 2번 이상 약속하고 안 지킴 · <b>환경대기</b>=인터넷·공사 등 매장 준비 미비</div>
+        <div class="chart-wrap h260"><canvas id="natBar"></canvas></div>
+      </div>
+      <div class="card col-7"><h3>📉 미룸 횟수 → 설치 소요일 <span class="board-imp">핵심</span></h3>
+        <div class="sub">막대=건수 · 선=완료건 평균 출고→설치 소요일 · <b>미룸이 반복될수록 설치가 늦어지는지</b>를 봅니다</div>
+        <div class="chart-wrap h260"><canvas id="ppLead"></canvas></div>
+        <div class="insight" id="nat-insight"></div>
+      </div>
       <div class="card col-12"><h3>🔧 원인별 상세 <span class="board-imp">클릭</span></h3>
         <div class="sub"><b>행을 클릭하면</b> 해당 주문번호·메모를 볼 수 있습니다 · 미완료율이 높을수록 그 원인이 설치를 끝까지 막고 있다는 뜻 · 개선대상 부서 먼저 정렬</div>
         <div class="tbl-wrap"><table class="dtable" id="deptTbl"></table></div>
@@ -862,6 +871,8 @@ function renderDept(reasons){
     tr.addEventListener("click", function(){ openDeptDetail(parseInt(tr.getAttribute("data-i"),10)); });
   });
 
+  renderDelayNature(reasons);
+
   // 데이터 품질: 사유 미기재 + 원천 코드번호 충돌
   var blank=d.coverage.rows-d.coverage.hasReason;
   document.getElementById("dept-quality").innerHTML =
@@ -869,6 +880,91 @@ function renderDept(reasons){
     "이 집계는 사유가 적힌 <b>"+fmt(d.coverage.hasReason)+"건</b>만 설명합니다.<br>"+
     "원천 코드번호가 겹칩니다 — <b>10</b>번(비용부담/비용문제), <b>4</b>번(설치중도포기/바쁨). "+
     "대시보드는 번호가 아닌 <b>라벨</b>로 매핑해 영향은 없지만, 시트에서 번호를 정리하면 더 안전합니다.";
+}
+
+// 지연 성격(미룸/환경) — K열 메모 파생, L열과 별개 축
+var NAT_COLOR = { "반복미룸":"--s-red", "환경대기":"--s-orange", "약속1회":"--s-blue-l", "신호없음":"--muted" };
+var NAT_KEYS = [];
+
+function renderDelayNature(reasons){
+  var n = reasons && reasons.delayNature;
+  if(!n){ return; }
+  NAT_KEYS = n.byNature.map(function(x){ return x.key; });
+
+  mk("natBar", { type:"bar",
+    data:{ labels:n.byNature.map(function(x){return x.label;}),
+      datasets:[{ data:n.byNature.map(function(x){return x.total;}),
+        backgroundColor:n.byNature.map(function(x){return C[NAT_COLOR[x.key]]||C["--grid"];}), borderRadius:6 }] },
+    options:{ scales:axes(),
+      onClick:function(evt, els){ if(els&&els.length) openNatureDetail(els[0].index); },
+      onHover:function(evt, els){ if(evt.native&&evt.native.target) evt.native.target.style.cursor=els.length?"pointer":"default"; },
+      plugins:{ tooltip:{ callbacks:{
+          label:function(ctx){ var x=n.byNature[ctx.dataIndex];
+            return fmt(x.total)+"건 · 미완료 "+fmt(x.open)+" · 완료평균 "+(x.avgLead!=null?"D+"+x.avgLead.toFixed(1):"–"); },
+          afterLabel:function(){ return "▶ 클릭 시 주문번호·메모"; } } },
+        datalabels: dlBarTop() } } });
+
+  // 미룸 횟수(막대) vs 완료 평균 소요일(선) — 콤보. 선이 우상향이면 "미룸이 곧 지연"의 증거.
+  var pp=n.byPostpone;
+  mk("ppLead", { type:"bar",
+    data:{ labels:pp.map(function(x){return x.label;}),
+      datasets:[
+        { type:"bar", label:"건수", data:pp.map(function(x){return x.total;}), yAxisID:"y",
+          backgroundColor:C["--s-blue-l"], borderRadius:6, order:2, datalabels: dlBarTop() },
+        { type:"line", label:"완료 평균 소요일(D+)", data:pp.map(function(x){return x.avgLead;}), yAxisID:"y2",
+          borderColor:C["--s-red"], backgroundColor:C["--s-red"], borderWidth:2.5, tension:.25,
+          pointRadius:4, pointHoverRadius:6, order:1,
+          datalabels:{ display:true, align:"top", color:C["--s-red"], font:{weight:"700",size:11},
+            formatter:function(v){ return v==null?"":"D+"+v.toFixed(1); } } }
+      ] },
+    options:{ scales:{
+        x:{ grid:{display:false}, ticks:{color:C["--muted"]} },
+        y:{ beginAtZero:true, grace:"14%", position:"left", grid:{color:C["--grid"]}, ticks:{color:C["--muted"]}, title:{display:true,text:"건수",color:C["--muted"],font:{size:11}} },
+        y2:{ beginAtZero:true, grace:"30%", position:"right", grid:{display:false}, ticks:{color:C["--s-red"]}, title:{display:true,text:"평균 소요일",color:C["--s-red"],font:{size:11}} } },
+      plugins:{ legend:{display:true, labels:{usePointStyle:true, pointStyle:"rectRounded", color:C["--text-secondary"]}},
+        tooltip:{ callbacks:{ afterBody:function(items){ var x=pp[items[0].dataIndex];
+          return "미완료 "+fmt(x.open)+"건 ("+(x.openRate*100).toFixed(1)+"%)"; } } } } } });
+
+  var z=pp[0], last=pp[pp.length-1];
+  var mult=(z&&last&&z.avgLead&&last.avgLead)?(last.avgLead/z.avgLead):null;
+  document.getElementById("nat-insight").innerHTML =
+    "미룸 없는 건은 평균 <b>D+"+(z&&z.avgLead!=null?z.avgLead.toFixed(1):"–")+"</b>에 설치되지만, <b>"+(last?last.label:"")+"</b> 미룬 건은 <b>D+"+(last&&last.avgLead!=null?last.avgLead.toFixed(1):"–")+"</b>"+
+    (mult?" — <b>"+mult.toFixed(1)+"배</b>":"")+" 걸립니다. 미룸은 결과가 아니라 <b>지연의 예고 신호</b>에 가깝습니다 → "+
+    "<b>2회째 약속</b>에서 방문설치·원격 전환 등 개입하면 D+12 이상으로 가는 걸 막을 수 있습니다. "+
+    "현재 반복미룸 <b>"+fmt(n.repeatTotal)+"건</b>(미완료 "+fmt(n.repeatOpen)+") · 환경대기 <b>"+fmt(n.envTotal)+"건</b>(미완료 "+fmt(n.envOpen)+").";
+}
+
+function openNatureDetail(idx){
+  var key=NAT_KEYS[idx];
+  if(!key || !LAST_PASS) return;
+  document.getElementById("modal-box").classList.add("wide");
+  document.getElementById("modal-title").textContent="지연 성격 · "+key;
+  document.getElementById("modal-sub").textContent="불러오는 중…";
+  document.getElementById("modal-body").innerHTML='<div class="modal-empty">불러오는 중…</div>';
+  document.getElementById("modal").classList.add("open");
+  fetchData(LAST_PASS, function(r){
+    if(!r || !r.ok){ failLastCallDetail((r&&r.error)||"조회 실패"); return; }
+    paintNatureDetail(key, r);
+  }, failLastCallDetail, { params:{ action:"naturedetail", nature:key } });
+}
+function paintNatureDetail(key, r){
+  var rows=r.rows||[];
+  document.getElementById("modal-title").textContent="지연 성격 · "+key+" ("+fmt(r.count||0)+"건)";
+  document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · K열 메모 원문 · 미룸 많은 순 · 미완료 "+fmt(r.open||0)+"건";
+  if(!rows.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">해당 성격의 건이 없습니다.</div>'; return; }
+  document.getElementById("modal-body").innerHTML=
+    '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
+    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>미룸</th><th>출고</th><th>설치</th><th>메모 (K열)</th></tr></thead><tbody>'+
+    rows.slice(0,300).map(function(x){
+      var memo=String(x.memo||"").trim();
+      var inst = x.installed ? esc(x.installed)+' <span class="lca-cum">D+'+x.lead+'</span>' : '<b style="color:'+C["--s-red"]+'">미완료</b>';
+      return '<tr><td class="lcd-ord">'+esc(x.order)+'</td>'+
+        '<td class="lcd-st"><b>'+x.postpone+'회</b></td>'+
+        '<td class="lcd-date">'+esc(x.ship)+'</td>'+
+        '<td class="lcd-date">'+inst+'</td>'+
+        '<td class="lcd-memo'+(memo?'':' empty')+'">'+(memo?esc(memo):"(메모 없음)")+'</td></tr>';
+    }).join('')+'</tbody></table>'+
+    (rows.length>300?'<div class="modal-empty">상위 300건만 표시 · 전체 '+fmt(rows.length)+'건</div>':'');
 }
 
 function openDeptDetail(i){
