@@ -259,6 +259,13 @@
   .statcell .sc-val .sc-unit { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-left: 2px; }
   .statcell .sc-pct { font-size: 11.5px; color: var(--muted); margin-left: 7px; font-weight: 500; }
 
+  /* 마지막 통화일 경과 현황 — 차트(좌) + 표(우) 2단, 좁아지면 1단으로 접힘 */
+  .lca-split { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; align-items: center; }
+  .lca-split table.dtable { min-width: 0; }
+  .lca-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; }
+  table.dtable td.lca-cum { color: var(--muted); font-size: 11.5px; font-weight: 500; }
+  @media (max-width: 1100px) { .lca-split { grid-template-columns: 1fr; } }
+
   /* Weekly comparison table */
   .tbl-wrap { width: 100%; overflow-x: auto; margin-top: 6px; }
   table.dtable { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; min-width: 640px; }
@@ -418,6 +425,14 @@
       <div class="card col-7"><h3>🚚 배송상태 · 미설치 즉시 컨택 대상</h3><div class="sub">미설치 중 배송완료/구매확정 건은 바로 설치 유도 가능</div><div class="chart-wrap h260"><canvas id="opsDelivery"></canvas></div><div class="insight" id="ops-insight"></div></div>
       <div class="card col-5"><h3>📵 부재 단계별</h3><div class="sub">재컨택 우선순위 판단용</div><div class="chart-wrap h220"><canvas id="opsAbsent"></canvas></div></div>
       <div class="card col-7"><h3>🧾 미설치 사유 (현재 잔여)</h3><div class="sub">로우데이터 L열 코드화 사유 · 반품/폐업 및 <b>배송중 전체 제외</b>(배송완료·구매확정만) · '(사유미기재) 배송완료'=설치 가능한데 사유 미입력</div><div class="chart-wrap h260"><canvas id="opsReason"></canvas></div></div>
+      <div class="card col-12"><h3>📞 마지막 통화일 경과 현황</h3>
+        <div class="sub">콜리스트 <b>T열(마지막통화일)</b>에 날짜가 있는 잔여 <b id="lca-total">–</b>건 기준 · 경과일 = 오늘 − 마지막통화일 · 표의 <b>누적</b>은 그 구간 <b>이상</b> 통화가 끊긴 건수 · <b>오래 방치된 건일수록 재컨택 우선순위</b></div>
+        <div class="lca-split">
+          <div class="chart-wrap" style="height:240px"><canvas id="opsLastCall"></canvas></div>
+          <div><table class="dtable" id="opsLastCallTbl"></table></div>
+        </div>
+        <div class="insight" id="lca-insight"></div>
+      </div>
       <div class="card col-12"><h3>🔎 사유코드 없는 미설치 — 배송상태 구성</h3><div class="sub">L열 사유 없는 미설치 <b id="ops-unspec-cnt">–</b>건 중, <b>배송중은 아직 설치 전이라 위 '사유미기재'에서 제외</b> · 배송완료 건이 실제 관리 대상</div><div class="chart-wrap h220"><canvas id="opsUnspecDelivery"></canvas></div></div>
       <div class="card col-12"><h3>🔑 미설치 사유 (메모 키워드 분류)</h3><div class="sub">현재 미설치 잔여건(반품·폐업 제외)의 <b>메모를 키워드 자동분류</b> · 설치일 무관 · 7일+ 지연 사유와 동일 로직(부재·문자안내/미룸/방문설치 접수/원격접수/전산·결제단말 등) · <b>기타 막대 클릭 시 세부내역</b></div><div class="chart-wrap" style="height:380px"><canvas id="opsReasonKw"></canvas></div></div>
     </div>
@@ -659,6 +674,50 @@ function renderOps(o, reasons) {
       datasets:[{ data:[o.absent["1차부재"],o.absent["2차부재"],o.absent["3차부재"],o.absent["4회이상부재"]],
         backgroundColor:[C["--s-blue-l"],C["--s-blue"],C["--s-orange"],C["--s-red"]], borderRadius:6 }] },
     options:{ scales:axes(), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
+
+  // ---- 마지막 통화일 경과 현황 (콜리스트 T열) ----
+  // 구간 색 = 방치 정도(초록:오늘 통화 → 빨강:7일+). 표의 '누적'은 해당 구간 이상 경과한 건의 합.
+  var lca = o.lastCallAging || { total:0, d0:0, d1:0, d2:0, d3:0, d46:0, d7:0 };
+  var lcaRows = [
+    ["오늘 통화", lca.d0,  C["--s-aqua"]],
+    ["1일 경과",  lca.d1,  C["--s-blue-l"]],
+    ["2일 경과",  lca.d2,  C["--s-blue"]],
+    ["3일 경과",  lca.d3,  C["--s-yellow"]],
+    ["4~6일 경과",lca.d46, C["--s-orange"]],
+    ["7일 이상",  lca.d7,  C["--s-red"]]
+  ];
+  var lcaPct = function(n){ return lca.total ? (n*100/lca.total) : 0; };
+  var lcaP1 = function(n){ return lcaPct(n).toFixed(1)+"%"; };
+  // 누적(이 구간 이상 경과) — 뒤에서부터 합산
+  var lcaCum = [], run = 0;
+  for (var li = lcaRows.length-1; li >= 0; li--) { run += lcaRows[li][1]; lcaCum[li] = run; }
+
+  document.getElementById("lca-total").textContent = fmt(lca.total);
+
+  mk("opsLastCall", { type:"bar",
+    data:{ labels: lcaRows.map(function(r){return r[0];}),
+      datasets:[{ data: lcaRows.map(function(r){return r[1];}),
+        backgroundColor: lcaRows.map(function(r){return r[2];}), borderRadius:6,
+        categoryPercentage:.72, barPercentage:.86 }] },
+    options:{ scales:axes(), plugins:{
+      tooltip:{ callbacks:{ label:function(ctx){ return fmt(ctx.parsed.y)+"건 · 전체의 "+lcaP1(ctx.parsed.y); } } },
+      datalabels: dlBarTop() } } });
+
+  document.getElementById("opsLastCallTbl").innerHTML =
+    "<thead><tr><th>구분</th><th>건수</th><th>비율</th><th>누적</th></tr></thead><tbody>" +
+    lcaRows.map(function(r, i){
+      return "<tr><td><span class='lca-dot' style='background:"+r[2]+"'></span>"+r[0]+"</td>" +
+        "<td class='cell-main'>"+fmt(r[1])+"</td><td>"+lcaP1(r[1])+"</td>" +
+        "<td class='lca-cum'>"+fmt(lcaCum[i])+"</td></tr>";
+    }).join("") +
+    "<tr class='cur'><td>합계 (T열 기재건)</td><td class='cell-main'>"+fmt(lca.total)+"</td>" +
+    "<td>"+(lca.total?"100.0%":"–")+"</td><td class='lca-cum'>–</td></tr></tbody>";
+
+  var lcaStale = lca.d46 + lca.d7;
+  document.getElementById("lca-insight").innerHTML = !lca.total
+    ? "콜리스트 T열(마지막통화일)에 날짜가 기재된 잔여건이 없습니다."
+    : "<b>4일 이상</b> 통화가 끊긴 건이 <b>"+fmt(lcaStale)+"건</b>(전체의 "+lcaP1(lcaStale)+") · 그중 <b>7일 이상</b>이 <b>"+fmt(lca.d7)+"건</b> → 재컨택 최우선 대상입니다. " +
+      "오늘 통화한 <b>"+fmt(lca.d0)+"건</b>은 이미 접촉이 끝난 건입니다.";
 
   var rz = reasons.uninstallReason.slice(0,8);
   mk("opsReason", { type:"bar",
