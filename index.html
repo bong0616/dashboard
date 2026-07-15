@@ -470,6 +470,15 @@
         <div class="sub">고객사정 제외 · 출고월 기준 · 최근 월은 아직 누적중이라 낮게 보일 수 있음</div>
         <div class="chart-wrap h260"><canvas id="deptMonth"></canvas></div>
       </div>
+      <div class="card col-5"><h3>🎯 근본원인 대분류 <span class="board-imp">핵심</span></h3>
+        <div class="sub">개선대상 197건을 <b>어떤 액션으로 막을 수 있나</b>로 묶음 · L열 코드 + K열 메모 병합 판정 · <b>정상 대기·고객 변심·사유 미기재</b>는 액션 대상이 아니라 회색</div>
+        <div class="chart-wrap h260"><canvas id="rootBar"></canvas></div>
+      </div>
+      <div class="card col-7"><h3>🧩 세분류 상세 <span class="board-imp">클릭</span></h3>
+        <div class="sub">행 클릭 시 주문번호·메모 · 규칙은 영업 93건 메모 전수 판독으로 도출 · 미완료율이 높을수록 그 원인은 <b>되살아나지 않고 반품으로 끝난다</b></div>
+        <div class="tbl-wrap"><table class="dtable" id="rootTbl"></table></div>
+        <div class="insight" id="root-insight"></div>
+      </div>
       <div class="card col-5"><h3>🔁 지연 성격 <span class="board-imp">클릭</span></h3>
         <div class="sub">K열 메모 파생 · L열 사유코드와 <b>별개 축</b> · 막대 클릭 시 주문번호·메모 · <b>반복미룸</b>=설치를 2번 이상 약속하고 안 지킴 · <b>환경대기</b>=인터넷·공사 등 매장 준비 미비</div>
         <div class="chart-wrap h260"><canvas id="natBar"></canvas></div>
@@ -871,6 +880,7 @@ function renderDept(reasons){
     tr.addEventListener("click", function(){ openDeptDetail(parseInt(tr.getAttribute("data-i"),10)); });
   });
 
+  renderRoot(reasons);
   renderDelayNature(reasons);
 
   // 데이터 품질: 사유 미기재 + 원천 코드번호 충돌
@@ -882,6 +892,83 @@ function renderDept(reasons){
     "담당자 공란·문자발송 <b>"+fmt(d.coverage.other)+"건</b>도 같은 이유로 사유가 없습니다.<br>"+
     "⚠️ 원천 코드번호가 겹칩니다 — <b>10</b>번(비용부담/비용문제), <b>4</b>번(설치중도포기/바쁨). "+
     "대시보드는 번호가 아닌 <b>라벨</b>로 매핑해 집계 영향은 없지만, 시트에서 번호를 정리하면 더 안전합니다.";
+}
+
+// 근본원인 2단(대분류→세분류). 색 = 액션 레버별, 비액션(정상대기·변심·미기재)은 회색.
+var ROOT_COLOR = { "판매 전 검증":"--s-red", "판매 시 구성·안내":"--s-orange", "출고·배송 오류":"--s-blue",
+  "전산·등록":"--s-violet", "설치 가이드":"--s-aqua", "정상 대기":"--muted", "고객 변심":"--baseline", "사유 미기재":"--grid" };
+var ROOT_MINORS_SEEN = [];
+
+function renderRoot(reasons){
+  var d = reasons && reasons.deptDelay;
+  if(!d || !d.rootMajor){ return; }
+  var pctS=function(x){ return (x*100).toFixed(1)+"%"; };
+
+  mk("rootBar", { type:"bar",
+    data:{ labels:d.rootMajor.map(function(x){return x.major;}),
+      datasets:[{ data:d.rootMajor.map(function(x){return x.total;}),
+        backgroundColor:d.rootMajor.map(function(x){return C[ROOT_COLOR[x.major]]||C["--grid"];}), borderRadius:6 }] },
+    options:{ indexAxis:"y", scales:axes({horizontal:true}),
+      plugins:{ tooltip:{ callbacks:{ label:function(ctx){ var x=d.rootMajor[ctx.dataIndex];
+        return fmt(x.total)+"건 · 미완료 "+fmt(x.open)+" ("+pctS(x.openRate)+")"+(x.avgLead!=null?" · 완료평균 D+"+x.avgLead.toFixed(1):""); } } },
+        datalabels: dl({anchor:"end",align:"end"}) } } });
+
+  ROOT_MINORS_SEEN = d.rootMinor.map(function(x){ return {major:x.major, minor:x.minor}; });
+  document.getElementById("rootTbl").innerHTML =
+    "<thead><tr><th>대분류</th><th>세분류</th><th>부서</th><th>건수</th><th>미완료</th><th>미완료율</th><th>완료평균</th></tr></thead><tbody>"+
+    d.rootMinor.map(function(x,i){
+      var warn = x.openRate>=0.5 && x.total>=5;
+      return "<tr class='dept-row"+(x.actionable?"":" dept-dim")+"' data-i='"+i+"'>"+
+        "<td><span class='lca-dot' style='background:"+(C[ROOT_COLOR[x.major]]||C["--grid"])+"'></span>"+esc(x.major)+"</td>"+
+        "<td>"+esc(x.minor)+"</td>"+
+        "<td class='lca-cum'>"+esc(x.depts.join("·"))+"</td>"+
+        "<td class='cell-main'>"+fmt(x.total)+"</td>"+
+        "<td>"+fmt(x.open)+"</td>"+
+        "<td class='"+(warn?"tgt-over":"")+"'>"+pctS(x.openRate)+"</td>"+
+        "<td class='lca-cum'>"+(x.avgLead!=null?"D+"+x.avgLead.toFixed(1):"–")+"</td></tr>";
+    }).join("")+"</tbody>";
+  Array.prototype.forEach.call(document.querySelectorAll("#rootTbl .dept-row"), function(tr){
+    tr.addEventListener("click", function(){ openRootDetail(parseInt(tr.getAttribute("data-i"),10)); });
+  });
+
+  var pre=d.rootMajor.filter(function(x){return x.major==="판매 전 검증";})[0];
+  var mis=d.rootMajor.filter(function(x){return x.major==="사유 미기재";})[0];
+  document.getElementById("root-insight").innerHTML =
+    (pre ? "<b>판매 전 검증</b>이 <b>"+fmt(pre.total)+"건</b>으로 가장 크고 미완료율이 <b>"+pctS(pre.openRate)+"</b>입니다 — 타사 중복계약·기존 약정·연동 불가는 전부 <b>팔기 전 조회 한 번이면 출고 자체가 없었을</b> 건들이라, 재컨택으로 되살리는 게 아니라 <b>체크리스트로 막는</b> 문제입니다. " : "")+
+    "반면 <b>정상 대기</b>(추가장비 배송待)는 미완료 2건뿐이라 문제로 세면 안 됩니다."+
+    (mis && mis.total ? " <b>사유 미기재 "+fmt(mis.total)+"건</b>은 반품인데 메모에 이유가 없어 분류가 불가능합니다 — 규칙의 한계가 아니라 원천 입력의 공백입니다." : "");
+}
+
+function openRootDetail(i){
+  var t=ROOT_MINORS_SEEN[i];
+  if(!t || !LAST_PASS) return;
+  document.getElementById("modal-box").classList.add("wide");
+  document.getElementById("modal-title").textContent=t.major+" · "+t.minor;
+  document.getElementById("modal-sub").textContent="불러오는 중…";
+  document.getElementById("modal-body").innerHTML='<div class="modal-empty">불러오는 중…</div>';
+  document.getElementById("modal").classList.add("open");
+  fetchData(LAST_PASS, function(r){
+    if(!r || !r.ok){ failLastCallDetail((r&&r.error)||"조회 실패"); return; }
+    paintRootDetail(t, r);
+  }, failLastCallDetail, { params:{ action:"rootdetail", major:t.major, minor:t.minor } });
+}
+function paintRootDetail(t, r){
+  var rows=r.rows||[];
+  document.getElementById("modal-title").textContent=t.major+" · "+t.minor+" ("+fmt(r.count||0)+"건)";
+  document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · K열 메모 원문 · 미완료 "+fmt(r.open||0)+"건 먼저 · 오래된 출고순";
+  if(!rows.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">해당 원인에 건이 없습니다.</div>'; return; }
+  document.getElementById("modal-body").innerHTML=
+    '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
+    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>부서</th><th>출고</th><th>설치</th><th>메모 (K열)</th></tr></thead><tbody>'+
+    rows.map(function(x){
+      var memo=String(x.memo||"").trim();
+      var inst = x.installed ? esc(x.installed)+' <span class="lca-cum">D+'+x.lead+'</span>' : '<b style="color:'+C["--s-red"]+'">미완료</b>';
+      return '<tr><td class="lcd-ord">'+esc(x.order)+'</td>'+
+        '<td class="lcd-st">'+esc(x.dept)+'</td>'+
+        '<td class="lcd-date">'+esc(x.ship)+'</td>'+
+        '<td class="lcd-date">'+inst+'</td>'+
+        '<td class="lcd-memo'+(memo?'':' empty')+'">'+(memo?esc(memo):"(메모 없음)")+'</td></tr>';
+    }).join('')+'</tbody></table>';
 }
 
 // 지연 성격(미룸/환경) — K열 메모 파생, L열과 별개 축
