@@ -312,6 +312,8 @@
   table.lcd-tbl td.lcd-st { color: var(--text-secondary); white-space: nowrap; }
   table.lcd-tbl td.lcd-memo { color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap; word-break: break-word; min-width: 260px; }
   table.lcd-tbl td.lcd-memo.empty { color: var(--muted); font-style: italic; }
+  /* 출고→설치 소요일(D+N) — 이 표의 핵심 수치라 날짜(muted)보다 진하게 */
+  .lcd-lead { color: var(--text-primary); font-weight: 700; margin-left: 3px; }
   table.modal-tbl { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
   table.modal-tbl td { padding: 9px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
   table.modal-tbl td.mk { font-weight: 600; color: var(--text-primary); white-space: nowrap; }
@@ -962,7 +964,7 @@ function paintRootDetail(t, r){
     '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>부서</th><th>출고</th><th>설치</th><th>메모 (K열)</th></tr></thead><tbody>'+
     rows.map(function(x){
       var memo=String(x.memo||"").trim();
-      var inst = x.installed ? esc(x.installed)+' <span class="lca-cum">D+'+x.lead+'</span>' : '<b style="color:'+C["--s-red"]+'">미완료</b>';
+      var inst = leadCell(x);
       return '<tr><td class="lcd-ord">'+esc(x.order)+'</td>'+
         '<td class="lcd-st">'+esc(x.dept)+'</td>'+
         '<td class="lcd-date">'+esc(x.ship)+'</td>'+
@@ -1046,7 +1048,7 @@ function paintNatureDetail(key, r){
     '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>미룸</th><th>출고</th><th>설치</th><th>메모 (K열)</th></tr></thead><tbody>'+
     rows.slice(0,300).map(function(x){
       var memo=String(x.memo||"").trim();
-      var inst = x.installed ? esc(x.installed)+' <span class="lca-cum">D+'+x.lead+'</span>' : '<b style="color:'+C["--s-red"]+'">미완료</b>';
+      var inst = leadCell(x);
       return '<tr><td class="lcd-ord">'+esc(x.order)+'</td>'+
         '<td class="lcd-st"><b>'+x.postpone+'회</b></td>'+
         '<td class="lcd-date">'+esc(x.ship)+'</td>'+
@@ -1079,7 +1081,7 @@ function paintDeptDetail(t, r){
     '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>출고</th><th>설치</th><th>메모 (K열)</th></tr></thead><tbody>'+
     rows.map(function(x){
       var memo=String(x.memo||"").trim();
-      var inst = x.installed ? esc(x.installed)+' <span class="lca-cum">D+'+x.lead+'</span>' : '<b style="color:'+C["--s-red"]+'">미완료</b>';
+      var inst = leadCell(x);
       return '<tr><td class="lcd-ord">'+esc(x.order)+'</td>'+
         '<td class="lcd-date">'+esc(x.ship)+'</td>'+
         '<td class="lcd-date">'+inst+'</td>'+
@@ -2176,6 +2178,13 @@ function closeModal(){ document.getElementById("modal").classList.remove("open")
 // ---- 마지막 통화일 경과: 막대 클릭 → 해당 구간의 주문번호·메모 원문 ----
 // 메모는 payload에 없다(캐시에 PII를 남기지 않으려고). 클릭 시 action=calldetail 로 그때만 조회한다.
 function esc(s){ var d=document.createElement("span"); d.textContent=String(s==null?"":s); return d.innerHTML; }
+
+// 상세 팝업의 '설치' 칸 — 설치일 + 출고→설치 소요일(D+N), 미완료면 빨강.
+// 세 팝업(원인별·세분류·지연성격)이 같은 표시를 쓰므로 여기 하나만 고치면 전부 반영된다.
+function leadCell(x){
+  if(!x.installed) return '<b style="color:'+C["--s-red"]+'">미완료</b>';
+  return esc(x.installed)+(x.lead!=null?' <span class="lcd-lead">D+'+x.lead+'</span>':'');
+}
 
 function openLastCallDetail(idx){
   var def=LCA_DEFS[idx];
