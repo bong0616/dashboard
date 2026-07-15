@@ -473,7 +473,7 @@
         <div class="chart-wrap h260"><canvas id="deptMonth"></canvas></div>
       </div>
       <div class="card col-5"><h3>🎯 근본원인 대분류 <span class="board-imp">핵심</span></h3>
-        <div class="sub">개선대상 197건을 <b>어떤 액션으로 막을 수 있나</b>로 묶음 · L열 코드 + K열 메모 병합 판정 · <b>정상 대기·고객 변심·사유 미기재</b>는 액션 대상이 아니라 회색</div>
+        <div class="sub">개선대상을 <b>어떤 액션으로 막을 수 있나</b>로 묶음 · L열 코드 + K열 메모 병합 판정 · <b>정상 대기·고객 변심·사유 미기재</b>는 액션 대상이 아니라 회색 · <b id="rootbar-scope"></b> <small class="th-tgt" style="display:inline">오른쪽 표의 월 선택을 따라감</small></div>
         <div class="chart-wrap h260"><canvas id="rootBar"></canvas></div>
       </div>
       <div class="card col-7"><h3>🧩 세분류 상세 <span class="board-imp">클릭</span>
@@ -931,12 +931,35 @@ function renderRoot(reasons){
     ? '모수=<b>'+ROOT_SEL_MO.slice(0,4)+'년 '+(+ROOT_SEL_MO.slice(5))+'월 출고</b>'
     : '모수=<b>'+d.since+' 이후 출고 전체</b>';
 
+  // 대분류 = 세분류를 합치면 나오므로 백엔드 추가 없이 프론트에서 집계(선택월을 같이 따라간다).
+  // 전체일 땐 서버가 준 rootMajor를 그대로 써서 반올림·정렬이 어긋날 여지를 없앤다.
+  var majorRows;
+  if (!ROOT_SEL_MO) majorRows = d.rootMajor;
+  else {
+    var agg = {};
+    minorRows.forEach(function(x){
+      var a = agg[x.major] || (agg[x.major] = { major:x.major, total:0, done:0, open:0, leadSum:0, leadN:0, actionable:x.actionable });
+      a.total += x.total; a.done += x.done; a.open += x.open;
+      if (x.avgLead != null && x.done > 0) { a.leadSum += x.avgLead * x.done; a.leadN += x.done; } // 건수 가중평균
+    });
+    majorRows = (d.majorOrder || Object.keys(agg)).filter(function(k){ return agg[k]; }).map(function(k){
+      var a = agg[k];
+      a.openRate = a.total ? (a.open / a.total) : 0;
+      a.avgLead = a.leadN ? (a.leadSum / a.leadN) : null;
+      return a;
+    });
+  }
+  var majScope = document.getElementById("rootbar-scope");
+  if (majScope) majScope.innerHTML = ROOT_SEL_MO
+    ? '<b>'+(+ROOT_SEL_MO.slice(5))+'월 출고</b> '+fmt(majorRows.reduce(function(s,x){return s+x.total;},0))+'건'
+    : '전체 '+fmt(d.actionableTotal)+'건';
+
   mk("rootBar", { type:"bar",
-    data:{ labels:d.rootMajor.map(function(x){return x.major;}),
-      datasets:[{ data:d.rootMajor.map(function(x){return x.total;}),
-        backgroundColor:d.rootMajor.map(function(x){return C[ROOT_COLOR[x.major]]||C["--grid"];}), borderRadius:6 }] },
+    data:{ labels:majorRows.map(function(x){return x.major;}),
+      datasets:[{ data:majorRows.map(function(x){return x.total;}),
+        backgroundColor:majorRows.map(function(x){return C[ROOT_COLOR[x.major]]||C["--grid"];}), borderRadius:6 }] },
     options:{ indexAxis:"y", scales:axes({horizontal:true}),
-      plugins:{ tooltip:{ callbacks:{ label:function(ctx){ var x=d.rootMajor[ctx.dataIndex];
+      plugins:{ tooltip:{ callbacks:{ label:function(ctx){ var x=majorRows[ctx.dataIndex];
         return fmt(x.total)+"건 · 미완료 "+fmt(x.open)+" ("+pctS(x.openRate)+")"+(x.avgLead!=null?" · 완료평균 D+"+x.avgLead.toFixed(1):""); } } },
         datalabels: dl({anchor:"end",align:"end"}) } } });
 
@@ -958,8 +981,8 @@ function renderRoot(reasons){
     tr.addEventListener("click", function(){ openRootDetail(parseInt(tr.getAttribute("data-i"),10)); });
   });
 
-  var pre=d.rootMajor.filter(function(x){return x.major==="판매 전 검증";})[0];
-  var mis=d.rootMajor.filter(function(x){return x.major==="사유 미기재";})[0];
+  var pre=majorRows.filter(function(x){return x.major==="판매 전 검증";})[0];
+  var mis=majorRows.filter(function(x){return x.major==="사유 미기재";})[0];
   document.getElementById("root-insight").innerHTML =
     (pre ? "<b>판매 전 검증</b>이 <b>"+fmt(pre.total)+"건</b>으로 가장 크고 미완료율이 <b>"+pctS(pre.openRate)+"</b>입니다 — 타사 중복계약·기존 약정·연동 불가는 전부 <b>팔기 전 조회 한 번이면 출고 자체가 없었을</b> 건들이라, 재컨택으로 되살리는 게 아니라 <b>체크리스트로 막는</b> 문제입니다. " : "")+
     "반면 <b>정상 대기</b>(추가장비 배송待)는 미완료 2건뿐이라 문제로 세면 안 됩니다."+
