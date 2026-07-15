@@ -455,7 +455,14 @@
     <div class="grid">
       <div class="card col-12"><h3>🐢 출고 주별 D+7 초과 지연건 · 사유 구성</h3><div class="sub">출고→설치 <b>7일 이상</b> 걸려 완료된 건을 <b>출고일 기준 주(월요일)</b>로 집계 · 사유는 메모 키워드 자동분류 · 최근 16주 · <b>최근 주는 아직 설치 진행중이라 낮게 나옴(정상)</b></div><div class="chart-wrap" style="height:360px"><canvas id="dwBar"></canvas></div></div>
       <div class="card col-12"><h3>📋 주차별 사유 상세표</h3><div class="sub">최근 12주 · 최신 주가 위 · 각 셀=그 출고주의 사유별 D+7 지연 건수</div><div class="tbl-wrap"><table class="dtable" id="delayWeekTable"></table></div></div>
-      <div class="card col-12"><h3>⏳ 지연일자별 사유</h3><div class="sub">출고→설치 <b>소요일 구간</b>별 사유 분포 · 각 셀=그 구간에서 해당 사유로 지연된 건수 · 괄호=구간 내 비중 · 굵게=그 구간 최다 사유 · 모수=<b>2026년 출고 D+7 초과 완료건 전체</b>(위 주차별 표는 최근 12주만 표시라 합계가 다름)</div><div class="tbl-wrap"><table class="dtable" id="delayLeadTable"></table></div></div>
+      <div class="card col-12">
+        <h3 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">⏳ 지연일자별 사유
+          <span class="flab" style="font-weight:400">🗓️ 출고월</span>
+          <select id="delaylead-mo-sel" style="font-size:12.5px;padding:3px 8px"></select>
+        </h3>
+        <div class="sub">출고→설치 <b>소요일 구간</b>별 사유 분포 · 각 셀=그 구간에서 해당 사유로 지연된 건수 · 괄호=구간 내 비중 · 굵게=그 구간 최다 사유 · <span id="delaylead-scope"></span></div>
+        <div class="tbl-wrap"><table class="dtable" id="delayLeadTable"></table></div>
+      </div>
     </div>
   </section>
 
@@ -733,7 +740,38 @@ function renderDelayWeekly(reasons){
         tooltip:{ callbacks:{ label:function(ct){ return ct.dataset.label+": "+fmt(ct.parsed.y||0)+"건"; } } } } } });
 
   renderDelayWeekTable(rows, cats);
-  renderDelayLeadTable((reasons && reasons.delayLead) || [], cats);
+  renderDelayLead(reasons, cats);
+}
+
+// 지연일자별 사유: 출고월 드롭다운(전체/월별) → 해당 구간표 렌더
+var DELAYLEAD_SEL_MO = ""; // ""=전체, 아니면 "YYYY-MM"
+function renderDelayLead(reasons, cats){
+  var all = (reasons && reasons.delayLead) || [];
+  var byMo = (reasons && reasons.delayLeadByMonth) || [];
+  var sel = document.getElementById("delaylead-mo-sel");
+  // 선택월이 현재 기간필터 결과에 없으면(필터 변경 등) 전체로 리셋
+  if (DELAYLEAD_SEL_MO && !byMo.some(function(m){ return m.ym===DELAYLEAD_SEL_MO; })) DELAYLEAD_SEL_MO = "";
+  if (sel){
+    var allTot = all.reduce(function(s,b){ return s+b.total; },0);
+    var html = '<option value="">전체 ('+fmt(allTot)+'건)</option>';
+    for (var i=byMo.length-1; i>=0; i--){   // 최신월 위
+      var m = byMo[i];
+      html += '<option value="'+m.ym+'">'+(+m.ym.slice(5))+'월 ('+fmt(m.total)+'건)</option>';
+    }
+    sel.innerHTML = html;
+    sel.value = DELAYLEAD_SEL_MO;
+    // 구버전 캐시(delayLeadByMonth 없음)면 드롭다운 숨김 — 전체만 표시
+    sel.style.display = byMo.length ? "" : "none";
+  }
+  var pick = DELAYLEAD_SEL_MO
+    ? (byMo.filter(function(m){ return m.ym===DELAYLEAD_SEL_MO; })[0] || {}).lead || []
+    : all;
+  var scope = document.getElementById("delaylead-scope");
+  var yr = byMo.length ? byMo[byMo.length-1].ym.slice(0,4)+"년 " : "";
+  if (scope) scope.innerHTML = DELAYLEAD_SEL_MO
+    ? '모수=<b>'+DELAYLEAD_SEL_MO.slice(0,4)+'년 '+(+DELAYLEAD_SEL_MO.slice(5))+'월 출고</b> D+7 초과 완료건'
+    : '모수=<b>'+yr+'출고 D+7 초과 완료건 전체</b>(위 주차별 표는 최근 12주만 표시라 합계가 다름)';
+  renderDelayLeadTable(pick, cats);
 }
 
 // 지연일자별(출고→설치 소요일 구간) 사유 분포표 · 구간 내 비중 병기 · 구간별 최다 사유 강조
@@ -1893,6 +1931,11 @@ function applyFilters(){
 }
 (function(){ var bsel=document.getElementById("board-wk-sel");
   if(bsel) bsel.addEventListener("change", function(){ BOARD_SEL_WEEK=this.value; if(LAST_DATA) renderBoard(LAST_DATA); });
+})();
+// 지연일자별 사유 · 출고월 선택(표만 갱신, 재조회 없음)
+(function(){ var msel=document.getElementById("delaylead-mo-sel");
+  if(msel) msel.addEventListener("change", function(){ DELAYLEAD_SEL_MO=this.value;
+    if(LAST_DATA&&LAST_DATA.reasons) renderDelayLead(LAST_DATA.reasons, LAST_DATA.reasons.delayCats||[]); });
 })();
 document.getElementById("f-apply").addEventListener("click", applyFilters);
 document.getElementById("f-reset").addEventListener("click", function(){
