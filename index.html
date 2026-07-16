@@ -111,7 +111,9 @@
   .tile .t-help .t-tip b { color:var(--s-blue); font-weight:700; }
 
   /* Cards grid */
-  .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+  /* align-items:start — 카드가 같은 행의 제일 큰 카드 높이로 늘어나지 않게. 늘어나면 내용 짧은 카드
+     (설치 채널 비율 등) 밑에 큰 빈 공간이 생겨 한 화면에 들어오는 정보가 줄어든다. */
+  .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; align-items: start; }
   .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 18px 16px; box-shadow: var(--shadow); min-width: 0; }
   .card h3 { font-size: 14.5px; letter-spacing: -.3px; display:flex; align-items:center; gap:8px; }
   .card .sub { font-size: 12px; color: var(--muted); margin-top: 3px; margin-bottom: 8px; }
@@ -218,9 +220,14 @@
   .col-4 { grid-column: span 4; } .col-5 { grid-column: span 5; } .col-6 { grid-column: span 6; }
   .col-7 { grid-column: span 7; } .col-8 { grid-column: span 8; } .col-12 { grid-column: span 12; }
   .chart-wrap { position: relative; width: 100%; }
-  .h220 { height: 220px; } .h260 { height: 260px; } .h300 { height: 300px; }
+  /* 차트 높이 스케일 — 이 4개만 쓴다(카드에 inline height를 다시 박지 말 것: 스케일이 갈라진다).
+     ch-xl은 카테고리가 많은 가로막대(사유 분류 등) 전용 — 그 외엔 ch-s/m/l로 충분하다. */
+  .ch-s  { height: 175px; }   /* 도넛·소형 막대 */
+  .ch-m  { height: 200px; }   /* 기본 세로막대 */
+  .ch-l  { height: 235px; }   /* 흐름(월·주·일) 등 가로로 긴 시계열 */
+  .ch-xl { height: 295px; }   /* 카테고리 10개+ 가로막대 */
 
-  .gauge-wrap { position: relative; height: 210px; display:flex; align-items:center; justify-content:center; }
+  .gauge-wrap { position: relative; height: 185px; display:flex; align-items:center; justify-content:center; }
   .gauge-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; }
   .gauge-center .g-val { font-size: 40px; font-weight: 800; letter-spacing:-1.5px; font-variant-numeric: tabular-nums; }
   .gauge-center .g-lab { font-size: 12.5px; color: var(--muted); margin-top:2px; }
@@ -300,6 +307,10 @@
 
   /* 마지막 통화일 상세(주문번호·메모 원문) — 메모가 길어 기본 520px보다 넓은 변형 */
   .modal-box.wide { max-width: 900px; }
+  /* D+7 지연사유 표 — 건수 셀 클릭 시 대상 목록(0건 셀은 클릭 대상 아님) */
+  td.dw-cell { cursor: pointer; }
+  td.dw-cell:hover { background: color-mix(in srgb, var(--s-blue) 9%, transparent); }
+  td.dw-cell:hover b { color: var(--s-blue-d); text-decoration: underline; }
   .lcd-warn { margin: 0 0 11px; padding: 9px 12px; border-radius: 8px; font-size: 11.5px; line-height: 1.5;
     background: color-mix(in srgb, var(--s-orange) 10%, transparent); border-left: 3px solid var(--s-orange); color: var(--text-secondary); }
   table.lcd-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
@@ -433,9 +444,9 @@
     <div class="grid">
       <div class="card col-12"><h3>📝 회의 코멘트 <span id="board-week" class="board-wk"></span></h3><div class="sub">이번 주 회의 메모 · 저장 시 공유(주차별 리포트와 동일 저장소)</div><div id="boardNote" class="rpt-note"></div></div>
       <div class="card col-6"><h3>🔧 설치 채널 비율</h3><div class="sub">자가설치 vs 상담원(문자발송 합산) · 이번주 %(전주 대비 %p)</div><div id="boardChannel" class="bch"></div></div>
-      <div class="card col-6"><h3>⏳ 미설치 잔여 경과일 <small class="th-tgt" style="display:inline">배송완료 기준</small></h3><div class="sub">설치예정·보류·부재(1~4회)만 · 배송완료 기준(배송중 제외) · 출고 후 경과일 · 장기미설치·위약금·반품/폐업 제외</div><div class="chart-wrap h240" style="height:240px"><canvas id="boardAging"></canvas></div></div>
-      <div class="card col-6"><h3>📐 설치소요일 분포 <small class="th-tgt" style="display:inline">최초컨택 주 기준</small></h3><div class="sub"><b>그 주에 최초컨택한 건들</b>이 출고→설치까지 며칠 걸렸는지 분포 · 전주 vs 금주 · 막대 위 %는 그 주 총건 대비 비중 (빠를수록 왼쪽)</div><div class="chart-wrap h240" style="height:240px"><canvas id="boardLead"></canvas></div></div>
-      <div class="card col-6"><h3>🐢 D+7 지연사유 · 전주 대비 <span class="board-imp">핵심</span></h3><div class="sub">출고→설치 7일+ 완료건 사유 · 이번주 vs 전주(▲증가=악화·빨강) · 출고주 기준이라 최근주는 아직 누적중</div><div class="tbl-wrap"><table class="dtable" id="boardDelay"></table></div></div>
+      <div class="card col-6"><h3>⏳ 미설치 잔여 경과일 <small class="th-tgt" style="display:inline">배송완료 기준</small></h3><div class="sub">설치예정·보류·부재(1~4회)만 · 배송완료 기준(배송중 제외) · 출고 후 경과일 · 장기미설치·위약금·반품/폐업 제외 · <b style="color:var(--s-blue-d)">막대 클릭 시 주문번호·경과일·메모</b></div><div class="chart-wrap ch-m"><canvas id="boardAging"></canvas></div></div>
+      <div class="card col-6"><h3>📐 설치소요일 분포 <small class="th-tgt" style="display:inline">최초컨택 주 기준</small></h3><div class="sub"><b>그 주에 최초컨택한 건들</b>이 출고→설치까지 며칠 걸렸는지 분포 · 전주 vs 금주 · 막대 위 %는 그 주 총건 대비 비중 (빠를수록 왼쪽)</div><div class="chart-wrap ch-m"><canvas id="boardLead"></canvas></div></div>
+      <div class="card col-6"><h3>🐢 D+7 지연사유 · 전주 대비 <span class="board-imp">핵심</span></h3><div class="sub">출고→설치 7일+ 완료건 사유 · 이번주 vs 전주(▲증가=악화·빨강) · 출고주 기준이라 최근주는 아직 누적중 · <b style="color:var(--s-blue-d)">건수 클릭 시 주문번호·D+N·메모</b></div><div class="tbl-wrap"><table class="dtable" id="boardDelay"></table></div></div>
     </div>
   </section>
 
@@ -443,20 +454,20 @@
   <section class="tab-content" id="tab-ops">
     <div class="tiles" id="ops-tiles"></div>
     <div class="grid">
-      <div class="card col-5"><h3>📊 상태 분포</h3><div class="sub">콜리스트 점주의사 기준 · 미설치는 배송완료/배송중으로 분리</div><div class="chart-wrap h260"><canvas id="opsStatus"></canvas></div></div>
-      <div class="card col-7"><h3>🚚 배송상태 · 미설치 즉시 컨택 대상</h3><div class="sub">미설치 중 배송완료/구매확정 건은 바로 설치 유도 가능</div><div class="chart-wrap h260"><canvas id="opsDelivery"></canvas></div><div class="insight" id="ops-insight"></div></div>
-      <div class="card col-5"><h3>📵 부재 단계별</h3><div class="sub">재컨택 우선순위 판단용</div><div class="chart-wrap h220"><canvas id="opsAbsent"></canvas></div></div>
-      <div class="card col-7"><h3>🧾 미설치 사유 (현재 잔여)</h3><div class="sub">로우데이터 L열 코드화 사유 · 반품/폐업 및 <b>배송중 전체 제외</b>(배송완료·구매확정만) · '(사유미기재) 배송완료'=설치 가능한데 사유 미입력</div><div class="chart-wrap h260"><canvas id="opsReason"></canvas></div></div>
+      <div class="card col-5"><h3>📊 상태 분포</h3><div class="sub">콜리스트 점주의사 기준 · 미설치는 배송완료/배송중으로 분리</div><div class="chart-wrap ch-m"><canvas id="opsStatus"></canvas></div></div>
+      <div class="card col-7"><h3>🚚 배송상태 · 미설치 즉시 컨택 대상</h3><div class="sub">미설치 중 배송완료/구매확정 건은 바로 설치 유도 가능</div><div class="chart-wrap ch-m"><canvas id="opsDelivery"></canvas></div><div class="insight" id="ops-insight"></div></div>
+      <div class="card col-5"><h3>📵 부재 단계별</h3><div class="sub">재컨택 우선순위 판단용</div><div class="chart-wrap ch-s"><canvas id="opsAbsent"></canvas></div></div>
+      <div class="card col-7"><h3>🧾 미설치 사유 (현재 잔여)</h3><div class="sub">로우데이터 L열 코드화 사유 · 반품/폐업 및 <b>배송중 전체 제외</b>(배송완료·구매확정만) · '(사유미기재) 배송완료'=설치 가능한데 사유 미입력</div><div class="chart-wrap ch-m"><canvas id="opsReason"></canvas></div></div>
       <div class="card col-12"><h3>📞 마지막 통화일 경과 현황</h3>
         <div class="sub">콜리스트 <b>T열(마지막통화일)</b>에 날짜가 있는 잔여 <b id="lca-total">–</b>건 기준 · 경과일 = 오늘 − 마지막통화일 · 표의 <b>누적</b>은 그 구간 <b>이상</b> 통화가 끊긴 건수 · <b>오래 방치된 건일수록 재컨택 우선순위</b></div>
         <div class="lca-split">
-          <div class="chart-wrap" style="height:240px"><canvas id="opsLastCall"></canvas></div>
+          <div class="chart-wrap ch-m"><canvas id="opsLastCall"></canvas></div>
           <div><table class="dtable" id="opsLastCallTbl"></table></div>
         </div>
         <div class="insight" id="lca-insight"></div>
       </div>
-      <div class="card col-12"><h3>🔎 사유코드 없는 미설치 — 배송상태 구성</h3><div class="sub">L열 사유 없는 미설치 <b id="ops-unspec-cnt">–</b>건 중, <b>배송중은 아직 설치 전이라 위 '사유미기재'에서 제외</b> · 배송완료 건이 실제 관리 대상</div><div class="chart-wrap h220"><canvas id="opsUnspecDelivery"></canvas></div></div>
-      <div class="card col-12"><h3>🔑 미설치 사유 (메모 키워드 분류)</h3><div class="sub">현재 미설치 잔여건(반품·폐업 제외)의 <b>메모를 키워드 자동분류</b> · 설치일 무관 · 7일+ 지연 사유와 동일 로직(부재·문자안내/미룸/방문설치 접수/원격접수/전산·결제단말 등) · <b>기타 막대 클릭 시 세부내역</b></div><div class="chart-wrap" style="height:380px"><canvas id="opsReasonKw"></canvas></div></div>
+      <div class="card col-12"><h3>🔎 사유코드 없는 미설치 — 배송상태 구성</h3><div class="sub">L열 사유 없는 미설치 <b id="ops-unspec-cnt">–</b>건 중, <b>배송중은 아직 설치 전이라 위 '사유미기재'에서 제외</b> · 배송완료 건이 실제 관리 대상</div><div class="chart-wrap ch-s"><canvas id="opsUnspecDelivery"></canvas></div></div>
+      <div class="card col-12"><h3>🔑 미설치 사유 (메모 키워드 분류)</h3><div class="sub">현재 미설치 잔여건(반품·폐업 제외)의 <b>메모를 키워드 자동분류</b> · 설치일 무관 · 7일+ 지연 사유와 동일 로직(부재·문자안내/미룸/방문설치 접수/원격접수/전산·결제단말 등) · <b>기타 막대 클릭 시 세부내역</b> · <span id="ops-kw-skip"></span></div><div class="chart-wrap ch-xl"><canvas id="opsReasonKw"></canvas></div></div>
     </div>
   </section>
 
@@ -466,15 +477,15 @@
     <div class="grid">
       <div class="card col-5"><h3>🏢 부서별 원인 건수</h3>
         <div class="sub">로우데이터 L열 사유코드 → 부서 매핑 · <b>고객사정</b>은 부서가 손쓰기 어려운 축이라 참고용</div>
-        <div class="chart-wrap h260"><canvas id="deptBar"></canvas></div>
+        <div class="chart-wrap ch-m"><canvas id="deptBar"></canvas></div>
       </div>
       <div class="card col-7"><h3>📈 출고월별 추이 <small class="th-tgt" style="display:inline">개선대상만</small></h3>
         <div class="sub">고객사정 제외 · 출고월 기준 · 최근 월은 아직 누적중이라 낮게 보일 수 있음</div>
-        <div class="chart-wrap h260"><canvas id="deptMonth"></canvas></div>
+        <div class="chart-wrap ch-m"><canvas id="deptMonth"></canvas></div>
       </div>
       <div class="card col-5"><h3>🎯 근본원인 대분류 <span class="board-imp">핵심</span></h3>
         <div class="sub">개선대상을 <b>어떤 액션으로 막을 수 있나</b>로 묶음 · L열 코드 + K열 메모 병합 판정 · <b>정상 대기·고객 변심·사유 미기재</b>는 액션 대상이 아니라 회색 · <b id="rootbar-scope"></b> <small class="th-tgt" style="display:inline">오른쪽 표의 월 선택을 따라감</small></div>
-        <div class="chart-wrap h260"><canvas id="rootBar"></canvas></div>
+        <div class="chart-wrap ch-m"><canvas id="rootBar"></canvas></div>
       </div>
       <div class="card col-7"><h3>🧩 세분류 상세 <span class="board-imp">클릭</span>
           <select id="root-mo-sel" style="font-size:12.5px;padding:3px 8px;margin-left:auto"></select></h3>
@@ -484,15 +495,16 @@
       </div>
       <div class="card col-5"><h3>🔁 지연 성격 <span class="board-imp">클릭</span></h3>
         <div class="sub">K열 메모 파생 · L열 사유코드와 <b>별개 축</b> · 막대 클릭 시 주문번호·메모 · <b>반복미룸</b>=설치를 2번 이상 약속하고 안 지킴 · <b>환경대기</b>=인터넷·공사 등 매장 준비 미비</div>
-        <div class="chart-wrap h260"><canvas id="natBar"></canvas></div>
+        <div class="chart-wrap ch-m"><canvas id="natBar"></canvas></div>
       </div>
       <div class="card col-7"><h3>📉 미룸 횟수 → 설치 소요일 <span class="board-imp">핵심</span></h3>
         <div class="sub">막대=건수 · 선=완료건 평균 출고→설치 소요일 · <b>미룸이 반복될수록 설치가 늦어지는지</b>를 봅니다</div>
-        <div class="chart-wrap h260"><canvas id="ppLead"></canvas></div>
+        <div class="chart-wrap ch-m"><canvas id="ppLead"></canvas></div>
         <div class="insight" id="nat-insight"></div>
       </div>
-      <div class="card col-12"><h3>🔧 원인별 상세 <span class="board-imp">클릭</span></h3>
-        <div class="sub"><b>행을 클릭하면</b> 해당 주문번호·메모를 볼 수 있습니다 · 미완료율이 높을수록 그 원인이 설치를 끝까지 막고 있다는 뜻 · 개선대상 부서 먼저 정렬</div>
+      <div class="card col-12"><h3>🔧 원인별 상세 <span class="board-imp">클릭</span>
+          <select id="dept-mo-sel" style="font-size:12.5px;padding:3px 8px;margin-left:auto"></select></h3>
+        <div class="sub"><b>행을 클릭하면</b> 해당 주문번호·메모를 볼 수 있습니다 · 목록은 <b>미완료 + D+7 초과 완료</b>만(제때 끝난 건 제외) · 미완료율이 높을수록 그 원인이 설치를 끝까지 막고 있다는 뜻 · 개선대상 부서 먼저 정렬 · <span id="dept-scope"></span></div>
         <div class="tbl-wrap"><table class="dtable" id="deptTbl"></table></div>
       </div>
       <div class="card col-12"><h3>⚠️ 데이터 품질</h3><div class="sub">집계 신뢰도에 영향을 주는 원천 이슈</div>
@@ -508,12 +520,12 @@
       <div class="card col-4"><h3>🎯 설치 완료율</h3><div class="sub">2026 출고 대비 설치완료</div>
         <div class="gauge-wrap"><canvas id="perfGauge"></canvas><div class="gauge-center"><div class="g-val" id="gauge-val">–</div><div class="g-lab">설치 완료율</div></div></div>
       </div>
-      <div class="card col-8"><h3>📈 월별 처리량 추세</h3><div class="sub">실적로그 · 통화시도(처리)량 vs 설치완료</div><div class="chart-wrap h260"><canvas id="perfMonthly"></canvas></div></div>
-      <div class="card col-5"><h3>🔌 설치 채널 비중</h3><div class="sub">자가설치 vs 상담원 · 5/6 출고건부터(채널 분류 시작일 기준)</div><div class="chart-wrap h220" style="height:200px"><canvas id="perfChannel"></canvas></div><div class="legend" id="channel-legend"></div></div>
-      <div class="card col-7"><h3>⏱️ 설치 소요일 분포</h3><div class="sub">출고 → 설치완료 (일). 평균 <b id="perf-avglead">–</b>일 · 5일 이내 <b id="perf-within5">–</b></div><div class="chart-wrap h220"><canvas id="perfSpeed"></canvas></div></div>
-      <div class="card col-6"><h3>🔁 재컨택 주기 → 설치 속도</h3><div class="sub">메모 재컨택 간격이 짧을수록 실제로 빨리 설치되는가?</div><div class="chart-wrap h220"><canvas id="perfRetouch"></canvas></div><div class="insight" id="retouch-insight"></div></div>
-      <div class="card col-6"><h3>🐢 7일+ 지연 사유</h3><div class="sub">설치완료됐지만 7일 이상 걸린 건 (메모 자동분류) · <b style="color:var(--s-blue-d)">기타 막대 클릭 시 세부내역</b></div><div class="chart-wrap" style="height:360px"><canvas id="perfDelay"></canvas></div></div>
-      <div class="card col-12"><h3>📅 일별 처리량</h3><div class="sub">최근 45영업일 · 통화시도량 & 설치완료</div><div class="chart-wrap h260"><canvas id="perfDaily"></canvas></div></div>
+      <div class="card col-8"><h3>📈 월별 처리량 추세</h3><div class="sub">실적로그 · 통화시도(처리)량 vs 설치완료</div><div class="chart-wrap ch-m"><canvas id="perfMonthly"></canvas></div></div>
+      <div class="card col-5"><h3>🔌 설치 채널 비중</h3><div class="sub">자가설치 vs 상담원 · 5/6 출고건부터(채널 분류 시작일 기준)</div><div class="chart-wrap ch-s"><canvas id="perfChannel"></canvas></div><div class="legend" id="channel-legend"></div></div>
+      <div class="card col-7"><h3>⏱️ 설치 소요일 분포</h3><div class="sub">출고 → 설치완료 (일). 평균 <b id="perf-avglead">–</b>일 · 5일 이내 <b id="perf-within5">–</b></div><div class="chart-wrap ch-s"><canvas id="perfSpeed"></canvas></div></div>
+      <div class="card col-6"><h3>🔁 재컨택 주기 → 설치 속도</h3><div class="sub">메모 재컨택 간격이 짧을수록 실제로 빨리 설치되는가?</div><div class="chart-wrap ch-s"><canvas id="perfRetouch"></canvas></div><div class="insight" id="retouch-insight"></div></div>
+      <div class="card col-6"><h3>🐢 7일+ 지연 사유</h3><div class="sub">설치완료됐지만 7일 이상 걸린 건 (메모 자동분류) · <b style="color:var(--s-blue-d)">기타 막대 클릭 시 세부내역</b></div><div class="chart-wrap ch-xl"><canvas id="perfDelay"></canvas></div></div>
+      <div class="card col-12"><h3>📅 일별 처리량</h3><div class="sub">최근 45영업일 · 통화시도량 & 설치완료</div><div class="chart-wrap ch-m"><canvas id="perfDaily"></canvas></div></div>
     </div>
   </section>
 
@@ -521,9 +533,9 @@
   <section class="tab-content" id="tab-flow">
     <div class="tiles" id="flow-tiles"></div>
     <div class="grid">
-      <div class="card col-12"><h3>📆 월별 흐름</h3><div class="sub">통화시도·최초컨택 = 실적로그(자가설치 제외) · 설치완료 = 로우데이터 설치일(U열) 기준, 2026 출고분 (전체 월)</div><div class="chart-wrap h300"><canvas id="flowMonthly"></canvas></div></div>
-      <div class="card col-12"><h3>📅 주별 흐름</h3><div class="sub">최근 16주 · 월요일 시작 주 기준 · 설치완료=설치일 기준(2026 출고분)</div><div class="chart-wrap h300"><canvas id="flowWeekly"></canvas></div></div>
-      <div class="card col-12"><h3>🗓️ 일별 흐름</h3><div class="sub">최근 45영업일 · 설치완료=설치일 기준(2026 출고분)</div><div class="chart-wrap h300"><canvas id="flowDaily"></canvas></div></div>
+      <div class="card col-12"><h3>📆 월별 흐름</h3><div class="sub">통화시도·최초컨택 = 실적로그(자가설치 제외) · 설치완료 = 로우데이터 설치일(U열) 기준, 2026 출고분 (전체 월)</div><div class="chart-wrap ch-l"><canvas id="flowMonthly"></canvas></div></div>
+      <div class="card col-12"><h3>📅 주별 흐름</h3><div class="sub">최근 16주 · 월요일 시작 주 기준 · 설치완료=설치일 기준(2026 출고분)</div><div class="chart-wrap ch-l"><canvas id="flowWeekly"></canvas></div></div>
+      <div class="card col-12"><h3>🗓️ 일별 흐름</h3><div class="sub">최근 45영업일 · 설치완료=설치일 기준(2026 출고분)</div><div class="chart-wrap ch-l"><canvas id="flowDaily"></canvas></div></div>
     </div>
   </section>
 
@@ -531,7 +543,7 @@
   <section class="tab-content" id="tab-delayweek">
     <div class="tiles" id="delayweek-tiles"></div>
     <div class="grid">
-      <div class="card col-12"><h3>🐢 출고 주별 D+7 초과 지연건 · 사유 구성</h3><div class="sub">출고→설치 <b>7일 이상</b> 걸려 완료된 건을 <b>출고일 기준 주(월요일)</b>로 집계 · 사유는 메모 키워드 자동분류 · 최근 16주 · <b>최근 주는 아직 설치 진행중이라 낮게 나옴(정상)</b></div><div class="chart-wrap" style="height:360px"><canvas id="dwBar"></canvas></div></div>
+      <div class="card col-12"><h3>🐢 출고 주별 D+7 초과 지연건 · 사유 구성</h3><div class="sub">출고→설치 <b>7일 이상</b> 걸려 완료된 건을 <b>출고일 기준 주(월요일)</b>로 집계 · 사유는 메모 키워드 자동분류 · 최근 16주 · <b>최근 주는 아직 설치 진행중이라 낮게 나옴(정상)</b></div><div class="chart-wrap ch-xl"><canvas id="dwBar"></canvas></div></div>
       <div class="card col-12"><h3>📋 주차별 사유 상세표</h3><div class="sub">최근 12주 · 최신 주가 위 · 각 셀=그 출고주의 사유별 D+7 지연 건수</div><div class="tbl-wrap"><table class="dtable" id="delayWeekTable"></table></div></div>
       <div class="card col-12">
         <h3 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">⏳ 지연일자별 사유
@@ -554,11 +566,11 @@
         <div id="achBox" class="ach"></div>
       </div>
       <div class="card col-12"><h3>📊 2026 출고건 전체 상태 구성</h3><div class="sub">출고 <b id="coh-total">–</b>건이 지금 어떤 상태인지 세부 분류 (설치완료 외에도 반품·폐업, 위약금 등 종결건 분리)</div><div id="cohSummary" class="statgrid"></div></div>
-      <div class="card col-7"><h3>📦 출고월별 진행률</h3><div class="sub">출고량 대비 설치완료 (자가설치 포함 전체)</div><div class="chart-wrap h260"><canvas id="cohMonth"></canvas></div></div>
-      <div class="card col-5"><h3>🧩 월별 설치 채널 구성</h3><div class="sub">자가설치 / 상담원 완료 건수</div><div class="chart-wrap h260"><canvas id="cohChannel"></canvas></div></div>
-      <div class="card col-7"><h3>📉 주별 설치 진행률</h3><div class="sub">최근 14주 · 최근 주는 진행중이라 낮게 나옴(정상)</div><div class="chart-wrap h240" style="height:240px"><canvas id="cohWeek"></canvas></div></div>
-      <div class="card col-5"><h3>⏳ 미설치 잔여 경과일</h3><div class="sub">출고 후 경과 · 오래된 잔여건 관리</div><div class="chart-wrap h240" style="height:240px"><canvas id="cohAging"></canvas></div></div>
-      <div class="card col-12"><h3>🗂️ 출고월별 현재 상태</h3><div class="sub">4월·5월 등 각 출고월 코호트가 지금 어떤 상태인지</div><div class="chart-wrap h260"><canvas id="cohStatus"></canvas></div></div>
+      <div class="card col-7"><h3>📦 출고월별 진행률</h3><div class="sub">출고량 대비 설치완료 (자가설치 포함 전체)</div><div class="chart-wrap ch-m"><canvas id="cohMonth"></canvas></div></div>
+      <div class="card col-5"><h3>🧩 월별 설치 채널 구성</h3><div class="sub">자가설치 / 상담원 완료 건수</div><div class="chart-wrap ch-m"><canvas id="cohChannel"></canvas></div></div>
+      <div class="card col-7"><h3>📉 주별 설치 진행률</h3><div class="sub">최근 14주 · 최근 주는 진행중이라 낮게 나옴(정상)</div><div class="chart-wrap ch-m"><canvas id="cohWeek"></canvas></div></div>
+      <div class="card col-5"><h3>⏳ 미설치 잔여 경과일</h3><div class="sub">출고 후 경과 · 오래된 잔여건 관리</div><div class="chart-wrap ch-m"><canvas id="cohAging"></canvas></div></div>
+      <div class="card col-12"><h3>🗂️ 출고월별 현재 상태</h3><div class="sub">4월·5월 등 각 출고월 코호트가 지금 어떤 상태인지</div><div class="chart-wrap ch-m"><canvas id="cohStatus"></canvas></div></div>
     </div>
   </section>
 
@@ -566,8 +578,8 @@
   <section class="tab-content" id="tab-weekly">
     <div class="tiles" id="weekly-tiles"></div>
     <div class="grid">
-      <div class="card col-12"><h3>📊 주별 업무량 · 속도 종합 비교</h3><div class="sub">막대=출고·통화건수, 초록선=설치완료 <b>(왼쪽축 건수)</b> · 점선=평균 설치속도·재컨택주기 <b>(오른쪽축 일, 낮을수록 빠름)</b>. 최근 16주 · 맨 오른쪽이 이번 주(진행중)</div><div class="chart-wrap" style="height:380px"><canvas id="wkVolume"></canvas></div></div>
-      <div class="card col-12"><h3>🔧 주별 설치 채널 구성</h3><div class="sub">자가설치 · 상담원 완료 건수(설치일 기준) · 막대 안 %는 그 주 설치완료 대비 비중</div><div class="chart-wrap h260"><canvas id="wkChannel"></canvas></div></div>
+      <div class="card col-12"><h3>📊 주별 업무량 · 속도 종합 비교</h3><div class="sub">막대=출고·통화건수, 초록선=설치완료 <b>(왼쪽축 건수)</b> · 점선=평균 설치속도·재컨택주기 <b>(오른쪽축 일, 낮을수록 빠름)</b>. 최근 16주 · 맨 오른쪽이 이번 주(진행중)</div><div class="chart-wrap ch-xl"><canvas id="wkVolume"></canvas></div></div>
+      <div class="card col-12"><h3>🔧 주별 설치 채널 구성</h3><div class="sub">자가설치 · 상담원 완료 건수(설치일 기준) · 막대 안 %는 그 주 설치완료 대비 비중</div><div class="chart-wrap ch-m"><canvas id="wkChannel"></canvas></div></div>
       <div class="card col-12"><h3>🗓️ 주차별 상세 비교표</h3><div class="sub">최근 12주 · 최신 주가 위 · <b>▲▼</b>는 직전 주 대비 증감(속도·재컨택주기는 낮을수록 개선)</div><div class="tbl-wrap"><table class="dtable" id="weeklyTable"></table></div></div>
     </div>
   </section>
@@ -576,8 +588,8 @@
   <section class="tab-content" id="tab-daily">
     <div class="tiles" id="daily-tiles"></div>
     <div class="grid">
-      <div class="card col-12"><h3>📊 일별 업무량 · 속도 종합 비교</h3><div class="sub">막대=출고·통화건수, 초록선=설치완료 <b>(왼쪽축 건수)</b> · 점선=평균 설치속도·재컨택주기 <b>(오른쪽축 일, 낮을수록 빠름)</b>. 최근 21일 · 맨 오른쪽이 오늘</div><div class="chart-wrap" style="height:380px"><canvas id="dyVolume"></canvas></div></div>
-      <div class="card col-12"><h3>🔧 일별 설치 채널 구성</h3><div class="sub">자가설치 · 상담원 완료 건수(설치일 기준) · 막대 안 %는 그 날 설치완료 대비 비중</div><div class="chart-wrap h260"><canvas id="dyChannel"></canvas></div></div>
+      <div class="card col-12"><h3>📊 일별 업무량 · 속도 종합 비교</h3><div class="sub">막대=출고·통화건수, 초록선=설치완료 <b>(왼쪽축 건수)</b> · 점선=평균 설치속도·재컨택주기 <b>(오른쪽축 일, 낮을수록 빠름)</b>. 최근 21일 · 맨 오른쪽이 오늘</div><div class="chart-wrap ch-xl"><canvas id="dyVolume"></canvas></div></div>
+      <div class="card col-12"><h3>🔧 일별 설치 채널 구성</h3><div class="sub">자가설치 · 상담원 완료 건수(설치일 기준) · 막대 안 %는 그 날 설치완료 대비 비중</div><div class="chart-wrap ch-m"><canvas id="dyChannel"></canvas></div></div>
       <div class="card col-12"><h3>📆 일자별 상세 비교표</h3><div class="sub">최근 14일 · 최신 일이 위 · <b>▲▼</b>는 직전 일 대비 증감(속도·재컨택주기는 낮을수록 개선)</div><div class="tbl-wrap"><table class="dtable" id="dailyTable"></table></div></div>
     </div>
   </section>
@@ -647,6 +659,10 @@ function setDefaults() {
   Chart.defaults.plugins.tooltip.titleColor = C["--surface-1"];
   Chart.defaults.plugins.tooltip.bodyColor = C["--surface-1"];
   Chart.defaults.maintainAspectRatio = false;
+  // 막대는 기본적으로 카테고리 슬롯을 꽉 채우며 늘어난다 → 카테고리가 3~4개뿐인 차트(부재 단계별,
+  // 사유코드 없는 미설치 등)에서 막대 하나가 300px가 넘어가 읽기 어려워진다. 굵기 상한을 걸면
+  // 카테고리 수와 무관하게 일정한 굵기로 그려진다(세로막대=너비, 가로막대=높이 상한).
+  Chart.defaults.datasets.bar.maxBarThickness = 46;
   // 막대 끝/차트 경계에서 데이터라벨이 캔버스 밖으로 잘리지 않도록 전역 여백
   Chart.defaults.layout = { padding: { top: 18, right: 18, bottom: 2, left: 2 } };
   Chart.defaults.plugins.datalabels.clamp = true; // 라벨을 차트 영역 안으로 고정
@@ -807,6 +823,13 @@ function renderOps(o, reasons) {
     options:{ scales:axes(), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
 
   // 미설치 잔여건 메모 키워드 분류(보조) · '기타'는 클릭 시 2차 키워드 세분(D+7과 동일)
+  // 모수에서 뺀 물량(배송중 / 미컨택)은 조용히 사라지면 안 되므로 부제에 건수를 밝힌다.
+  var kwSkip = reasons.uninstallKwSkipped||{};
+  var kwSkipShip = kwSkip["배송중"]||0, kwSkipNC = kwSkip["미컨택(배송완료·메모없음)"]||0;
+  var kwSkipBox = document.getElementById("ops-kw-skip");
+  if (kwSkipBox) kwSkipBox.innerHTML = (kwSkipShip+kwSkipNC)
+    ? '모수 제외: <b>배송중 '+fmt(kwSkipShip)+'건</b>(설치 전) · <b>미컨택 '+fmt(kwSkipNC)+'건</b>(배송완료·메모없음=최초컨택 대상)'
+    : '';
   var kz = (reasons.uninstallReasonKw||[]).slice(0,11);
   var kwEtc = reasons.uninstallReasonKwEtc||[];
   var kwEtcTotal = kwEtc.reduce(function(s,r){return s+r.count;},0);
@@ -827,6 +850,7 @@ function renderOps(o, reasons) {
 // 부서 색: 개선대상 4개는 유채색, 고객사정·미분류는 회색(=액션 대상이 아님을 색으로 구분)
 var DEPT_COLOR = { "영업":"--s-red", "물류":"--s-orange", "전산":"--s-violet", "온보딩":"--s-blue", "고객사정":"--muted", "미분류":"--grid" };
 var DEPT_CAUSES_SEEN = [];  // 표 행 index → {dept,cause} (클릭 드릴다운용)
+var DEPT_SEL_MO = ""; // ""=전체, 아니면 "YYYY-MM" — 원인별 상세표 + 드릴다운이 같이 따라간다(상단 기간필터와 별개)
 
 function renderDept(reasons){
   var d = reasons && reasons.deptDelay;
@@ -836,12 +860,12 @@ function renderDept(reasons){
   var top=act.slice().sort(function(a,b){return b.total-a.total;})[0];
 
   document.getElementById("dept-tiles").innerHTML =
-    tile("부서 개선대상","🏢", fmt(d.actionableTotal), "건", "고객사정 제외 · "+d.since+" 출고~", true,
-      "각 부서가 <b>줄일 수 있는</b> 지연 원인만 센 건수입니다.<br>영업·물류·전산·온보딩 4개 부서에 매핑된 사유코드의 합이며, 창업지연·개인사유·미룸 같은 <b>고객사정은 제외</b>했습니다.") +
+    tile("부서 개선대상","🏢", fmt(d.actionableTotal), "건", "지연건만 · 고객사정 제외 · "+d.since+" 출고~", true,
+      "각 부서가 <b>줄일 수 있는</b> 지연 원인만 센 건수입니다.<br>영업·물류·전산·온보딩 4개 부서에 매핑된 사유코드의 합이며, 창업지연·개인사유·미룸 같은 <b>고객사정은 제외</b>했습니다.<br><br>이 탭 전체 모수는 <b>지연건</b>입니다 — 완료건은 출고→설치 <b>D+7 이상</b>, 미완료건은 <b>출고 후 7일 이상</b> 지난 건만. 제때 끝난 건은 지연 원인이 아니라 모수만 부풀려서 뺐습니다.") +
     tile("아직 미완료","⛔", fmt(d.actionableOpen), "건", "개선대상 중 설치 안 끝난 건") +
     (top ? tile("최다 부서","🔺", top.dept, "", fmt(top.total)+"건 · 미완료 "+pctS(top.openRate)) : "") +
-    tile("사유 기재율","📝", pctS(d.coverage.rate), "", "상담원 배정건 "+fmt(d.coverage.agentHasReason)+"/"+fmt(d.coverage.agent), false,
-      "<b>상담원이 배정된 건</b>만 분모로 셉니다.<br><br><b>자가설치("+fmt(d.coverage.self)+"건)는 제외</b> — 상담원이 컨택하지 않으므로 L열 사유가 비어 있는 게 정상입니다. 이걸 분모에 넣으면 기재율이 "+pctS(d.coverage.rateAll)+"로 보여 마치 절반이 누락된 것처럼 오해하게 됩니다.");
+    tile("사유 기재율","📝", pctS(d.coverage.rate), "", "지연건 중 상담원 배정 "+fmt(d.coverage.agentHasReason)+"/"+fmt(d.coverage.agent), false,
+      "<b>상담원이 배정된 건</b>만 분모로 셉니다.<br><br><b>자가설치("+fmt(d.coverage.self)+"건)는 제외</b> — 상담원이 컨택하지 않으므로 L열 사유가 비어 있는 게 정상입니다. 이걸 분모에 넣으면 기재율이 "+pctS(d.coverage.rateAll)+"로 보여 마치 절반이 누락된 것처럼 오해하게 됩니다.<br><br>⚠️ 이 탭의 다른 지표와 같이 <b>지연건만</b>을 모수로 씁니다 — 전체 출고건 기준 기재율과는 다른 숫자입니다.");
 
   // 부서별 막대(개선대상 → 고객사정 순, DEPT_ORDER 유지)
   mk("deptBar", { type:"bar",
@@ -865,11 +889,32 @@ function renderDept(reasons){
       plugins:{ legend:{display:true, labels:{usePointStyle:true, pointStyle:"rectRounded", color:C["--text-secondary"]}},
         datalabels: dlSeg() } } });
 
-  // 원인별 상세표
-  DEPT_CAUSES_SEEN = d.byCause.map(function(c){ return {dept:c.dept, cause:c.cause}; });
+  // ---- 원인별 상세표 + 출고월 드롭다운(이 표 전용 · 상단 기간필터와 별개로 동작) ----
+  var cByMo = d.byCauseByMonth || [];
+  // 선택월이 현재 기간필터 결과에 없으면(필터 변경 등) 전체로 리셋
+  if (DEPT_SEL_MO && !cByMo.some(function(m){ return m.ym===DEPT_SEL_MO; })) DEPT_SEL_MO = "";
+  var dsel = document.getElementById("dept-mo-sel");
+  if (dsel){
+    var dhtml = '<option value="">전체 기간</option>';
+    for (var mi=cByMo.length-1; mi>=0; mi--){ // 최신월 먼저
+      dhtml += '<option value="'+cByMo[mi].ym+'">'+(+cByMo[mi].ym.slice(5))+'월 ('+fmt(cByMo[mi].total)+'건)</option>';
+    }
+    dsel.innerHTML = dhtml;
+    dsel.value = DEPT_SEL_MO;
+    dsel.style.display = cByMo.length ? "" : "none"; // 구버전 캐시(byCauseByMonth 없음)면 숨김
+  }
+  var causeRows = DEPT_SEL_MO
+    ? ((cByMo.filter(function(m){ return m.ym===DEPT_SEL_MO; })[0] || {}).cause || [])
+    : d.byCause;
+  var dscope = document.getElementById("dept-scope");
+  if (dscope) dscope.innerHTML = DEPT_SEL_MO
+    ? '모수=<b>'+DEPT_SEL_MO.slice(0,4)+'년 '+(+DEPT_SEL_MO.slice(5))+'월 출고</b>'
+    : '모수=<b>전체 기간</b>';
+
+  DEPT_CAUSES_SEEN = causeRows.map(function(c){ return {dept:c.dept, cause:c.cause}; });
   document.getElementById("deptTbl").innerHTML =
     "<thead><tr><th>부서</th><th>원인 (L열 사유코드)</th><th>건수</th><th>완료</th><th>미완료</th><th>미완료율</th></tr></thead><tbody>"+
-    d.byCause.map(function(c,i){
+    causeRows.map(function(c,i){
       var warn = c.openRate>=0.5 && c.total>=5; // 절반 이상 미완료 = 설치를 끝까지 막는 원인
       return "<tr class='dept-row"+(c.actionable?"":" dept-dim")+"' data-i='"+i+"'>"+
         "<td><span class='lca-dot' style='background:"+(C[DEPT_COLOR[c.dept]]||C["--grid"])+"'></span>"+c.dept+"</td>"+
@@ -882,6 +927,10 @@ function renderDept(reasons){
   Array.prototype.forEach.call(document.querySelectorAll("#deptTbl .dept-row"), function(tr){
     tr.addEventListener("click", function(){ openDeptDetail(parseInt(tr.getAttribute("data-i"),10)); });
   });
+  if (dsel && !dsel._wired){ // 월 전환 = 표 + 드릴다운이 같이 따라간다(서버 왕복 없음)
+    dsel._wired = 1;
+    dsel.addEventListener("change", function(){ DEPT_SEL_MO = dsel.value || ""; renderDept(reasons); });
+  }
 
   renderRoot(reasons);
   renderDelayNature(reasons);
@@ -927,9 +976,9 @@ function renderRoot(reasons){
     ? ((byMo.filter(function(m){ return m.ym===ROOT_SEL_MO; })[0] || {}).minor || [])
     : d.rootMinor;
   var scope = document.getElementById("root-scope");
-  if (scope) scope.innerHTML = ROOT_SEL_MO
+  if (scope) scope.innerHTML = (ROOT_SEL_MO
     ? '모수=<b>'+ROOT_SEL_MO.slice(0,4)+'년 '+(+ROOT_SEL_MO.slice(5))+'월 출고</b>'
-    : '모수=<b>'+d.since+' 이후 출고 전체</b>';
+    : '모수=<b>'+d.since+' 이후 출고 전체</b>') + ' 중 <b>지연건</b>(완료 D+7 이상 / 미완료 출고 후 7일 이상)';
 
   // 대분류 = 세분류를 합치면 나오므로 백엔드 추가 없이 프론트에서 집계(선택월을 같이 따라간다).
   // 전체일 땐 서버가 준 rootMajor를 그대로 써서 반올림·정렬이 어긋날 여지를 없앤다.
@@ -1121,13 +1170,16 @@ function openDeptDetail(i){
   fetchData(LAST_PASS, function(r){
     if(!r || !r.ok){ failLastCallDetail((r && r.error)||"조회 실패"); return; }
     paintDeptDetail(t, r);
-  }, failLastCallDetail, { params:{ action:"deptdetail", cause:t.cause, dept:t.dept } });
+  }, failLastCallDetail, { params:{ action:"deptdetail", cause:t.cause, dept:t.dept, ym:DEPT_SEL_MO||"" } });
 }
 function paintDeptDetail(t, r){
   var rows=r.rows||[];
-  document.getElementById("modal-title").textContent=t.dept+" · "+t.cause+" ("+fmt(r.count||0)+"건)";
-  document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · K열 메모 원문 · 미완료 "+fmt(r.open||0)+"건 먼저 · 오래된 출고순";
-  if(!rows.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">해당 원인에 건이 없습니다.</div>'; return; }
+  var moLab = r.ym ? " · "+(+r.ym.slice(5))+"월 출고" : "";
+  document.getElementById("modal-title").textContent=t.dept+" · "+t.cause+moLab+" ("+fmt(r.count||0)+"건)";
+  document.getElementById("modal-sub").textContent=
+    "미완료 "+fmt(r.open||0)+"건 + D+7 초과 완료 "+fmt(r.delayedDone||0)+"건"
+    +" · 로우데이터 A열 주문번호 · K열 메모 원문 · 미완료 먼저 · 오래된 출고순";
+  if(!rows.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">해당 원인에 지연건이 없습니다.</div>'; return; }
   document.getElementById("modal-body").innerHTML=
     '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
     '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>출고</th><th>설치</th><th>메모 (K열)</th></tr></thead><tbody>'+
@@ -2043,7 +2095,11 @@ function renderBoard(d){
   mk("boardAging", { type:"bar",
     data:{ labels:["0~6일","7~13일","14~29일","30일+"], datasets:[{ data:[agd["0-6"],agd["7-13"],agd["14-29"],agd["30+"]],
       backgroundColor:[C["--s-blue-l"],C["--s-blue"],C["--s-yellow"],C["--critical"]], borderRadius:6 }] },
-    options:{ scales:axes(), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
+    options:{ scales:axes(),
+      onClick:function(evt, els){ if(els && els.length) openAgingDetail(els[0].index); },
+      onHover:function(evt, els){ if(evt.native && evt.native.target) evt.native.target.style.cursor = els.length?"pointer":"default"; },
+      plugins:{ datalabels: dl({anchor:"end",align:"end"}),
+        tooltip:{ callbacks:{ afterLabel:function(){ return "▶ 클릭 시 주문번호·메모 목록"; } } } } } });
   // 설치소요일 분포 (최초컨택 주 기준 · 전주 vs 금주 · 건수+%)
   var lcw=(d.perf&&d.perf.leadDistByContactWeek)||[];
   var li=boardWeekIdx(lcw, BOARD_SEL_WEEK);
@@ -2143,16 +2199,24 @@ function renderBoardDelay(reasons){
     var rate=pv>0?((diff>0?"+":"")+Math.round(diff/pv*100)+"%"):"신규";
     return diff>0?('<span class="delta-dn">▲'+diff+' <small>'+rate+'</small></span>'):('<span class="delta-up">▼'+Math.abs(diff)+' <small>'+Math.round(diff/pv*100)+'%</small></span>');
   }
-  function cell(v,t){ return '<b>'+v+'</b> <span class="cell-pct">'+pctOf(v,t)+'%</span>'; }
+  // 건수 셀 — 0건이 아니면 클릭 시 그 주·그 사유의 주문번호·메모 목록(cat=""이면 그 주 전체)
+  function cellTd(v,t,wk,cat,noPct){
+    var inner='<b>'+v+'</b>'+(noPct?'':' <span class="cell-pct">'+pctOf(v,t)+'%</span>');
+    if(!v) return '<td>'+inner+'</td>';
+    return '<td class="dw-cell" data-week="'+esc(wk)+'" data-cat="'+esc(cat)+'" title="클릭 시 주문번호·메모 목록">'+inner+'</td>';
+  }
   function sortBtn(col){ var on=(BOARD_DELAY_SORTBY===col); var lbl=on?(BOARD_DELAY_SORT==="asc"?"▲ 오름":"▼ 내림"):"↕"; return '<button class="sort-btn'+(on?" active":"")+'" data-col="'+col+'" title="이 주 건수로 정렬">'+lbl+'</button>'; }
   var curL=rptWeekLabel(cur.week)+"주", prevL=prev?(rptWeekLabel(prev.week)+"주"):"전주";
   var head='<thead><tr><th>지연 사유</th><th>'+curL+' '+sortBtn("cur")+'</th><th>'+prevL+(prev?(' '+sortBtn("prev")):"")+'</th><th>증감(율)</th></tr></thead>';
   var body=cats.map(function(cat){
     var c=cur.reasons[cat]||0, pv=prev?(prev.reasons[cat]||0):null;
-    return '<tr><td>'+cat+'</td><td>'+cell(c,ct)+'</td><td>'+(pv==null?"–":cell(pv,pt))+'</td><td>'+delt(c,pv)+'</td></tr>';
+    return '<tr><td>'+cat+'</td>'+cellTd(c,ct,cur.week,cat)+(pv==null?'<td>–</td>':cellTd(pv,pt,prev.week,cat))+'<td>'+delt(c,pv)+'</td></tr>';
   }).join("");
-  body+='<tr class="cur"><td><b>합계</b></td><td><b>'+ct+'</b> <span class="cell-pct">100%</span></td><td>'+(prev?('<b>'+pt+'</b>'):"–")+'</td><td>'+(prev?delt(ct,pt):"–")+'</td></tr>';
+  body+='<tr class="cur"><td><b>합계</b></td>'+cellTd(ct,ct,cur.week,"")+(prev?cellTd(pt,pt,prev.week,"",true):'<td>–</td>')+'<td>'+(prev?delt(ct,pt):"–")+'</td></tr>';
   tbl.innerHTML=head+'<tbody>'+body+'</tbody>';
+  Array.prototype.forEach.call(tbl.querySelectorAll(".dw-cell"), function(td){
+    td.addEventListener("click", function(){ openDelayWeekDetail(td.getAttribute("data-week"), td.getAttribute("data-cat")); });
+  });
   Array.prototype.forEach.call(tbl.querySelectorAll(".sort-btn"), function(b){
     b.addEventListener("click", function(){
       var col=b.getAttribute("data-col");
@@ -2233,8 +2297,14 @@ function esc(s){ var d=document.createElement("span"); d.textContent=String(s==n
 
 // 상세 팝업의 '설치' 칸 — 설치일 + 출고→설치 소요일(D+N), 미완료면 빨강.
 // 세 팝업(원인별·세분류·지연성격)이 같은 표시를 쓰므로 여기 하나만 고치면 전부 반영된다.
+// J열 상태가 반품/폐업이면 애초에 설치될 수 없는 건이라 '미완료'로 뭉뚱그리면 안 된다
+// (신호없음 팝업이 반품접수 메모로 가득했던 이유). 재컨택 대상이 아니므로 회색으로 구분한다.
+function isDeadStatus(s){ s=String(s||""); return s.indexOf("반품")!==-1 || s.indexOf("폐업")!==-1; }
 function leadCell(x){
-  if(!x.installed) return '<b style="color:'+C["--s-red"]+'">미완료</b>';
+  if(!x.installed){
+    if(isDeadStatus(x.status)) return '<b style="color:'+C["--muted"]+'" title="'+esc(x.status)+'">반품·폐업</b>';
+    return '<b style="color:'+C["--s-red"]+'">미완료</b>';
+  }
   return esc(x.installed)+(x.lead!=null?' <span class="lcd-lead">D+'+x.lead+'</span>':'');
 }
 
@@ -2271,6 +2341,73 @@ function paintLastCallDetail(def, d){
       return '<tr><td class="lcd-ord">'+esc(r.order)+'</td>'+
         '<td class="lcd-date">'+esc(r.lastCall)+'</td>'+
         '<td class="lcd-st">'+esc(r.status)+'</td>'+
+        '<td class="lcd-memo'+(memo?'':' empty')+'">'+(memo?esc(memo):"(메모 없음)")+'</td></tr>';
+    }).join('')+'</tbody></table>';
+}
+
+// ===== 현황판 드릴다운 — 잔여 경과일 막대 / D+7 지연사유 표 클릭 시 대상 목록 =====
+// 둘 다 캐시 payload가 아니라 클릭 시 on-demand 조회다(대시보드API.js 상단 '메모 원문 예외' 규칙 참고).
+// 구간·주 판정은 서버가 차트와 같은 공유 헬퍼를 쓰므로 막대/셀 숫자 = 팝업 건수.
+var AGING_DEFS=[["0-6","0~6일"],["7-13","7~13일"],["14-29","14~29일"],["30+","30일+"]];
+function openDrill(title){
+  document.getElementById("modal-box").classList.add("wide");
+  document.getElementById("modal-title").textContent=title;
+  document.getElementById("modal-sub").textContent="불러오는 중…";
+  document.getElementById("modal-body").innerHTML='<div class="modal-empty">불러오는 중…</div>';
+  document.getElementById("modal").classList.add("open");
+}
+function openAgingDetail(idx){
+  var def=AGING_DEFS[idx]; if(!def || !LAST_PASS) return;
+  openDrill("미설치 잔여 · 출고 후 "+def[1]);
+  fetchData(LAST_PASS, function(r){
+    if(!r || !r.ok){ failLastCallDetail((r&&r.error)||"조회 실패"); return; }
+    paintAgingDetail(def, r);
+  }, failLastCallDetail, { params:{ action:"agingdetail", bucket:def[0] } });
+}
+function paintAgingDetail(def, r){
+  var rows=r.rows||[];
+  document.getElementById("modal-title").textContent="미설치 잔여 · 출고 후 "+def[1]+" ("+fmt(r.count||0)+"건)";
+  document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · K열 메모 원문 · 오래 방치된 건 순 · 배송완료·구매확정 + 설치예정·보류·부재만";
+  if(!rows.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">해당 구간에 건이 없습니다.</div>'; return; }
+  // 메모는 시트 자유입력 → esc() 필수(HTML 주입 방지)
+  document.getElementById("modal-body").innerHTML=
+    '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
+    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>경과</th><th>출고</th><th>상태</th><th>메모 (K열)</th></tr></thead><tbody>'+
+    rows.map(function(x){
+      var memo=String(x.memo||"").trim();
+      return '<tr><td class="lcd-ord">'+esc(x.order)+'</td>'+
+        '<td class="lcd-date"><span class="lcd-lead">D+'+x.age+'</span></td>'+
+        '<td class="lcd-date">'+esc(x.shipped)+'</td>'+
+        '<td class="lcd-st">'+esc(x.status)+'</td>'+
+        '<td class="lcd-memo'+(memo?'':' empty')+'">'+(memo?esc(memo):"(메모 없음)")+'</td></tr>';
+    }).join('')+'</tbody></table>';
+}
+// cat="" = 합계행 클릭(그 주 전체 사유)
+function openDelayWeekDetail(week, cat){
+  if(!week || !LAST_PASS) return;
+  var lab=rptWeekLabel(week)+"주 · "+(cat||"전체 사유");
+  openDrill("D+7 지연 · "+lab);
+  fetchData(LAST_PASS, function(r){
+    if(!r || !r.ok){ failLastCallDetail((r&&r.error)||"조회 실패"); return; }
+    paintDelayWeekDetail(lab, r);
+  }, failLastCallDetail, { params:{ action:"delayweekdetail", week:week, cat:cat||"" } });
+}
+function paintDelayWeekDetail(lab, r){
+  var rows=r.rows||[];
+  document.getElementById("modal-title").textContent="D+7 지연 · "+lab+" ("+fmt(r.count||0)+"건)";
+  document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · K열 메모 원문 · 출고주 기준 · 오래 걸린 순";
+  if(!rows.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">해당 주·사유에 건이 없습니다.</div>'; return; }
+  var showCat=!r.cat; // 합계(전체 사유) 조회일 때만 사유 열을 보여준다
+  document.getElementById("modal-body").innerHTML=
+    '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
+    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>소요</th>'+(showCat?'<th>사유</th>':'')+'<th>출고</th><th>설치</th><th>메모 (K열)</th></tr></thead><tbody>'+
+    rows.map(function(x){
+      var memo=String(x.memo||"").trim();
+      return '<tr><td class="lcd-ord">'+esc(x.order)+'</td>'+
+        '<td class="lcd-date"><span class="lcd-lead">D+'+x.lead+'</span></td>'+
+        (showCat?('<td class="lcd-st">'+esc(x.cat)+'</td>'):'')+
+        '<td class="lcd-date">'+esc(x.shipped)+'</td>'+
+        '<td class="lcd-date">'+esc(x.installed)+'</td>'+
         '<td class="lcd-memo'+(memo?'':' empty')+'">'+(memo?esc(memo):"(메모 없음)")+'</td></tr>';
     }).join('')+'</tbody></table>';
 }
@@ -2449,7 +2586,7 @@ document.getElementById("f-reset").addEventListener("click", function(){
   loadPeriod("","","전체 기간");
 });
 
-var TABMETA={ board:["주간 현황판","주간 회의용 핵심 지표 한눈에 · 전주 대비 · 회의 코멘트"], ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], dept:["부서별 지연원인","로우데이터 L열 사유코드 → 부서별 · 각 부서가 줄일 수 있는 지연 원인"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], flow:["월·주·일 흐름","실적로그 기준 · 통화시도·설치완료·최초컨택의 월별/주별/일별 추이"], delayweek:["D+7 초과 설치지연분석","출고→설치 7일+ 완료건을 출고 주(월요일)별로 · 사유 메모 키워드 자동분류"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주간 비교 스코어보드","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일간 비교 스코어보드","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"] };
+var TABMETA={ board:["주간 현황판","주간 회의용 핵심 지표 한눈에 · 전주 대비 · 회의 코멘트"], ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], dept:["부서별 지연원인","로우데이터 L열 사유코드 → 부서별 · 각 부서가 줄일 수 있는 지연 원인 · 모수=지연건만(완료 D+7 이상 / 미완료 출고 후 7일 이상)"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], flow:["월·주·일 흐름","실적로그 기준 · 통화시도·설치완료·최초컨택의 월별/주별/일별 추이"], delayweek:["D+7 초과 설치지연분석","출고→설치 7일+ 완료건을 출고 주(월요일)별로 · 사유 메모 키워드 자동분류"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주간 비교 스코어보드","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일간 비교 스코어보드","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
