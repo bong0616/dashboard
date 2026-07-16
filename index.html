@@ -118,6 +118,11 @@
      stack은 행 높이까지 늘어나고(align-self:stretch), 내부 카드가 높이를 균등하게 나눠 가진 뒤
      chart-wrap이 남는 공간을 먹어 차트가 같이 커진다 → 표가 길어져도 공백이 안 생긴다.
      (차트 높이를 고정값으로 박으면 표 길이가 바뀔 때마다 다시 어긋난다) */
+  /* 같은 행 짝이 더 길면(insight 유무·부제 줄수 차이 등) 그만큼 차트를 늘려 카드 밑이 비지 않게 한다.
+     chart-wrap의 ch-* 높이가 flex-basis라 여유가 없으면 원래 높이 그대로, 여유가 있을 때만 늘어난다.
+     ⚠️ 긴 표 옆 카드에는 쓰지 말 것 — 차트가 표 높이(800px+)까지 늘어난다. 거긴 .stack을 쓴다. */
+  .grid > .card.fill { align-self: stretch; display: flex; flex-direction: column; }
+  .grid > .card.fill > .chart-wrap, .grid > .card.fill > .gauge-wrap { flex: 1 1 auto; }
   .grid > .stack { align-self: stretch; }
   .stack { display: grid; gap: 16px; grid-auto-rows: 1fr; }
   .stack > .card { display: flex; flex-direction: column; }
@@ -455,8 +460,8 @@
     <div class="grid">
       <div class="card col-12"><h3>📝 회의 코멘트 <span id="board-week" class="board-wk"></span></h3><div class="sub">이번 주 회의 메모 · 저장 시 공유(주차별 리포트와 동일 저장소)</div><div id="boardNote" class="rpt-note"></div></div>
       <div class="card col-12"><h3>🔧 설치 채널 비율</h3><div class="sub">자가설치 vs 상담원(문자발송 합산) · 이번주 %(전주 대비 %p)</div><div id="boardChannel" class="bch"></div></div>
-      <div class="card col-6"><h3>⏳ 미설치 잔여 경과일 <small class="th-tgt" style="display:inline">배송완료 기준</small></h3><div class="sub">설치예정·보류·부재(1~4회)만 · 배송완료 기준(배송중 제외) · 출고 후 경과일 · 장기미설치·위약금·반품/폐업 제외 · <b style="color:var(--s-blue-d)">막대 클릭 시 주문번호·경과일·메모</b></div><div class="chart-wrap ch-m"><canvas id="boardAging"></canvas></div></div>
-      <div class="card col-6"><h3>📐 설치소요일 분포 <small class="th-tgt" style="display:inline">최초컨택 주 기준</small></h3><div class="sub"><b>그 주에 최초컨택한 건들</b>이 출고→설치까지 며칠 걸렸는지 분포 · 전주 vs 금주 · 막대 위 %는 그 주 총건 대비 비중 (빠를수록 왼쪽)</div><div class="chart-wrap ch-m"><canvas id="boardLead"></canvas></div></div>
+      <div class="card col-6 fill"><h3>⏳ 미설치 잔여 경과일 <small class="th-tgt" style="display:inline">배송완료 기준</small></h3><div class="sub">설치예정·보류·부재(1~4회)만 · 배송완료 기준(배송중 제외) · 출고 후 경과일 · 장기미설치·위약금·반품/폐업 제외 · <b style="color:var(--s-blue-d)">막대 클릭 시 주문번호·경과일·메모</b></div><div class="chart-wrap ch-m"><canvas id="boardAging"></canvas></div></div>
+      <div class="card col-6 fill"><h3>📐 설치소요일 분포 <small class="th-tgt" style="display:inline">최초컨택 주 기준</small></h3><div class="sub"><b>그 주에 최초컨택한 건들</b>이 출고→설치까지 며칠 걸렸는지 분포 · 전주 vs 금주 · 막대 위 %는 그 주 총건 대비 비중 (빠를수록 왼쪽)</div><div class="chart-wrap ch-m"><canvas id="boardLead"></canvas></div></div>
       <div class="card col-12"><h3>🐢 D+7 지연사유 · 최근 4주 <span class="board-imp">핵심</span></h3><div class="sub">출고→설치 7일+ 완료건 사유 · 왼쪽이 오래된 주 · 증감=선택주 vs 직전주(▲증가=악화·빨강) · 출고주 기준이라 최근주는 아직 누적중 · <b style="color:var(--s-blue-d)">건수 클릭 시 주문번호·D+N·메모</b></div><div class="tbl-wrap"><table class="dtable" id="boardDelay"></table></div></div>
     </div>
   </section>
@@ -465,10 +470,10 @@
   <section class="tab-content" id="tab-ops">
     <div class="tiles" id="ops-tiles"></div>
     <div class="grid">
-      <div class="card col-5"><h3>📊 상태 분포</h3><div class="sub">콜리스트 점주의사 기준 · 미설치는 배송완료/배송중으로 분리</div><div class="chart-wrap ch-m"><canvas id="opsStatus"></canvas></div></div>
-      <div class="card col-7"><h3>🚚 배송상태 · 미설치 즉시 컨택 대상</h3><div class="sub">미설치 중 배송완료/구매확정 건은 바로 설치 유도 가능</div><div class="chart-wrap ch-m"><canvas id="opsDelivery"></canvas></div><div class="insight" id="ops-insight"></div></div>
-      <div class="card col-5"><h3>📵 부재 단계별</h3><div class="sub">재컨택 우선순위 판단용</div><div class="chart-wrap ch-m"><canvas id="opsAbsent"></canvas></div></div>
-      <div class="card col-7"><h3>🧾 미설치 사유 (현재 잔여)</h3><div class="sub">로우데이터 L열 코드화 사유 · 반품/폐업 및 <b>배송중 전체 제외</b>(배송완료·구매확정만) · '(사유미기재) 배송완료'=설치 가능한데 사유 미입력</div><div class="chart-wrap ch-m"><canvas id="opsReason"></canvas></div></div>
+      <div class="card col-5 fill"><h3>📊 상태 분포</h3><div class="sub">콜리스트 점주의사 기준 · 미설치는 배송완료/배송중으로 분리</div><div class="chart-wrap ch-m"><canvas id="opsStatus"></canvas></div></div>
+      <div class="card col-7 fill"><h3>🚚 배송상태 · 미설치 즉시 컨택 대상</h3><div class="sub">미설치 중 배송완료/구매확정 건은 바로 설치 유도 가능</div><div class="chart-wrap ch-m"><canvas id="opsDelivery"></canvas></div><div class="insight" id="ops-insight"></div></div>
+      <div class="card col-5 fill"><h3>📵 부재 단계별</h3><div class="sub">재컨택 우선순위 판단용</div><div class="chart-wrap ch-m"><canvas id="opsAbsent"></canvas></div></div>
+      <div class="card col-7 fill"><h3>🧾 미설치 사유 (현재 잔여)</h3><div class="sub">로우데이터 L열 코드화 사유 · 반품/폐업 및 <b>배송중 전체 제외</b>(배송완료·구매확정만) · '(사유미기재) 배송완료'=설치 가능한데 사유 미입력</div><div class="chart-wrap ch-m"><canvas id="opsReason"></canvas></div></div>
       <div class="card col-12"><h3>📞 마지막 통화일 경과 현황</h3>
         <div class="sub">콜리스트 <b>T열(마지막통화일)</b>에 날짜가 있는 잔여 <b id="lca-total">–</b>건 기준 · 경과일 = 오늘 − 마지막통화일 · 표의 <b>누적</b>은 그 구간 <b>이상</b> 통화가 끊긴 건수 · <b>오래 방치된 건일수록 재컨택 우선순위</b></div>
         <div class="lca-split">
@@ -485,11 +490,11 @@
   <section class="tab-content" id="tab-dept">
     <div class="tiles" id="dept-tiles"></div>
     <div class="grid">
-      <div class="card col-5"><h3>🏢 부서별 원인 건수</h3>
+      <div class="card col-5 fill"><h3>🏢 부서별 원인 건수</h3>
         <div class="sub">로우데이터 L열 사유코드 → 부서 매핑 · <b>고객사정</b>은 부서가 손쓰기 어려운 축이라 참고용</div>
         <div class="chart-wrap ch-m"><canvas id="deptBar"></canvas></div>
       </div>
-      <div class="card col-7"><h3>📈 출고월별 추이 <small class="th-tgt" style="display:inline">개선대상만</small></h3>
+      <div class="card col-7 fill"><h3>📈 출고월별 추이 <small class="th-tgt" style="display:inline">개선대상만</small></h3>
         <div class="sub">고객사정 제외 · 출고월 기준 · 최근 월은 아직 누적중이라 낮게 보일 수 있음</div>
         <div class="chart-wrap ch-m"><canvas id="deptMonth"></canvas></div>
       </div>
@@ -530,14 +535,14 @@
   <section class="tab-content" id="tab-perf">
     <div class="tiles" id="perf-tiles"></div>
     <div class="grid">
-      <div class="card col-4"><h3>🎯 설치 완료율</h3><div class="sub">2026 출고 대비 설치완료</div>
+      <div class="card col-4 fill"><h3>🎯 설치 완료율</h3><div class="sub">2026 출고 대비 설치완료</div>
         <div class="gauge-wrap"><canvas id="perfGauge"></canvas><div class="gauge-center"><div class="g-val" id="gauge-val">–</div><div class="g-lab">설치 완료율</div></div></div>
       </div>
-      <div class="card col-8"><h3>📈 월별 처리량 추세</h3><div class="sub">실적로그 · 통화시도(처리)량 vs 설치완료</div><div class="chart-wrap ch-m"><canvas id="perfMonthly"></canvas></div></div>
-      <div class="card col-5"><h3>🔌 설치 채널 비중</h3><div class="sub">자가설치 vs 상담원 · 5/6 출고건부터(채널 분류 시작일 기준)</div><div class="chart-wrap ch-s"><canvas id="perfChannel"></canvas></div><div class="legend" id="channel-legend"></div></div>
-      <div class="card col-7"><h3>⏱️ 설치 소요일 분포</h3><div class="sub">출고 → 설치완료 (일). 평균 <b id="perf-avglead">–</b>일 · 5일 이내 <b id="perf-within5">–</b></div><div class="chart-wrap ch-s"><canvas id="perfSpeed"></canvas></div></div>
-      <div class="card col-6"><h3>🔁 재컨택 주기 → 설치 속도</h3><div class="sub">메모 재컨택 간격이 짧을수록 실제로 빨리 설치되는가?</div><div class="chart-wrap ch-l"><canvas id="perfRetouch"></canvas></div><div class="insight" id="retouch-insight"></div></div>
-      <div class="card col-6"><h3>🐢 7일+ 지연 사유</h3><div class="sub">설치완료됐지만 7일 이상 걸린 건 (메모 자동분류) · <b style="color:var(--s-blue-d)">기타 막대 클릭 시 세부내역</b></div><div class="chart-wrap ch-xl"><canvas id="perfDelay"></canvas></div></div>
+      <div class="card col-8 fill"><h3>📈 월별 처리량 추세</h3><div class="sub">실적로그 · 통화시도(처리)량 vs 설치완료</div><div class="chart-wrap ch-m"><canvas id="perfMonthly"></canvas></div></div>
+      <div class="card col-5 fill"><h3>🔌 설치 채널 비중</h3><div class="sub">자가설치 vs 상담원 · 5/6 출고건부터(채널 분류 시작일 기준)</div><div class="chart-wrap ch-s"><canvas id="perfChannel"></canvas></div><div class="legend" id="channel-legend"></div></div>
+      <div class="card col-7 fill"><h3>⏱️ 설치 소요일 분포</h3><div class="sub">출고 → 설치완료 (일). 평균 <b id="perf-avglead">–</b>일 · 5일 이내 <b id="perf-within5">–</b></div><div class="chart-wrap ch-s"><canvas id="perfSpeed"></canvas></div></div>
+      <div class="card col-6 fill"><h3>🔁 재컨택 주기 → 설치 속도</h3><div class="sub">메모 재컨택 간격이 짧을수록 실제로 빨리 설치되는가?</div><div class="chart-wrap ch-l"><canvas id="perfRetouch"></canvas></div><div class="insight" id="retouch-insight"></div></div>
+      <div class="card col-6 fill"><h3>🐢 7일+ 지연 사유</h3><div class="sub">설치완료됐지만 7일 이상 걸린 건 (메모 자동분류) · <b style="color:var(--s-blue-d)">기타 막대 클릭 시 세부내역</b></div><div class="chart-wrap ch-xl"><canvas id="perfDelay"></canvas></div></div>
       <div class="card col-12"><h3>📅 일별 처리량</h3><div class="sub">최근 45영업일 · 통화시도량 & 설치완료</div><div class="chart-wrap ch-m"><canvas id="perfDaily"></canvas></div></div>
     </div>
   </section>
@@ -579,10 +584,10 @@
         <div id="achBox" class="ach"></div>
       </div>
       <div class="card col-12"><h3>📊 2026 출고건 전체 상태 구성</h3><div class="sub">출고 <b id="coh-total">–</b>건이 지금 어떤 상태인지 세부 분류 (설치완료 외에도 반품·폐업, 위약금 등 종결건 분리)</div><div id="cohSummary" class="statgrid"></div></div>
-      <div class="card col-7"><h3>📦 출고월별 진행률</h3><div class="sub">출고량 대비 설치완료 (자가설치 포함 전체)</div><div class="chart-wrap ch-m"><canvas id="cohMonth"></canvas></div></div>
-      <div class="card col-5"><h3>🧩 월별 설치 채널 구성</h3><div class="sub">자가설치 / 상담원 완료 건수</div><div class="chart-wrap ch-m"><canvas id="cohChannel"></canvas></div></div>
-      <div class="card col-7"><h3>📉 주별 설치 진행률</h3><div class="sub">최근 14주 · 최근 주는 진행중이라 낮게 나옴(정상)</div><div class="chart-wrap ch-m"><canvas id="cohWeek"></canvas></div></div>
-      <div class="card col-5"><h3>⏳ 미설치 잔여 경과일</h3><div class="sub">출고 후 경과 · 오래된 잔여건 관리</div><div class="chart-wrap ch-m"><canvas id="cohAging"></canvas></div></div>
+      <div class="card col-7 fill"><h3>📦 출고월별 진행률</h3><div class="sub">출고량 대비 설치완료 (자가설치 포함 전체)</div><div class="chart-wrap ch-m"><canvas id="cohMonth"></canvas></div></div>
+      <div class="card col-5 fill"><h3>🧩 월별 설치 채널 구성</h3><div class="sub">자가설치 / 상담원 완료 건수</div><div class="chart-wrap ch-m"><canvas id="cohChannel"></canvas></div></div>
+      <div class="card col-7 fill"><h3>📉 주별 설치 진행률</h3><div class="sub">최근 14주 · 최근 주는 진행중이라 낮게 나옴(정상)</div><div class="chart-wrap ch-m"><canvas id="cohWeek"></canvas></div></div>
+      <div class="card col-5 fill"><h3>⏳ 미설치 잔여 경과일</h3><div class="sub">출고 후 경과 · 오래된 잔여건 관리</div><div class="chart-wrap ch-m"><canvas id="cohAging"></canvas></div></div>
       <div class="card col-12"><h3>🗂️ 출고월별 현재 상태</h3><div class="sub">4월·5월 등 각 출고월 코호트가 지금 어떤 상태인지</div><div class="chart-wrap ch-m"><canvas id="cohStatus"></canvas></div></div>
     </div>
   </section>
