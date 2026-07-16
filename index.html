@@ -114,6 +114,8 @@
   /* align-items:start — 카드가 같은 행의 제일 큰 카드 높이로 늘어나지 않게. 늘어나면 내용 짧은 카드
      (설치 채널 비율 등) 밑에 큰 빈 공간이 생겨 한 화면에 들어오는 정보가 줄어든다. */
   .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; align-items: start; }
+  /* 긴 표 옆에 짧은 카드를 여러 개 세로로 쌓아 높이를 맞추는 열. 짧은 카드 하나만 두면 밑이 통째로 빈다. */
+  .stack { display: grid; gap: 16px; align-content: start; }
   .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 18px 16px; box-shadow: var(--shadow); min-width: 0; }
   .card h3 { font-size: 14.5px; letter-spacing: -.3px; display:flex; align-items:center; gap:8px; }
   .card .sub { font-size: 12px; color: var(--muted); margin-top: 3px; margin-bottom: 8px; }
@@ -459,7 +461,7 @@
     <div class="grid">
       <div class="card col-5"><h3>📊 상태 분포</h3><div class="sub">콜리스트 점주의사 기준 · 미설치는 배송완료/배송중으로 분리</div><div class="chart-wrap ch-m"><canvas id="opsStatus"></canvas></div></div>
       <div class="card col-7"><h3>🚚 배송상태 · 미설치 즉시 컨택 대상</h3><div class="sub">미설치 중 배송완료/구매확정 건은 바로 설치 유도 가능</div><div class="chart-wrap ch-m"><canvas id="opsDelivery"></canvas></div><div class="insight" id="ops-insight"></div></div>
-      <div class="card col-5"><h3>📵 부재 단계별</h3><div class="sub">재컨택 우선순위 판단용</div><div class="chart-wrap ch-s"><canvas id="opsAbsent"></canvas></div></div>
+      <div class="card col-5"><h3>📵 부재 단계별</h3><div class="sub">재컨택 우선순위 판단용</div><div class="chart-wrap ch-m"><canvas id="opsAbsent"></canvas></div></div>
       <div class="card col-7"><h3>🧾 미설치 사유 (현재 잔여)</h3><div class="sub">로우데이터 L열 코드화 사유 · 반품/폐업 및 <b>배송중 전체 제외</b>(배송완료·구매확정만) · '(사유미기재) 배송완료'=설치 가능한데 사유 미입력</div><div class="chart-wrap ch-m"><canvas id="opsReason"></canvas></div></div>
       <div class="card col-12"><h3>📞 마지막 통화일 경과 현황</h3>
         <div class="sub">콜리스트 <b>T열(마지막통화일)</b>에 날짜가 있는 잔여 <b id="lca-total">–</b>건 기준 · 경과일 = 오늘 − 마지막통화일 · 표의 <b>누적</b>은 그 구간 <b>이상</b> 통화가 끊긴 건수 · <b>오래 방치된 건일수록 재컨택 우선순위</b></div>
@@ -469,7 +471,6 @@
         </div>
         <div class="insight" id="lca-insight"></div>
       </div>
-      <div class="card col-12"><h3>🔎 사유코드 없는 미설치 — 배송상태 구성</h3><div class="sub">L열 사유 없는 미설치 <b id="ops-unspec-cnt">–</b>건 중, <b>배송중은 아직 설치 전이라 위 '사유미기재'에서 제외</b> · 배송완료 건이 실제 관리 대상</div><div class="chart-wrap ch-s"><canvas id="opsUnspecDelivery"></canvas></div></div>
       <div class="card col-12"><h3>🔑 미설치 사유 (메모 키워드 분류)</h3><div class="sub">현재 미설치 잔여건(반품·폐업 제외)의 <b>메모를 키워드 자동분류</b> · 설치일 무관 · 7일+ 지연 사유와 동일 로직(부재·문자안내/미룸/방문설치 접수/원격접수/전산·결제단말 등) · <b>기타 막대 클릭 시 세부내역</b> · <span id="ops-kw-skip"></span></div><div class="chart-wrap ch-xl"><canvas id="opsReasonKw"></canvas></div></div>
     </div>
   </section>
@@ -486,9 +487,17 @@
         <div class="sub">고객사정 제외 · 출고월 기준 · 최근 월은 아직 누적중이라 낮게 보일 수 있음</div>
         <div class="chart-wrap ch-m"><canvas id="deptMonth"></canvas></div>
       </div>
-      <div class="card col-5"><h3>🎯 근본원인 대분류 <span class="board-imp">핵심</span></h3>
-        <div class="sub">개선대상을 <b>어떤 액션으로 막을 수 있나</b>로 묶음 · L열 코드 + K열 메모 병합 판정 · <b>정상 대기·고객 변심·사유 미기재</b>는 액션 대상이 아니라 회색 · <b id="rootbar-scope"></b> <small class="th-tgt" style="display:inline">오른쪽 표의 월 선택을 따라감</small></div>
-        <div class="chart-wrap ch-m"><canvas id="rootBar"></canvas></div>
+      <!-- 긴 표(세분류 상세) 옆에는 짧은 카드 2개를 세로로 쌓아 높이를 맞춘다 — 하나만 두면 밑이 통째로 빈다 -->
+      <div class="col-5 stack">
+        <div class="card"><h3>🔁 지연 성격 <span class="board-imp">클릭</span></h3>
+          <div class="sub">K열 메모 파생 · L열 사유코드와 <b>별개 축</b> · 막대 클릭 시 주문번호·메모 · <b>반복미룸</b>=설치를 2번 이상 약속하고 안 지킴 · <b>환경대기</b>=인터넷·공사 등 매장 준비 미비</div>
+          <div class="chart-wrap ch-m"><canvas id="natBar"></canvas></div>
+        </div>
+        <div class="card"><h3>📉 미룸 횟수 → 설치 소요일 <span class="board-imp">핵심</span></h3>
+          <div class="sub">막대=건수 · 선=완료건 평균 출고→설치 소요일 · <b>미룸이 반복될수록 설치가 늦어지는지</b>를 봅니다 · <b style="color:var(--s-orange)">이 카드만 모수가 전체 건</b>(D+7 미적용) — 빨리 설치된 건이 비교 기준이라 빼면 대비가 사라집니다</div>
+          <div class="chart-wrap ch-m"><canvas id="ppLead"></canvas></div>
+          <div class="insight" id="nat-insight"></div>
+        </div>
       </div>
       <div class="card col-7"><h3>🧩 세분류 상세 <span class="board-imp">클릭</span>
           <select id="root-mo-sel" style="font-size:12.5px;padding:3px 8px;margin-left:auto"></select></h3>
@@ -496,19 +505,14 @@
         <div class="tbl-wrap"><table class="dtable" id="rootTbl"></table></div>
         <div class="insight" id="root-insight"></div>
       </div>
-      <div class="card col-5"><h3>🔁 지연 성격 <span class="board-imp">클릭</span></h3>
-        <div class="sub">K열 메모 파생 · L열 사유코드와 <b>별개 축</b> · 막대 클릭 시 주문번호·메모 · <b>반복미룸</b>=설치를 2번 이상 약속하고 안 지킴 · <b>환경대기</b>=인터넷·공사 등 매장 준비 미비</div>
-        <div class="chart-wrap ch-m"><canvas id="natBar"></canvas></div>
-      </div>
-      <div class="card col-7"><h3>📉 미룸 횟수 → 설치 소요일 <span class="board-imp">핵심</span></h3>
-        <div class="sub">막대=건수 · 선=완료건 평균 출고→설치 소요일 · <b>미룸이 반복될수록 설치가 늦어지는지</b>를 봅니다 · <b style="color:var(--s-orange)">이 카드만 모수가 전체 건</b>(D+7 미적용) — 빨리 설치된 건이 비교 기준이라 빼면 대비가 사라집니다</div>
-        <div class="chart-wrap ch-m"><canvas id="ppLead"></canvas></div>
-        <div class="insight" id="nat-insight"></div>
-      </div>
       <div class="card col-12"><h3>🔧 원인별 상세 <span class="board-imp">클릭</span>
           <select id="dept-mo-sel" style="font-size:12.5px;padding:3px 8px;margin-left:auto"></select></h3>
         <div class="sub"><b>행을 클릭하면</b> 해당 주문번호·메모를 볼 수 있습니다 · 목록은 <b>미완료 + D+7 초과 완료</b>만(제때 끝난 건 제외) · 미완료율이 높을수록 그 원인이 설치를 끝까지 막고 있다는 뜻 · 개선대상 부서 먼저 정렬 · <span id="dept-scope"></span></div>
         <div class="tbl-wrap"><table class="dtable" id="deptTbl"></table></div>
+      </div>
+      <div class="card col-12"><h3>🎯 근본원인 대분류 <span class="board-imp">핵심</span></h3>
+        <div class="sub">개선대상을 <b>어떤 액션으로 막을 수 있나</b>로 묶음 · L열 코드 + K열 메모 병합 판정 · <b>정상 대기·고객 변심·사유 미기재</b>는 액션 대상이 아니라 회색 · <b id="rootbar-scope"></b> <small class="th-tgt" style="display:inline">'세분류 상세' 표의 월 선택을 따라감</small></div>
+        <div class="chart-wrap ch-m"><canvas id="rootBar"></canvas></div>
       </div>
       <div class="card col-12"><h3>⚠️ 데이터 품질</h3><div class="sub">집계 신뢰도에 영향을 주는 원천 이슈</div>
         <div class="insight" id="dept-quality"></div>
@@ -526,7 +530,7 @@
       <div class="card col-8"><h3>📈 월별 처리량 추세</h3><div class="sub">실적로그 · 통화시도(처리)량 vs 설치완료</div><div class="chart-wrap ch-m"><canvas id="perfMonthly"></canvas></div></div>
       <div class="card col-5"><h3>🔌 설치 채널 비중</h3><div class="sub">자가설치 vs 상담원 · 5/6 출고건부터(채널 분류 시작일 기준)</div><div class="chart-wrap ch-s"><canvas id="perfChannel"></canvas></div><div class="legend" id="channel-legend"></div></div>
       <div class="card col-7"><h3>⏱️ 설치 소요일 분포</h3><div class="sub">출고 → 설치완료 (일). 평균 <b id="perf-avglead">–</b>일 · 5일 이내 <b id="perf-within5">–</b></div><div class="chart-wrap ch-s"><canvas id="perfSpeed"></canvas></div></div>
-      <div class="card col-6"><h3>🔁 재컨택 주기 → 설치 속도</h3><div class="sub">메모 재컨택 간격이 짧을수록 실제로 빨리 설치되는가?</div><div class="chart-wrap ch-s"><canvas id="perfRetouch"></canvas></div><div class="insight" id="retouch-insight"></div></div>
+      <div class="card col-6"><h3>🔁 재컨택 주기 → 설치 속도</h3><div class="sub">메모 재컨택 간격이 짧을수록 실제로 빨리 설치되는가?</div><div class="chart-wrap ch-l"><canvas id="perfRetouch"></canvas></div><div class="insight" id="retouch-insight"></div></div>
       <div class="card col-6"><h3>🐢 7일+ 지연 사유</h3><div class="sub">설치완료됐지만 7일 이상 걸린 건 (메모 자동분류) · <b style="color:var(--s-blue-d)">기타 막대 클릭 시 세부내역</b></div><div class="chart-wrap ch-xl"><canvas id="perfDelay"></canvas></div></div>
       <div class="card col-12"><h3>📅 일별 처리량</h3><div class="sub">최근 45영업일 · 통화시도량 & 설치완료</div><div class="chart-wrap ch-m"><canvas id="perfDaily"></canvas></div></div>
     </div>
@@ -816,14 +820,6 @@ function renderOps(o, reasons) {
     data:{ labels:rz.map(function(r){return r.label.length>16?r.label.slice(0,15)+"…":r.label;}),
       datasets:[{ data:rz.map(function(r){return r.count;}), backgroundColor:C["--s-blue"], borderRadius:5 }] },
     options:{ indexAxis:"y", scales:axes({horizontal:true}), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
-
-  document.getElementById("ops-unspec-cnt").textContent = fmt(reasons.unspecifiedTotal||0);
-  var ud = reasons.unspecifiedByDelivery||{};
-  mk("opsUnspecDelivery", { type:"bar",
-    data:{ labels:["배송중 (사유 제외)","배송완료","기타"],
-      datasets:[{ data:[ud.배송중||0,ud.배송완료||0,ud.기타||0],
-        backgroundColor:[C["--muted"],C["--s-red"],C["--s-orange"]], borderRadius:6 }] },
-    options:{ scales:axes(), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
 
   // 미설치 잔여건 메모 키워드 분류(보조) · '기타'는 클릭 시 2차 키워드 세분(D+7과 동일)
   // 모수에서 뺀 물량(배송중 / 미컨택)은 조용히 사라지면 안 되므로 부제에 건수를 밝힌다.
