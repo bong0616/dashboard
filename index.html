@@ -307,7 +307,10 @@
 
   /* 마지막 통화일 상세(주문번호·메모 원문) — 메모가 길어 기본 520px보다 넓은 변형 */
   .modal-box.wide { max-width: 900px; }
-  /* D+7 지연사유 표 — 건수 셀 클릭 시 대상 목록(0건 셀은 클릭 대상 아님) */
+  /* D+7 지연사유 표 — 최근 4주를 나란히 두므로 '선택주' 열을 옅게 칠해 눈이 바로 찾게 한다 */
+  table.dtable th.col-cur, table.dtable td.col-cur { background: color-mix(in srgb, var(--s-blue) 6%, transparent); }
+  table.dtable th.col-cur { color: var(--text-secondary); }
+  /* 건수 셀 클릭 시 대상 목록(0건 셀은 클릭 대상 아님) */
   td.dw-cell { cursor: pointer; }
   td.dw-cell:hover { background: color-mix(in srgb, var(--s-blue) 9%, transparent); }
   td.dw-cell:hover b { color: var(--s-blue-d); text-decoration: underline; }
@@ -443,10 +446,10 @@
     <div class="tiles" id="board-tiles"></div>
     <div class="grid">
       <div class="card col-12"><h3>📝 회의 코멘트 <span id="board-week" class="board-wk"></span></h3><div class="sub">이번 주 회의 메모 · 저장 시 공유(주차별 리포트와 동일 저장소)</div><div id="boardNote" class="rpt-note"></div></div>
-      <div class="card col-6"><h3>🔧 설치 채널 비율</h3><div class="sub">자가설치 vs 상담원(문자발송 합산) · 이번주 %(전주 대비 %p)</div><div id="boardChannel" class="bch"></div></div>
+      <div class="card col-12"><h3>🔧 설치 채널 비율</h3><div class="sub">자가설치 vs 상담원(문자발송 합산) · 이번주 %(전주 대비 %p)</div><div id="boardChannel" class="bch"></div></div>
       <div class="card col-6"><h3>⏳ 미설치 잔여 경과일 <small class="th-tgt" style="display:inline">배송완료 기준</small></h3><div class="sub">설치예정·보류·부재(1~4회)만 · 배송완료 기준(배송중 제외) · 출고 후 경과일 · 장기미설치·위약금·반품/폐업 제외 · <b style="color:var(--s-blue-d)">막대 클릭 시 주문번호·경과일·메모</b></div><div class="chart-wrap ch-m"><canvas id="boardAging"></canvas></div></div>
       <div class="card col-6"><h3>📐 설치소요일 분포 <small class="th-tgt" style="display:inline">최초컨택 주 기준</small></h3><div class="sub"><b>그 주에 최초컨택한 건들</b>이 출고→설치까지 며칠 걸렸는지 분포 · 전주 vs 금주 · 막대 위 %는 그 주 총건 대비 비중 (빠를수록 왼쪽)</div><div class="chart-wrap ch-m"><canvas id="boardLead"></canvas></div></div>
-      <div class="card col-6"><h3>🐢 D+7 지연사유 · 전주 대비 <span class="board-imp">핵심</span></h3><div class="sub">출고→설치 7일+ 완료건 사유 · 이번주 vs 전주(▲증가=악화·빨강) · 출고주 기준이라 최근주는 아직 누적중 · <b style="color:var(--s-blue-d)">건수 클릭 시 주문번호·D+N·메모</b></div><div class="tbl-wrap"><table class="dtable" id="boardDelay"></table></div></div>
+      <div class="card col-12"><h3>🐢 D+7 지연사유 · 최근 4주 <span class="board-imp">핵심</span></h3><div class="sub">출고→설치 7일+ 완료건 사유 · 왼쪽이 오래된 주 · 증감=선택주 vs 직전주(▲증가=악화·빨강) · 출고주 기준이라 최근주는 아직 누적중 · <b style="color:var(--s-blue-d)">건수 클릭 시 주문번호·D+N·메모</b></div><div class="tbl-wrap"><table class="dtable" id="boardDelay"></table></div></div>
     </div>
   </section>
 
@@ -2181,17 +2184,25 @@ function populateBoardWeekSel(rows){
   sel.innerHTML=html;
   sel.value=BOARD_SEL_WEEK||rows[rows.length-1].week;
 }
-var BOARD_DELAY_SORTBY="cur", BOARD_DELAY_SORT="desc"; // 정렬 기준 컬럼(cur=이번주/prev=전주) + 방향
+var BOARD_DELAY_SORTW="", BOARD_DELAY_SORT="desc"; // 정렬 기준 주 키(""=선택주) + 방향
+var BOARD_DELAY_WEEKS=4; // 표에 함께 보여줄 최근 주 수(선택주 포함)
 function renderBoardDelay(reasons){
   var tbl=document.getElementById("boardDelay"); if(!tbl) return;
   var wk=(reasons&&reasons.delayWeekly)||[];
   if(!wk.length){ tbl.innerHTML='<tbody><tr><td>데이터 없음</td></tr></tbody>'; return; }
   var ci=boardWeekIdx(wk, BOARD_SEL_WEEK);
-  var cur=wk[ci], prev=ci>0?wk[ci-1]:null;
+  var cols=wk.slice(Math.max(0, ci-(BOARD_DELAY_WEEKS-1)), ci+1); // 왼쪽이 오래된 주 → 맨 오른쪽이 선택주
+  var cur=cols[cols.length-1], prev=cols.length>1?cols[cols.length-2]:null;
   var ct=cur.total||0, pt=prev?(prev.total||0):0;
-  if(BOARD_DELAY_SORTBY==="prev" && !prev) BOARD_DELAY_SORTBY="cur";
-  var cats=(reasons.delayCats||[]).slice().filter(function(cat){ var c=cur.reasons[cat]||0, pv=prev?(prev.reasons[cat]||0):0; return !(c===0&&pv===0); });
-  cats.sort(function(a,b){ var pick=function(cat){ return BOARD_DELAY_SORTBY==="prev"?(prev?(prev.reasons[cat]||0):0):(cur.reasons[cat]||0); }; var d=pick(b)-pick(a); return BOARD_DELAY_SORT==="asc"?-d:d; });
+  // 정렬 기준 주가 현재 열에 없으면(기준 주 변경 등) 선택주로 리셋
+  var sortW=BOARD_DELAY_SORTW;
+  if(!sortW || !cols.some(function(c){ return c.week===sortW; })) sortW=cur.week;
+  var sortCol=cols.filter(function(c){ return c.week===sortW; })[0]||cur;
+  // 4주 내내 0건인 사유는 행만 차지하므로 숨김
+  var cats=(reasons.delayCats||[]).slice().filter(function(cat){
+    return cols.some(function(c){ return (c.reasons[cat]||0)>0; });
+  });
+  cats.sort(function(a,b){ var d=(sortCol.reasons[b]||0)-(sortCol.reasons[a]||0); return BOARD_DELAY_SORT==="asc"?-d:d; });
   function pctOf(v,t){ return t>0?Math.round(v/t*100):0; }
   function delt(c,pv){ // 증감 건수 + 증감율
     if(pv==null) return "–";
@@ -2200,28 +2211,35 @@ function renderBoardDelay(reasons){
     return diff>0?('<span class="delta-dn">▲'+diff+' <small>'+rate+'</small></span>'):('<span class="delta-up">▼'+Math.abs(diff)+' <small>'+Math.round(diff/pv*100)+'%</small></span>');
   }
   // 건수 셀 — 0건이 아니면 클릭 시 그 주·그 사유의 주문번호·메모 목록(cat=""이면 그 주 전체)
-  function cellTd(v,t,wk,cat,noPct){
+  function cellTd(v,t,wkKey,cat,cls,noPct){
     var inner='<b>'+v+'</b>'+(noPct?'':' <span class="cell-pct">'+pctOf(v,t)+'%</span>');
-    if(!v) return '<td>'+inner+'</td>';
-    return '<td class="dw-cell" data-week="'+esc(wk)+'" data-cat="'+esc(cat)+'" title="클릭 시 주문번호·메모 목록">'+inner+'</td>';
+    var c=(cls||"");
+    if(!v) return '<td'+(c?' class="'+c+'"':'')+'>'+inner+'</td>';
+    return '<td class="dw-cell'+(c?' '+c:'')+'" data-week="'+esc(wkKey)+'" data-cat="'+esc(cat)+'" title="클릭 시 주문번호·메모 목록">'+inner+'</td>';
   }
-  function sortBtn(col){ var on=(BOARD_DELAY_SORTBY===col); var lbl=on?(BOARD_DELAY_SORT==="asc"?"▲ 오름":"▼ 내림"):"↕"; return '<button class="sort-btn'+(on?" active":"")+'" data-col="'+col+'" title="이 주 건수로 정렬">'+lbl+'</button>'; }
-  var curL=rptWeekLabel(cur.week)+"주", prevL=prev?(rptWeekLabel(prev.week)+"주"):"전주";
-  var head='<thead><tr><th>지연 사유</th><th>'+curL+' '+sortBtn("cur")+'</th><th>'+prevL+(prev?(' '+sortBtn("prev")):"")+'</th><th>증감(율)</th></tr></thead>';
+  function sortBtn(wkKey){ var on=(sortW===wkKey); var lbl=on?(BOARD_DELAY_SORT==="asc"?"▲":"▼"):"↕";
+    return '<button class="sort-btn'+(on?" active":"")+'" data-w="'+wkKey+'" title="이 주 건수로 정렬">'+lbl+'</button>'; }
+  var head='<thead><tr><th>지연 사유</th>'+cols.map(function(c,i){
+      var isCur=(i===cols.length-1);
+      return '<th'+(isCur?' class="col-cur"':'')+'>'+rptWeekLabel(c.week)+(isCur?'<small> 선택주</small>':'')+' '+sortBtn(c.week)+'</th>';
+    }).join("")+'<th>증감(율)</th></tr></thead>';
   var body=cats.map(function(cat){
-    var c=cur.reasons[cat]||0, pv=prev?(prev.reasons[cat]||0):null;
-    return '<tr><td>'+cat+'</td>'+cellTd(c,ct,cur.week,cat)+(pv==null?'<td>–</td>':cellTd(pv,pt,prev.week,cat))+'<td>'+delt(c,pv)+'</td></tr>';
+    return '<tr><td>'+cat+'</td>'+cols.map(function(c,i){
+        return cellTd(c.reasons[cat]||0, c.total||0, c.week, cat, i===cols.length-1?"col-cur":"");
+      }).join("")+'<td>'+(prev?delt(cur.reasons[cat]||0, prev.reasons[cat]||0):"–")+'</td></tr>';
   }).join("");
-  body+='<tr class="cur"><td><b>합계</b></td>'+cellTd(ct,ct,cur.week,"")+(prev?cellTd(pt,pt,prev.week,"",true):'<td>–</td>')+'<td>'+(prev?delt(ct,pt):"–")+'</td></tr>';
+  body+='<tr class="cur"><td><b>합계</b></td>'+cols.map(function(c,i){
+      return cellTd(c.total||0, c.total||0, c.week, "", i===cols.length-1?"col-cur":"", true);
+    }).join("")+'<td>'+(prev?delt(ct,pt):"–")+'</td></tr>';
   tbl.innerHTML=head+'<tbody>'+body+'</tbody>';
   Array.prototype.forEach.call(tbl.querySelectorAll(".dw-cell"), function(td){
     td.addEventListener("click", function(){ openDelayWeekDetail(td.getAttribute("data-week"), td.getAttribute("data-cat")); });
   });
   Array.prototype.forEach.call(tbl.querySelectorAll(".sort-btn"), function(b){
     b.addEventListener("click", function(){
-      var col=b.getAttribute("data-col");
-      if(BOARD_DELAY_SORTBY===col){ BOARD_DELAY_SORT=(BOARD_DELAY_SORT==="desc"?"asc":"desc"); }
-      else { BOARD_DELAY_SORTBY=col; BOARD_DELAY_SORT="desc"; }
+      var w=b.getAttribute("data-w");
+      if(sortW===w){ BOARD_DELAY_SORT=(BOARD_DELAY_SORT==="desc"?"asc":"desc"); }
+      else { BOARD_DELAY_SORTW=w; BOARD_DELAY_SORT="desc"; }
       renderBoardDelay(reasons);
     });
   });
