@@ -501,7 +501,7 @@
       <!-- 긴 표(세분류 상세) 옆에는 짧은 카드 2개를 세로로 쌓아 높이를 맞춘다 — 하나만 두면 밑이 통째로 빈다 -->
       <div class="col-5 stack">
         <div class="card"><h3>🔁 지연 성격 <span class="board-imp">클릭</span></h3>
-          <div class="sub">L열 사유코드와 <b>별개 축</b> · 막대 클릭 시 주문번호·메모 · <b>반품·폐업</b>=J열 기준(설치 불가라 별도) · <b>방문설치</b>=N열 기준(방문 접수돼 조치 잡힌 건) · <b>반복미룸</b>=2번 이상 약속하고 안 지킴 · <b>환경대기</b>=인터넷·공사 등 매장 준비 미비 · 나머지는 K열 메모 파생</div>
+          <div class="sub">L열 사유코드와 <b>별개 축</b> · 막대 클릭 시 주문번호·메모 · <b>반품·폐업</b>=J열 기준(설치 불가라 별도) · <b>방문설치</b>=N열 기준(방문 접수돼 조치 잡힌 건) · <b>반복미룸</b>=2번 이상 약속하고 안 지킴 · <b>환경대기</b>=인터넷·공사 등 매장 준비 미비 · <b>연락안됨</b>=첫 컨택부터 부재 + 부재 2회 이상(한 번도 못 잡은 건) · 나머지는 K열 메모 파생</div>
           <div class="chart-wrap ch-m"><canvas id="natBar"></canvas></div>
         </div>
         <div class="card"><h3>📉 미룸 횟수 → 설치 소요일 <span class="board-imp">핵심</span></h3>
@@ -1120,7 +1120,7 @@ function paintRootDetail(t, r){
 
 // 지연 성격(미룸/환경) — K열 메모 파생, L열과 별개 축
 // 방문설치=조치 잡힌 건(초록) · 반품·폐업=이미 죽은 건(회색 계열, 재컨택 대상 아님)
-var NAT_COLOR = { "반복미룸":"--s-red", "환경대기":"--s-orange", "약속1회":"--s-blue-l",
+var NAT_COLOR = { "반복미룸":"--s-red", "환경대기":"--s-orange", "연락안됨":"--s-violet", "약속1회":"--s-blue-l",
   "방문설치":"--s-aqua", "반품·폐업":"--baseline", "신호없음":"--muted" };
 var NAT_KEYS = [];
 
@@ -1169,7 +1169,8 @@ function renderDelayNature(reasons){
     "미룸 없는 건은 평균 <b>D+"+(z&&z.avgLead!=null?z.avgLead.toFixed(1):"–")+"</b>에 설치되지만, <b>"+(last?last.label:"")+"</b> 미룬 건은 <b>D+"+(last&&last.avgLead!=null?last.avgLead.toFixed(1):"–")+"</b>"+
     (mult?" — <b>"+mult.toFixed(1)+"배</b>":"")+" 걸립니다. 미룸은 결과가 아니라 <b>지연의 예고 신호</b>에 가깝습니다 → "+
     "<b>2회째 약속</b>에서 방문설치·원격 전환 등 개입하면 D+12 이상으로 가는 걸 막을 수 있습니다. "+
-    "현재 반복미룸 <b>"+fmt(n.repeatTotal)+"건</b>(미완료 "+fmt(n.repeatOpen)+") · 환경대기 <b>"+fmt(n.envTotal)+"건</b>(미완료 "+fmt(n.envOpen)+").";
+    "현재 반복미룸 <b>"+fmt(n.repeatTotal)+"건</b>(미완료 "+fmt(n.repeatOpen)+") · 환경대기 <b>"+fmt(n.envTotal)+"건</b>(미완료 "+fmt(n.envOpen)+")"+
+    (n.unreachTotal ? " · 연락안됨 <b>"+fmt(n.unreachTotal)+"건</b>(미완료 "+fmt(n.unreachOpen)+")" : "")+".";
 }
 
 function openNatureDetail(idx){
@@ -1187,17 +1188,21 @@ function openNatureDetail(idx){
 }
 function paintNatureDetail(key, r){
   var rows=r.rows||[];
+  // 연락안됨은 미룸이 0~1로 고정이라 볼 게 없다 → 부재 횟수를 보여준다(서버 정렬 기준도 동일).
+  var isUnreach = (key==="연락안됨");
+  var cntHead = isUnreach ? "부재" : "미룸";
   document.getElementById("modal-title").textContent="지연 성격 · "+key+" ("+fmt(r.count||0)+"건)";
-  document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · K열 메모 원문 · 미룸 많은 순 · 미완료 "+fmt(r.open||0)+"건";
+  document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · K열 메모 원문 · "+cntHead+" 많은 순 · 미완료 "+fmt(r.open||0)+"건";
   if(!rows.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">해당 성격의 건이 없습니다.</div>'; return; }
   document.getElementById("modal-body").innerHTML=
     '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
-    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>미룸</th><th>출고</th><th>설치</th><th>메모 (K열)</th></tr></thead><tbody>'+
+    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>'+cntHead+'</th><th>출고</th><th>설치</th><th>메모 (K열)</th></tr></thead><tbody>'+
     rows.slice(0,300).map(function(x){
       var memo=String(x.memo||"").trim();
       var inst = leadCell(x);
+      var cnt = isUnreach ? (x.absent||0) : x.postpone;
       return '<tr><td class="lcd-ord">'+esc(x.order)+'</td>'+
-        '<td class="lcd-st"><b>'+x.postpone+'회</b></td>'+
+        '<td class="lcd-st"><b>'+cnt+'회</b></td>'+
         '<td class="lcd-date">'+esc(x.ship)+'</td>'+
         '<td class="lcd-date">'+inst+'</td>'+
         '<td class="lcd-memo'+(memo?'':' empty')+'">'+(memo?esc(memo):"(메모 없음)")+'</td></tr>';
