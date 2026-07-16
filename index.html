@@ -490,8 +490,8 @@
   <section class="tab-content" id="tab-dept">
     <div class="tiles" id="dept-tiles"></div>
     <div class="grid">
-      <div class="card col-5 fill"><h3>🏢 부서별 원인 건수</h3>
-        <div class="sub">로우데이터 L열 사유코드 → 부서 매핑 · <b>고객사정</b>은 부서가 손쓰기 어려운 축이라 참고용</div>
+      <div class="card col-5 fill"><h3>🏢 부서별 원인 건수 <span class="board-imp">클릭</span></h3>
+        <div class="sub">로우데이터 L열 사유코드 → 부서 매핑 · <b>고객사정</b>은 부서가 손쓰기 어려운 축이라 참고용 · <b style="color:var(--s-blue-d)">막대 클릭 시 그 부서 주문번호·메모</b></div>
         <div class="chart-wrap ch-m"><canvas id="deptBar"></canvas></div>
       </div>
       <div class="card col-7 fill"><h3>📈 출고월별 추이 <small class="th-tgt" style="display:inline">개선대상만</small></h3>
@@ -501,7 +501,7 @@
       <!-- 긴 표(세분류 상세) 옆에는 짧은 카드 2개를 세로로 쌓아 높이를 맞춘다 — 하나만 두면 밑이 통째로 빈다 -->
       <div class="col-5 stack">
         <div class="card"><h3>🔁 지연 성격 <span class="board-imp">클릭</span></h3>
-          <div class="sub">K열 메모 파생 · L열 사유코드와 <b>별개 축</b> · 막대 클릭 시 주문번호·메모 · <b>반복미룸</b>=설치를 2번 이상 약속하고 안 지킴 · <b>환경대기</b>=인터넷·공사 등 매장 준비 미비</div>
+          <div class="sub">L열 사유코드와 <b>별개 축</b> · 막대 클릭 시 주문번호·메모 · <b>반품·폐업</b>=J열 기준(설치 불가라 별도) · <b>방문설치</b>=N열 기준(방문 접수돼 조치 잡힌 건) · <b>반복미룸</b>=2번 이상 약속하고 안 지킴 · <b>환경대기</b>=인터넷·공사 등 매장 준비 미비 · 나머지는 K열 메모 파생</div>
           <div class="chart-wrap ch-m"><canvas id="natBar"></canvas></div>
         </div>
         <div class="card"><h3>📉 미룸 횟수 → 설치 소요일 <span class="board-imp">핵심</span></h3>
@@ -876,6 +876,7 @@ function sumRowHead(d, rows, selMo, midSpan){
 }
 function sumOf(rows, k){ return rows.reduce(function(s,x){ return s+(x[k]||0); },0); }
 var DEPT_CAUSES_SEEN = [];  // 표 행 index → {dept,cause} (클릭 드릴다운용)
+var DEPT_BARS_SEEN = [];    // 부서별 막대 index → 부서명 (막대 클릭 드릴다운용)
 var DEPT_SEL_MO = ""; // ""=전체, 아니면 "YYYY-MM" — 원인별 상세표 + 드릴다운이 같이 따라간다(상단 기간필터와 별개)
 
 function renderDept(reasons){
@@ -893,14 +894,19 @@ function renderDept(reasons){
     tile("사유 기재율","📝", pctS(d.coverage.rate), "", "지연건 중 상담원 배정 "+fmt(d.coverage.agentHasReason)+"/"+fmt(d.coverage.agent), false,
       "<b>상담원이 배정된 건</b>만 분모로 셉니다.<br><br><b>자가설치("+fmt(d.coverage.self)+"건)는 제외</b> — 상담원이 컨택하지 않으므로 L열 사유가 비어 있는 게 정상입니다. 이걸 분모에 넣으면 기재율이 "+pctS(d.coverage.rateAll)+"로 보여 마치 절반이 누락된 것처럼 오해하게 됩니다.<br><br>⚠️ 이 탭의 다른 지표와 같이 <b>지연건만</b>을 모수로 씁니다 — 전체 출고건 기준 기재율과는 다른 숫자입니다.");
 
-  // 부서별 막대(개선대상 → 고객사정 순, DEPT_ORDER 유지)
+  // 부서별 막대(개선대상 → 고객사정 순, DEPT_ORDER 유지) · 막대 클릭 = 그 부서 원인 전체 드릴다운
+  DEPT_BARS_SEEN = d.byDept.map(function(x){ return x.dept; });
   mk("deptBar", { type:"bar",
     data:{ labels:d.byDept.map(function(x){return x.dept;}),
       datasets:[{ data:d.byDept.map(function(x){return x.total;}),
         backgroundColor:d.byDept.map(function(x){return C[DEPT_COLOR[x.dept]]||C["--grid"];}), borderRadius:6 }] },
-    options:{ scales:axes(), plugins:{
+    options:{ scales:axes(),
+      onClick:function(evt, els){ if(els&&els.length) openDeptBarDetail(els[0].index); },
+      onHover:function(evt, els){ if(evt.native&&evt.native.target) evt.native.target.style.cursor=els.length?"pointer":"default"; },
+      plugins:{
       tooltip:{ callbacks:{ label:function(ctx){ var x=d.byDept[ctx.dataIndex];
-        return fmt(x.total)+"건 · 미완료 "+fmt(x.open)+" ("+pctS(x.openRate)+")"; } } },
+        return fmt(x.total)+"건 · 미완료 "+fmt(x.open)+" ("+pctS(x.openRate)+")"; },
+        afterLabel:function(){ return "▶ 클릭 시 주문번호·메모"; } } },
       datalabels: dlBarTop() } } });
 
   // 출고월별 추이(개선대상 부서만 누적)
@@ -1113,7 +1119,9 @@ function paintRootDetail(t, r){
 }
 
 // 지연 성격(미룸/환경) — K열 메모 파생, L열과 별개 축
-var NAT_COLOR = { "반복미룸":"--s-red", "환경대기":"--s-orange", "약속1회":"--s-blue-l", "신호없음":"--muted" };
+// 방문설치=조치 잡힌 건(초록) · 반품·폐업=이미 죽은 건(회색 계열, 재컨택 대상 아님)
+var NAT_COLOR = { "반복미룸":"--s-red", "환경대기":"--s-orange", "약속1회":"--s-blue-l",
+  "방문설치":"--s-aqua", "반품·폐업":"--baseline", "신호없음":"--muted" };
 var NAT_KEYS = [];
 
 function renderDelayNature(reasons){
@@ -1197,6 +1205,16 @@ function paintNatureDetail(key, r){
     (rows.length>300?'<div class="modal-empty">상위 300건만 표시 · 전체 '+fmt(rows.length)+'건</div>':'');
 }
 
+// '부서별 원인 건수' 막대 클릭 → 그 부서의 원인 전체(cause 없이 dept만 조회)
+function openDeptBarDetail(i){
+  var dep=DEPT_BARS_SEEN[i];
+  if(!dep || !LAST_PASS) return;
+  openDrill(dep+" · 원인 전체");
+  fetchData(LAST_PASS, function(r){
+    if(!r || !r.ok){ failLastCallDetail((r&&r.error)||"조회 실패"); return; }
+    paintDeptDetail({dept:dep, cause:"원인 전체"}, r, true);
+  }, failLastCallDetail, { params:{ action:"deptdetail", dept:dep, ym:DEPT_SEL_MO||"" } });
+}
 function openDeptDetail(i){
   var t=DEPT_CAUSES_SEEN[i];
   if(!t || !LAST_PASS) return;
@@ -1210,7 +1228,8 @@ function openDeptDetail(i){
     paintDeptDetail(t, r);
   }, failLastCallDetail, { params:{ action:"deptdetail", cause:t.cause, dept:t.dept, ym:DEPT_SEL_MO||"" } });
 }
-function paintDeptDetail(t, r){
+// showCause=true(부서 전체 조회)면 원인이 여러 개 섞이므로 '원인' 열을 추가로 보여준다.
+function paintDeptDetail(t, r, showCause){
   var rows=r.rows||[];
   var moLab = r.ym ? " · "+(+r.ym.slice(5))+"월 출고" : "";
   document.getElementById("modal-title").textContent=t.dept+" · "+t.cause+moLab+" ("+fmt(r.count||0)+"건)";
@@ -1220,11 +1239,12 @@ function paintDeptDetail(t, r){
   if(!rows.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">해당 원인에 지연건이 없습니다.</div>'; return; }
   document.getElementById("modal-body").innerHTML=
     '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
-    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>출고</th><th>설치</th><th>메모 (K열)</th></tr></thead><tbody>'+
+    '<table class="lcd-tbl"><thead><tr><th>주문번호</th>'+(showCause?'<th>원인 (L열)</th>':'')+'<th>출고</th><th>설치</th><th>메모 (K열)</th></tr></thead><tbody>'+
     rows.map(function(x){
       var memo=String(x.memo||"").trim();
       var inst = leadCell(x);
       return '<tr><td class="lcd-ord">'+esc(x.order)+'</td>'+
+        (showCause?('<td class="lcd-st">'+esc(x.cause)+'</td>'):'')+
         '<td class="lcd-date">'+esc(x.ship)+'</td>'+
         '<td class="lcd-date">'+inst+'</td>'+
         '<td class="lcd-memo'+(memo?'':' empty')+'">'+(memo?esc(memo):"(메모 없음)")+'</td></tr>';
