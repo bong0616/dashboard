@@ -747,11 +747,13 @@ function renderOps(o, reasons) {
   var absentTotal = o.status.부재;
   document.getElementById("ops-tiles").innerHTML =
     tile("전체 잔여","📋", fmt(o.listTotal), "건", "콜리스트 전체", true) +
+    tile("총 컨택 예정","🎯", fmt(o.todayContactable + o.neverContacted), "건", "재컨택 "+fmt(o.todayContactable)+" + 미컨택 "+fmt(o.neverContacted)+"건", false,
+      "지금 연락하면 바로 설치 진행이 가능한 전체 대상입니다.<br><br>• <b>재컨택</b> "+fmt(o.todayContactable)+"건: 마지막통화 지난 설치예정·보류·부재<br>• <b>미컨택</b> "+fmt(o.neverContacted)+"건: 배송완료·구매확정 미설치 중 최초컨텍일(P열)이 비어 한 번도 연락 안 한 건<br><br>두 모수는 상태값이 배타적이라 겹치지 않습니다. 배송중인 건은 제외합니다.") +
     tile("미설치","⛔", fmt(o.status.미설치), "건", "배송완료·구매확정 "+fmt(o.uninstallByDelivery.배송완료+o.uninstallByDelivery.구매확정)+"건 즉시가능") +
-    tile("설치예정","🗓️", fmt(o.status.설치예정), "건", "일정 잡힌 건") +
+    tile("재컨택 예정","🔁", fmt(o.todayContactable), "건", "마지막통화 지난 재컨택 대상", false,
+      "<b>배송완료·구매확정</b>(물건 도착)이면서 상태값이 <b>설치예정·보류·부재(1~4차)</b>인 건 중, 마지막통화일(T)이 오늘보다 지났고 설치예정일(M)이 비었거나 과거인 건입니다.<br><br>이미 한 번 이상 컨택한 뒤 다시 연락할 대상 — <b>부재(1~4차) 포함</b>.") +
     tile("부재","📵", fmt(absentTotal), "건", "재컨택 필요") +
-    tile("오늘 컨택 가능","🎯", fmt(o.todayContactable), "건", "미컨택 "+fmt(o.neverContacted)+"건 포함", false,
-      "<b>배송완료·구매확정</b>(물건 도착)이면서 아래 중 하나에 해당하는 건입니다.<br>• <b>미설치</b> 전체<br>• <b>부재</b>(1~4차) 전체<br>• <b>설치예정</b>인데 예정일이 오늘보다 지난 건<br><br>배송중인 건은 제외 — 지금 연락하면 바로 설치 진행이 가능한 대상만 집계합니다.<br><br><b>미컨택 N건</b>: 이 중 최초컨텍일(P열)이 비어 한 번도 연락한 적 없는 건.");
+    tile("설치예정","🗓️", fmt(o.status.설치예정), "건", "일정 잡힌 건");
 
   var usp = o.uninstallSplit||{배송중:0,배송완료:0,기타:0};
   var stSegs = [
