@@ -360,6 +360,12 @@
   table.dtable th.gl, table.dtable td:nth-child(5) { border-left: 1.5px solid color-mix(in srgb, var(--s-aqua) 42%, transparent); }
   table.dtable th.gr, table.dtable td:nth-child(7) { border-right: 1.5px solid color-mix(in srgb, var(--s-aqua) 42%, transparent); }
   .curtag { display:inline-block; font-size:10px; font-weight:700; color:#fff; background:var(--s-blue); border-radius:5px; padding:1px 6px; margin-left:6px; vertical-align:middle; }
+  /* 표 컬럼 정의 박스 — 부제 한 줄로는 안 되는 표(출고 코호트 상세표 등)의 컬럼 설명 */
+  .coldef { margin-top: 10px; padding: 10px 13px; border-radius: 10px; background: color-mix(in srgb, var(--s-blue) 5%, transparent); border: 1px solid var(--border); font-size: 11.5px; color: var(--text-secondary); line-height: 1.85; word-break: keep-all; }
+  .coldef .cd-k { display: inline-block; min-width: 78px; font-weight: 700; color: var(--s-blue-d); }
+  .coldef b { color: var(--text-primary); font-weight: 700; }
+  .coldef .cd-warn { color: var(--s-red); font-weight: 700; }
+  .coldef .cd-row { display: block; }
   /* 설치완료 그룹이 없는 표(nth-child(5)/(7) 아쿠아 세로선 규칙에서 제외) */
   table.dtable.no-grp td:nth-child(5) { border-left: 0; }
   table.dtable.no-grp td:nth-child(7) { border-right: 0; }
@@ -645,7 +651,7 @@
     <div class="grid">
       <div class="card col-12"><h3>📦 출고 물량 대비 처리·전환율</h3><div class="sub">막대=출고·설치완료 건수(<b>출고주 기준 코호트</b>) · 초록선=완료율(오른쪽축). 최근 16주 · <b>맨 오른쪽 진행중 주는 아직 설치 중</b>이라 완료율이 낮게 나옵니다</div><div class="chart-wrap ch-xl"><canvas id="swConv"></canvas></div></div>
       <div class="card col-12"><h3>⏱️ 설치 소요일 · 미완료 잔량</h3><div class="sub">막대=미완료 잔량(출고했지만 아직 미설치), 점선=평균 설치소요일(완료건, 낮을수록 빠름) · <b>진행중 주는 소요일이 과소평가</b>(빠른 건만 먼저 완료)</div><div class="chart-wrap ch-m"><canvas id="swSpeed"></canvas></div></div>
-      <div class="card col-12"><h3>🗓️ 출고주별 상세 비교표</h3><div class="sub">최근 12주 · 최신 주가 위 · <b>출고일 기준 코호트</b> · <b>▲▼</b>는 직전 주 대비 · <b>컨택 시도</b>=K열 메모 스탬프(통화+부재, 자동문자 제외 · 메모 미기재분은 0이라 실통화보다 과소) · <span style="color:var(--muted)">회색 '진행중'</span> 주는 완료율·소요일·건당컨택이 아직 안 굳음</div><div class="tbl-wrap"><table class="dtable" id="shipWeeklyTable"></table></div></div>
+      <div class="card col-12"><h3>🗓️ 출고주별 상세 비교표</h3><div class="sub">최근 12주 · 최신 주가 위 · <b>출고주 기준 코호트</b> · <b>▲▼</b>는 직전 주 대비 · <span style="color:var(--muted)">회색 '진행중'</span> 주는 완료율·소요일·건당컨택이 아직 안 굳음</div><div class="coldef ship-coldef"></div><div class="tbl-wrap"><table class="dtable" id="shipWeeklyTable"></table></div></div>
     </div>
   </section>
 
@@ -655,7 +661,7 @@
     <div class="grid">
       <div class="card col-12"><h3>📦 출고 물량 대비 처리·전환율</h3><div class="sub">막대=출고·설치완료 건수(<b>출고일 기준 코호트</b>) · 초록선=완료율. 최근 21일 · <b>최근 며칠은 아직 설치 중</b>이라 완료율이 낮게 나옵니다</div><div class="chart-wrap ch-xl"><canvas id="sdConv"></canvas></div></div>
       <div class="card col-12"><h3>⏱️ 설치 소요일 · 미완료 잔량</h3><div class="sub">막대=미완료 잔량, 점선=평균 설치소요일(완료건) · <b>최근 며칠은 소요일 과소평가</b></div><div class="chart-wrap ch-m"><canvas id="sdSpeed"></canvas></div></div>
-      <div class="card col-12"><h3>📆 출고일별 상세 비교표</h3><div class="sub">최근 14일 · 최신 일이 위 · <b>출고일 기준 코호트</b> · <b>컨택 시도</b>=K열 메모 스탬프(통화+부재, 메모 미기재분은 0) · <span style="color:var(--muted)">회색 '진행중'</span> 일은 완료율·소요일·건당컨택 미성숙</div><div class="tbl-wrap"><table class="dtable" id="shipDailyTable"></table></div></div>
+      <div class="card col-12"><h3>📆 출고일별 상세 비교표</h3><div class="sub">최근 14일 · 최신 일이 위 · <b>출고일 기준 코호트</b> · <b>▲▼</b>는 직전 일 대비 · <span style="color:var(--muted)">회색 '진행중'</span> 일은 완료율·소요일·건당컨택 미성숙</div><div class="coldef ship-coldef"></div><div class="tbl-wrap"><table class="dtable" id="shipDailyTable"></table></div></div>
     </div>
   </section>
 
@@ -1884,11 +1890,26 @@ function shipSpeedChart(cid, rows, labels, maxTicks){
         tooltip:{callbacks:{label:function(ct){var v=ct.parsed.y;if(v==null)return ct.dataset.label+": –";return ct.dataset.label+": "+(ct.dataset.yAxisID==="y1"?v+"일":fmt(v)+"건");}}} },
       interaction:{mode:"index",intersect:false} } });
 }
+// 출고 코호트 상세표 컬럼 정의(주/일 공용) — 2026-07-21 사용자 요청("컨택 컬럼 설명이 부실").
+// ⚠️ 최초컨택(P열)은 자가설치 건에 안 찍힌다. 실측(2026-07-21 ship.daily 15일): 최초컨택 = 출고 − 자가설치완료 ±3건.
+//    이 사실을 안 적으면 "출고 147건 중 41건만 컨택(28%)"으로 읽혀 컨택 누락으로 오독된다(그 날 105건이 자가설치였음).
+var SHIP_COLDEF_HTML =
+    '<span class="cd-row"><span class="cd-k">읽는 법</span> 한 행 = <b>그 날(주) 출고된 물량</b>의 현재 처리 상태. 설치완료·완료율도 <b>설치한 날이 아니라 출고한 날</b>에 계상됩니다(주간·일간 비교 탭은 반대로 설치일 기준).</span>'
+  + '<span class="cd-row"><span class="cd-k">최초컨택</span> 그 날 출고분 중 <b>상담원이 첫 컨택을 기록한 건수</b>(로우데이터 P열 최초컨택일) = <b>이 물량에 컨택이 들어갔는지</b>를 보는 칸. <span class="cd-warn">⚠️ 자가설치로 처리되는 건은 상담원 컨택이 없어 여기 안 잡힙니다</span> → 출고 대비 100%가 정상이 아니며, 실측상 <b>최초컨택 ≈ 출고 − 자가설치</b>(상담원이 맡은 물량)입니다.</span>'
+  + '<span class="cd-row"><span class="cd-k">컨택 시도</span> 그 날 출고건들의 K열 메모 <b>[날짜] 스탬프 줄 수 합</b> = 통화·부재 <b>시도 횟수</b>(1건을 3번 컨택하면 3). 최초컨택이 <b>건수</b>라면 이건 <b>횟수</b>입니다. 자동문자 제외 · <span class="cd-warn">메모 미기재분은 0</span>이라 실제 시도량보다 적게 잡힙니다.</span>'
+  + '<span class="cd-row"><span class="cd-k">건당 컨택</span> 컨택 시도 ÷ 출고. 자가설치·메모공란 때문에 <b>1회 미만이 정상</b>이고, 물량 대비 컨택 노력의 <b>추세</b>를 봅니다(좋고 나쁨 판단이 애매해 회색 화살표).</span>'
+  + '<span class="cd-row"><span class="cd-k">진행중</span> 코호트가 닫힌 뒤 10일이 안 지난 행. 컨택·설치가 아직 돌아가는 중이라 <b>위 세 칸이 계속 올라갑니다</b> → 성숙한 행끼리만 비교하세요.</span>';
+function paintShipColdef(){
+  var els=document.querySelectorAll(".ship-coldef");
+  for(var i=0;i<els.length;i++) els[i].innerHTML=SHIP_COLDEF_HTML;
+}
 // 코호트 상세표(주/일 공용). immature 행은 완료율·소요일·재컨택을 회색 표기(비교 화살표 생략).
 function shipTableHTML(rows, opts){
   var head='<thead><tr>'
-    + '<th rowspan="2">'+opts.dateHead+'</th><th rowspan="2">출고<br><small class="th-tgt">업무량</small></th><th rowspan="2">최초컨택</th>'
-    + '<th rowspan="2">컨택 시도<br><small class="th-tgt">부재 포함</small></th><th rowspan="2">건당 컨택<br><small class="th-tgt">시도÷출고</small></th>'
+    + '<th rowspan="2">'+opts.dateHead+'</th><th rowspan="2">출고<br><small class="th-tgt">업무량</small></th>'
+    + '<th rowspan="2" title="그 날 출고분 중 상담원이 첫 컨택을 기록한 건수(P열). 자가설치 건은 상담원 컨택이 없어 잡히지 않습니다.">최초컨택<br><small class="th-tgt">컨택 들어간 건수<br>자가설치 제외</small></th>'
+    + '<th rowspan="2" title="K열 메모 [날짜] 스탬프 줄 수 합 = 통화·부재 시도 횟수(건수 아님). 메모 미기재분은 0.">컨택 시도<br><small class="th-tgt">시도 횟수<br>통화+부재</small></th>'
+    + '<th rowspan="2" title="컨택 시도 ÷ 출고. 자가설치·메모공란 때문에 1회 미만이 정상입니다.">건당 컨택<br><small class="th-tgt">시도÷출고</small></th>'
     + '<th colspan="3" class="grp grp-top gl gr">설치완료 <small>합계 = 자가설치 + 상담원</small></th>'
     + '<th rowspan="2">완료율</th><th rowspan="2">미완료<br><small class="th-tgt">잔량</small></th>'
     + '<th rowspan="2">평균 설치소요일<br><small class="th-tgt">목표 ≤'+SPD_TGT+'일</small></th><th rowspan="2">평균 재컨택주기<br><small class="th-tgt">목표 ≤'+RTC_TGT+'일</small></th>'
@@ -1934,6 +1955,7 @@ function renderShipWeekly(ship){
   shipConvChart("swConv",rows,labels,16);
   shipSpeedChart("swSpeed",rows,labels,16);
   document.getElementById("shipWeeklyTable").innerHTML = shipTableHTML(rows, {dateHead:"출고주 (월요일)", recent:12, label:function(w){return w.week.slice(5).replace("-",".")+"주";}});
+  paintShipColdef();
 }
 function renderShipDaily(ship){
   var rows=scPrep((ship&&ship.daily)||[]);
@@ -1948,6 +1970,7 @@ function renderShipDaily(ship){
   shipConvChart("sdConv",rows,labels,21);
   shipSpeedChart("sdSpeed",rows,labels,21);
   document.getElementById("shipDailyTable").innerHTML = shipTableHTML(rows, {dateHead:"출고일", recent:14, label:function(w){return dyLabelW(w.date);}});
+  paintShipColdef();
 }
 
 // ---------- COHORT ----------
