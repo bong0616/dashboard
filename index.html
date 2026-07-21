@@ -360,6 +360,24 @@
   table.dtable th.gl, table.dtable td:nth-child(5) { border-left: 1.5px solid color-mix(in srgb, var(--s-aqua) 42%, transparent); }
   table.dtable th.gr, table.dtable td:nth-child(7) { border-right: 1.5px solid color-mix(in srgb, var(--s-aqua) 42%, transparent); }
   .curtag { display:inline-block; font-size:10px; font-weight:700; color:#fff; background:var(--s-blue); border-radius:5px; padding:1px 6px; margin-left:6px; vertical-align:middle; }
+  /* 설치완료 그룹이 없는 표(nth-child(5)/(7) 아쿠아 세로선 규칙에서 제외) */
+  table.dtable.no-grp td:nth-child(5) { border-left: 0; }
+  table.dtable.no-grp td:nth-child(7) { border-right: 0; }
+  /* 출고월별 현재 상태 표 — 셀 = 건수 + 그 달 출고 대비 % */
+  table.dtable .cell-pct2 { font-size: 10.5px; font-weight: 600; color: var(--muted); margin-left: 5px; }
+  /* 주차별 D+N 누적 설치완료율 표 — 33열 가로스크롤 + 좌측 2열 고정 + 히트맵 */
+  table.dtable.curve-tbl { min-width: 1240px; font-size: 11.5px; }
+  table.dtable.curve-tbl th, table.dtable.curve-tbl td { padding: 6px 5px; text-align: center; }
+  table.dtable.curve-tbl th.dcol { font-size: 10.5px; }
+  table.dtable.curve-tbl th:nth-child(-n+2), table.dtable.curve-tbl td:nth-child(-n+2) { position: sticky; background: var(--surface-1); }
+  table.dtable.curve-tbl th:first-child, table.dtable.curve-tbl td:first-child { left: 0; width: 96px; text-align: left; }
+  table.dtable.curve-tbl th:nth-child(2), table.dtable.curve-tbl td:nth-child(2) { left: 96px; width: 60px; text-align: right; box-shadow: 1px 0 0 var(--baseline); }
+  table.dtable.curve-tbl td:nth-child(-n+2) { z-index: 1; }
+  table.dtable.curve-tbl th:nth-child(-n+2) { z-index: 3; }
+  table.dtable.curve-tbl tbody tr:hover td:nth-child(-n+2) { background: color-mix(in srgb, var(--s-blue) 6%, var(--surface-1)); }
+  table.dtable.curve-tbl td.cv { font-weight: 600; color: var(--text-primary); }
+  table.dtable.curve-tbl td.cv-na { color: var(--muted); font-weight: 500; }
+  table.dtable.curve-tbl td.imm { font-style: italic; }
 
   /* Passcode gate */
   #gate { position: fixed; inset: 0; background: var(--page); z-index: 100; display:flex; align-items:center; justify-content:center; }
@@ -591,11 +609,13 @@
         <div id="achBox" class="ach"></div>
       </div>
       <div class="card col-12"><h3>📊 2026 출고건 전체 상태 구성</h3><div class="sub">출고 <b id="coh-total">–</b>건이 지금 어떤 상태인지 세부 분류 (설치완료 외에도 반품·폐업, 위약금 등 종결건 분리)</div><div id="cohSummary" class="statgrid"></div></div>
-      <div class="card col-7 fill"><h3>📦 출고월별 진행률</h3><div class="sub">출고량 대비 설치완료 (자가설치 포함 전체)</div><div class="chart-wrap ch-m"><canvas id="cohMonth"></canvas></div></div>
-      <div class="card col-5 fill"><h3>🧩 월별 설치 채널 구성</h3><div class="sub">자가설치 / 상담원 완료 건수</div><div class="chart-wrap ch-m"><canvas id="cohChannel"></canvas></div></div>
-      <div class="card col-7 fill"><h3>📉 주별 설치 진행률</h3><div class="sub">최근 14주 · 최근 주는 진행중이라 낮게 나옴(정상)</div><div class="chart-wrap ch-m"><canvas id="cohWeek"></canvas></div></div>
-      <div class="card col-5 fill"><h3>⏳ 미설치 잔여 경과일</h3><div class="sub">출고 후 경과 · 오래된 잔여건 관리</div><div class="chart-wrap ch-m"><canvas id="cohAging"></canvas></div></div>
-      <div class="card col-12"><h3>🗂️ 출고월별 현재 상태</h3><div class="sub">4월·5월 등 각 출고월 코호트가 지금 어떤 상태인지</div><div class="chart-wrap ch-m"><canvas id="cohStatus"></canvas></div></div>
+      <div class="card col-5 fill"><h3>📦 출고월별 진행률</h3><div class="sub">출고량 대비 설치완료 (자가설치 포함 전체)</div><div class="chart-wrap ch-m"><canvas id="cohMonth"></canvas></div></div>
+      <div class="card col-7"><h3>🗂️ 출고월별 현재 상태</h3><div class="sub">각 출고월 코호트가 지금 어떤 상태인지 · <b>건수</b>와 <b>그 달 출고 대비 %</b></div><div class="tbl-wrap"><table class="dtable no-grp" id="cohStatusTable"></table></div></div>
+      <div class="card col-12">
+        <h3>📈 주차별 출고 대비 누적 설치완료율 <small class="th-tgt" style="display:inline">D+0 ~ D+30</small></h3>
+        <div class="sub">그 주 <b>출고건</b>이 출고 후 며칠 만에 몇 % 설치완료됐는지 (누적) · 최근 18주(약 4개월) · 최신 주가 위 · <b style="color:var(--s-blue-d)">–</b> 는 아직 그 날짜가 지나지 않아 관측 불가(0%가 아님) · 출고가 끝나지 않은 이번 주는 제외</div>
+        <div class="tbl-wrap"><table class="dtable no-grp curve-tbl" id="cohCurveTable"></table></div>
+      </div>
     </div>
   </section>
 
@@ -613,9 +633,9 @@
   <section class="tab-content" id="tab-daily">
     <div class="tiles" id="daily-tiles"></div>
     <div class="grid">
-      <div class="card col-12"><h3>📊 일별 업무량 · 속도 종합 비교</h3><div class="sub">막대=출고·통화건수, 초록선=설치완료 <b>(왼쪽축 건수)</b> · 점선=평균 설치속도·재컨택주기 <b>(오른쪽축 일, 낮을수록 빠름)</b>. 최근 21일 · 맨 오른쪽이 오늘</div><div class="chart-wrap ch-xl"><canvas id="dyVolume"></canvas></div></div>
+      <div class="card col-12"><h3>📊 일별 업무량 · 속도 종합 비교</h3><div class="sub">막대=출고·통화건수, 초록선=설치완료 <b>(왼쪽축 건수)</b> · 점선=평균 설치속도·재컨택주기 <b>(오른쪽축 일, 낮을수록 빠름)</b>. 최근 31일 · 맨 오른쪽이 오늘</div><div class="chart-wrap ch-xl"><canvas id="dyVolume"></canvas></div></div>
       <div class="card col-12"><h3>🔧 일별 설치 채널 구성</h3><div class="sub">자가설치 · 상담원 완료 건수(설치일 기준) · 막대 안 %는 그 날 설치완료 대비 비중</div><div class="chart-wrap ch-m"><canvas id="dyChannel"></canvas></div></div>
-      <div class="card col-12"><h3>📆 일자별 상세 비교표</h3><div class="sub">최근 14일 · 최신 일이 위 · <b>▲▼</b>는 직전 일 대비 증감(속도·재컨택주기는 낮을수록 개선)</div><div class="tbl-wrap"><table class="dtable" id="dailyTable"></table></div></div>
+      <div class="card col-12"><h3>📆 일자별 상세 비교표</h3><div class="sub">최근 30일 · 최신 일이 위 · <b>▲▼</b>는 직전 일 대비 증감(속도·재컨택주기는 낮을수록 개선)</div><div class="tbl-wrap"><table class="dtable" id="dailyTable"></table></div></div>
     </div>
   </section>
 
@@ -1794,7 +1814,7 @@ function renderDailyTable(rows){
     + '</tr>'
     + '<tr><th class="grp gl">합계</th><th class="grp">자가설치</th><th class="grp gr">상담원컨택후설치</th></tr>'
     + '</thead>';
-  var recent = rows.slice(-14);            // 최근 14일(오름차순)
+  var recent = rows.slice(-30);            // 최근 30일(오름차순) — 2026-07-21 14→30일로 확대
   var lastIdx = recent.length - 1;
   var body = recent.map(function(w, i){
     var prev = i>0 ? recent[i-1] : null;   // 표에선 직전 일
@@ -1978,38 +1998,72 @@ function renderCohort(c) {
       ] },
     options:{ scales:axes(), plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false} } } });
 
-  mk("cohChannel", { type:"bar",
-    data:{ labels:m.map(function(x){return x.ym.slice(2);}),
-      datasets:[
-        { label:"자가설치", data:m.map(function(x){return x.self;}), backgroundColor:C["--s-aqua"], borderRadius:{topLeft:0,topRight:0}, stack:"s", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels: dlSeg() },
-        { label:"상담원", data:m.map(function(x){return (x.agent||0)+(x.sms||0);}), backgroundColor:C["--s-blue"], borderRadius:{topLeft:5,topRight:5}, stack:"s", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels: dlSeg() }
-      ] },
-    options:{ scales:{ x:{stacked:true,grid:{display:false},ticks:{color:C["--muted"]}}, y:{stacked:true,beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
-      plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false} } } });
+  renderCohortStatusTable(c.monthStatus);
+  renderCohortCurve(c);
+}
 
-  var w=c.byWeek;
-  mk("cohWeek", { type:"line",
-    data:{ labels:w.map(function(x){return x.week.slice(5);}),
-      datasets:[{ label:"설치 진행률", data:w.map(function(x){return Math.round(x.rate*1000)/10;}),
-        borderColor:C["--s-blue"], backgroundColor:"transparent", borderWidth:2, tension:.3, pointRadius:3, pointBackgroundColor:C["--s-blue"] }] },
-    options:{ scales:{ x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:8}}, y:{beginAtZero:true,max:100,grid:{color:C["--grid"]},ticks:{color:C["--muted"],callback:function(v){return v+"%";}}} },
-      plugins:{ datalabels:{display:false}, tooltip:{callbacks:{label:function(ct){return ct.parsed.y+"%";}}} } } });
+// 🗂️ 출고월별 현재 상태 — 누적막대 차트 대신 건수+비율 표(2026-07-21, 가독성 요청)
+var COH_STATUS_CATS = ["설치완료","설치예정","미설치","부재","반품·폐업","기타"];
+function renderCohortStatusTable(ms){
+  var el=document.getElementById("cohStatusTable"); if(!el) return;
+  ms = ms || {};
+  var keys=Object.keys(ms).sort();
+  if(!keys.length){ el.innerHTML='<tbody><tr><td>데이터 없음</td></tr></tbody>'; return; }
+  var head='<thead><tr><th>출고월</th><th>출고</th>'
+    + COH_STATUS_CATS.map(function(k){ return '<th>'+k+'</th>'; }).join("")
+    + '</tr></thead>';
+  // 합계행 분모까지 한 번에 — 월별 셀은 그 달 출고, 합계 셀은 전체 출고 대비 %
+  var tot={}, totShip=0;
+  COH_STATUS_CATS.forEach(function(k){ tot[k]=0; });
+  keys.forEach(function(k){
+    COH_STATUS_CATS.forEach(function(c2){ tot[c2]+=(ms[k][c2]||0); });
+  });
+  COH_STATUS_CATS.forEach(function(k){ totShip+=tot[k]; });
+  function cell(v, denom){
+    var p = denom>0 ? Math.round(v/denom*1000)/10 : 0;
+    return '<td><span class="cell-main">'+fmt(v)+'</span><span class="cell-pct2">'+p.toFixed(1)+'%</span></td>';
+  }
+  var body=keys.map(function(k){
+    var row=ms[k], ship=0;
+    COH_STATUS_CATS.forEach(function(c2){ ship+=(row[c2]||0); });
+    return '<tr><td>'+k.slice(2)+'</td><td><span class="cell-main">'+fmt(ship)+'</span></td>'
+      + COH_STATUS_CATS.map(function(c2){ return cell(row[c2]||0, ship); }).join("")
+      + '</tr>';
+  }).reverse().join("");   // 최신 월이 위
+  var sum='<tr class="cur"><td>합계</td><td><span class="cell-main">'+fmt(totShip)+'</span></td>'
+    + COH_STATUS_CATS.map(function(k){ return cell(tot[k], totShip); }).join("") + '</tr>';
+  el.innerHTML = head + '<tbody>' + body + sum + '</tbody>';
+}
 
-  var ag=c.aging;
-  mk("cohAging", { type:"bar",
-    data:{ labels:["0~6일","7~13일","14~29일","30일+"],
-      datasets:[{ data:[ag["0-6"],ag["7-13"],ag["14-29"],ag["30+"]],
-        backgroundColor:[C["--s-blue-l"],C["--s-blue"],C["--s-yellow"],C["--critical"]], borderRadius:6 }] },
-    options:{ scales:axes(), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
-
-  // Month status stacked
-  var ms=c.monthStatus, keys=Object.keys(ms).sort();
-  var cats=[["설치완료",C["--s-aqua"]],["설치예정",C["--s-blue"]],["미설치",C["--s-red"]],["부재",C["--s-orange"]],["반품·폐업",C["--muted"]],["기타",C["--s-violet"]]];
-  mk("cohStatus", { type:"bar",
-    data:{ labels:keys.map(function(k){return k.slice(2);}),
-      datasets:cats.map(function(cat){ return { label:cat[0], data:keys.map(function(k){return ms[k][cat[0]]||0;}), backgroundColor:cat[1], stack:"st", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels: dlSeg() }; }) },
-    options:{ scales:{ x:{stacked:true,grid:{display:false},ticks:{color:C["--muted"]}}, y:{stacked:true,beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
-      plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"],padding:12}}, datalabels:{display:false} } } });
+// 📈 주차별 출고 대비 누적 설치완료율(D+0~D+30) — 2026-07-21 신규
+//  · 한 행 = 그 주 출고 코호트. 셀 = 출고 후 D일까지 누적 설치완료율(분모=그 주 출고 전체)
+//  · null = right-censoring(그 날짜가 아직 안 지나 관측 불가) → '–'. 0%와 구분해야 오독이 없다
+function curveHeat(p){
+  // 0~100% → 파랑 농도. 낮을수록 옅게(경고색 안 씀: 신규 주가 낮은 건 정상이라 빨강이면 오독)
+  var a = Math.round(Math.max(0, Math.min(100, p)) * 0.42);
+  return 'background:color-mix(in srgb, var(--s-blue) '+a+'%, transparent)';
+}
+function renderCohortCurve(c){
+  var el=document.getElementById("cohCurveTable"); if(!el) return;
+  var rows=(c&&c.shipCurve)||[];
+  var maxD=(c&&c.curveMaxD!=null)?c.curveMaxD:30;
+  if(!rows.length){ el.innerHTML='<tbody><tr><td>데이터 없음</td></tr></tbody>'; return; }
+  var ds=[]; for(var d=0; d<=maxD; d++) ds.push(d);
+  var head='<thead><tr><th>출고주</th><th>출고</th>'
+    + ds.map(function(d){ return '<th class="dcol">D+'+d+'</th>'; }).join("")
+    + '</tr></thead>';
+  var body=rows.map(function(r){
+    var cells=ds.map(function(d){
+      var v=r.cum[d];
+      if(v==null) return '<td class="cv-na">–</td>';
+      var p=Math.round(v*1000)/10;
+      return '<td class="cv" style="'+curveHeat(p)+'">'+p.toFixed(1)+'</td>';
+    }).join("");
+    var imm = r.maxD < maxD;   // 아직 D+30이 안 지난 진행중 코호트
+    return '<tr'+(imm?' class="imm"':'')+'><td>'+rptWeekLabel(r.week)+(imm?' <span class="share">진행중</span>':'')+'</td>'
+      + '<td><span class="cell-main">'+fmt(r.shipped)+'</span></td>' + cells + '</tr>';
+  }).reverse().join("");   // 최신 주가 위
+  el.innerHTML = head + '<tbody>' + body + '</tbody>';
 }
 
 // ===== 🎯 월 목표 달성률 (U열 설치일 기준 월별 설치완료 vs 수기 목표) =====
