@@ -385,6 +385,18 @@
   table.dtable.curve-tbl td.cv-na { color: var(--muted); font-weight: 500; }
   table.dtable.curve-tbl td.imm { font-style: italic; }
 
+  /* 설치가속화 Action — 한 줄 요약(운영자가 그대로 읽어 보고하는 문장 형식) */
+  .acl { display: flex; flex-direction: column; gap: 7px; margin-top: 4px; }
+  .acl .acl-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 10px; padding: 9px 12px; border-radius: 10px; background: color-mix(in srgb, var(--s-blue) 4%, transparent); border: 1px solid var(--border); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .acl .acl-row.cur { background: color-mix(in srgb, var(--s-blue) 10%, transparent); border-color: color-mix(in srgb, var(--s-blue) 35%, transparent); }
+  .acl .acl-d { font-weight: 700; color: var(--text-primary); min-width: 74px; }
+  .acl .acl-seg { color: var(--text-secondary); }
+  .acl .acl-seg b { color: var(--text-primary); font-weight: 700; font-size: 14px; }
+  .acl .acl-seg.hi b { color: var(--s-blue-d); }
+  .acl .acl-sep { color: var(--muted); }
+  .acl .acl-tail { color: var(--muted); font-size: 11.5px; margin-left: auto; }
+  .acl .acl-empty { padding: 14px; color: var(--muted); font-size: 12.5px; }
+
   /* Passcode gate */
   #gate { position: fixed; inset: 0; background: var(--page); z-index: 100; display:flex; align-items:center; justify-content:center; }
   .gate-box { background: var(--surface-1); border:1px solid var(--border); border-radius: 20px; padding: 34px 30px; width: 340px; box-shadow: var(--shadow); text-align:center; }
@@ -438,6 +450,7 @@
   </div>
   <div class="navitem active" data-tab="board"><span class="ic">📊</span><div>현황판<small>주간 회의용 요약</small></div></div>
   <div class="navitem" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량</small></div></div>
+  <div class="navitem" data-tab="accel"><span class="ic">🚀</span><div>설치가속화 Action<small>배송반영·통화 당일설치</small></div></div>
   <div class="navitem" data-tab="cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div></div>
   <div class="navitem" data-tab="perf" id="nav-perf"><span class="ic">⚡</span><div>성과<small>설치속도·작업량</small></div><span class="navcaret" id="perf-caret">▸</span></div>
   <div class="navitem navchild" data-tab="flow" id="nav-flow" style="display:none"><span class="ic">📈</span><div>월·주·일 흐름<small>기간별 추이</small></div></div>
@@ -514,6 +527,48 @@
         <div class="insight" id="lca-insight"></div>
       </div>
       <div class="card col-12"><h3>🔑 미설치 사유 (메모 키워드 분류)</h3><div class="sub">현재 미설치 잔여건(반품·폐업 제외)의 <b>메모를 키워드 자동분류</b> · 설치일 무관 · 7일+ 지연 사유와 동일 로직(부재·문자안내/미룸/방문설치 접수/원격접수/전산·결제단말 등) · <b>기타 막대 클릭 시 세부내역</b> · <span id="ops-kw-skip"></span></div><div class="chart-wrap ch-xl"><canvas id="opsReasonKw"></canvas></div></div>
+    </div>
+  </section>
+
+  <!-- ACCEL (설치가속화 Action) -->
+  <section class="tab-content" id="tab-accel">
+    <div class="tiles" id="accel-dev-tiles"></div>
+    <div class="grid">
+      <div class="card col-12">
+        <h3>🚚 배송완료 → 설치 · 일자별 한 줄 요약</h3>
+        <div class="sub">로우데이터 <b>T열(당일배송반영)</b>에 그 날짜가 찍힌 건들의 코호트 · <b>배송업데이트</b>=그날 배송완료로 전환된 건 · <b>당일설치건</b>=설치일(S)−T가 0일 · <b>배송소요일</b>=T−출고일(H) · <b>평균설치소요일</b>=S−T · 과거 코호트도 매 조회 시 재계산되므로 설치가 뒤늦게 찍히면 숫자가 올라갑니다</div>
+        <div id="accelDevLines" class="acl"></div>
+      </div>
+      <div class="card col-12">
+        <h3>📊 배송반영 대비 설치 전환</h3>
+        <div class="sub">막대=배송업데이트·설치완료·당일설치 <b>(왼쪽축 건수)</b> · 점선=평균 설치소요일 <b>(오른쪽축 일)</b> · 최근 코호트는 아직 설치 진행중이라 완료·소요일이 낮게 나옵니다</div>
+        <div class="chart-wrap ch-xl"><canvas id="acDev"></canvas></div>
+      </div>
+      <div class="card col-12">
+        <h3>📋 배송반영 상세표 <small class="th-tgt" style="display:inline">실적로그 K·D 병기</small></h3>
+        <div class="sub">최신 일이 위 · <b>▲▼</b>는 직전 일 대비 · 콜시도·설치예정은 <b>실적로그 K열 총계 / D열 설치예정</b>(자가설치 담당자 제외)</div>
+        <div class="coldef accel-coldef"></div>
+        <div class="tbl-wrap"><table class="dtable no-grp" id="accelDevTable"></table></div>
+      </div>
+    </div>
+
+    <div class="tiles" id="accel-sd-tiles" style="margin-top:4px"></div>
+    <div class="grid">
+      <div class="card col-12">
+        <h3>📞 통화 → 당일설치 · 일자별 한 줄 요약</h3>
+        <div class="sub"><b>통화당일설치</b> 탭과 동일 판정 — U열(통화시점상태)=설치예정 이면서 R열(마지막통화일)=S열(설치일) · <b>원격접수건</b>=그중 N열(외주/원격)에 '원격'이 들어간 건 · <b>당일 통화건</b>은 R열 기준이라 <b>과거 날짜일수록 과소집계</b>됩니다(R은 마지막 1회만 남음) → 콜 시도량의 정본은 실적로그 K열</div>
+        <div id="accelSdLines" class="acl"></div>
+      </div>
+      <div class="card col-12">
+        <h3>📊 콜시도 → 설치예정 → 당일설치</h3>
+        <div class="sub">막대=콜시도(K열)·설치예정(D열) <b>(왼쪽축 건수)</b> · 선=통화당일 설치완료 · 점선=콜시도 대비 설치예정율 <b>(오른쪽축 %)</b></div>
+        <div class="chart-wrap ch-xl"><canvas id="acSd"></canvas></div>
+      </div>
+      <div class="card col-12">
+        <h3>📋 통화 당일설치 상세표 <small class="th-tgt" style="display:inline">실적로그 K·D 병기</small></h3>
+        <div class="sub">최신 일이 위 · <b>▲▼</b>는 직전 일 대비 · <b>설치예정 대비</b>=당일설치 ÷ 그날 설치예정(D열) — 잡은 일정이 그 자리에서 끝난 비율 · <b>오늘 행의 콜시도·설치예정 0</b>은 실적로그가 아직 마감 적재되기 전이라는 뜻입니다</div>
+        <div class="tbl-wrap"><table class="dtable no-grp" id="accelSdTable"></table></div>
+      </div>
     </div>
   </section>
 
@@ -769,6 +824,7 @@ function render(d) {
   renderDaily(d.perf);
   renderShipWeekly(d.ship);
   renderShipDaily(d.ship);
+  renderAccel(d.accel);
   renderDelayWeekly(d.reasons);
   renderDept(d.reasons);
   renderReport(d.perf, d.weeklyNotes);
@@ -1973,6 +2029,196 @@ function renderShipDaily(ship){
   paintShipColdef();
 }
 
+// ---------- ACCEL (설치가속화 Action) ----------
+// 두 축 모두 "그날 들어온 물량이 그날 얼마나 끝났나"를 본다(서버 buildAccel_ 참고).
+//  ① 배송 축 — T열(당일배송반영) 각인일 코호트. 오후 배송반영 자동화가 도는 날부터만 존재한다.
+//     ⚠️ 비어 있는 것이 곧 고장이 아니다 → cohortStart 로 '아직 없음'을 안내한다(빈 화면 금지).
+//  ② 통화 축 — 통화당일설치 탭과 동일 판정(U=설치예정 && R==S).
+//     ⚠️ '당일 통화건'은 R열(마지막통화일) 기준이라 과거일수록 과소집계된다 → 콜 시도량 정본은 실적로그 K열.
+var ACCEL_LINE_DAYS = 10;   // 한 줄 요약에 노출할 최근 일수(표는 더 길게 본다)
+var ACCEL_TABLE_DAYS = 30;
+
+// 사용자 요청 표기: "21일 배송업데이트 54건 / 설치완료건 21건 / …" — 일(日) + 요일만 붙인다.
+function aclDay(s){ var p=s.split("-"); var d=new Date(+p[0],+p[1]-1,+p[2]); return (+p[2])+"일("+DY_WD[d.getDay()]+")"; }
+function aclSeg(label, val, unit, hi){
+  return '<span class="acl-seg'+(hi?' hi':'')+'">'+label+' <b>'+(val==null?"–":val)+'</b>'+(unit||"")+'</span>';
+}
+var aclSep = '<span class="acl-sep">/</span>';
+function aclEmpty(el, msg){ el.innerHTML='<div class="acl-empty">'+msg+'</div>'; }
+
+function renderAccel(a){
+  a = a || {};
+  var dev = a.delivery || [], sd = a.sameday || [];
+
+  // ----- 배송 축 -----
+  document.getElementById("accel-dev-tiles").innerHTML =
+    dayTile("배송업데이트","🚚", dev, "delivered", {accent:true}) +
+    dayTile("설치완료건","✅", dev, "installed") +
+    dayTile("당일설치건","⚡", dev, "sameDay") +
+    dayTile("배송소요일","📦", dev, "avgShipDays", {valFn:round1, unit:"일", lowerBetter:true}) +
+    dayTile("평균설치소요일","⏱️", dev, "avgLeadDays", {valFn:round1, unit:"일", lowerBetter:true}) +
+    dayTile("설치완료율","📈", dev, "doneRate", {valFn:shipPct, unit:"%"});
+
+  var devLines = document.getElementById("accelDevLines");
+  if(!dev.length){
+    aclEmpty(devLines, a.cohortStart
+      ? "선택한 기간에 배송반영(T열) 코호트가 없습니다. 기간을 넓혀 보세요. (첫 각인일 "+a.cohortStart+")"
+      : "아직 배송반영(T열) 코호트가 없습니다. 오후 배송반영 자동화(14:45~15:15)가 한 번 돌아야 T열에 날짜가 찍힙니다.");
+  } else {
+    var dRecent = dev.slice(-ACCEL_LINE_DAYS), dLast = dRecent.length-1;
+    devLines.innerHTML = dRecent.map(function(r,i){
+      return '<div class="acl-row'+(i===dLast?' cur':'')+'">'
+        + '<span class="acl-d">'+aclDay(r.date)+'</span>'
+        + aclSeg("배송업데이트", fmt(r.delivered), "건") + aclSep
+        + aclSeg("설치완료건", fmt(r.installed), "건") + aclSep
+        + aclSeg("당일설치건", fmt(r.sameDay), "건", true) + aclSep
+        + aclSeg("배송소요일", round1(r.avgShipDays), "일") + aclSep
+        + aclSeg("평균설치소요일", round1(r.avgLeadDays), "일")
+        + '<span class="acl-tail">콜시도 '+fmt(r.calls)+'건 · 설치예정 '+fmt(r.planned)+'건</span>'
+        + '</div>';
+    }).reverse().join("");
+  }
+
+  var dLabels = dev.map(function(x){ return dyLabel(x.date); });
+  mk("acDev", { type:"bar",
+    data:{ labels:dLabels, datasets:[
+      { type:"bar", label:"배송업데이트", data:dev.map(function(x){return x.delivered;}), backgroundColor:C["--s-blue-l"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, datalabels:dlBarTop({font:{weight:"600",size:9}}) },
+      { type:"bar", label:"설치완료", data:dev.map(function(x){return x.installed;}), backgroundColor:C["--s-aqua"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, datalabels:dlBarTop({font:{weight:"600",size:9}}) },
+      { type:"bar", label:"당일설치", data:dev.map(function(x){return x.sameDay;}), backgroundColor:C["--s-violet"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, datalabels:dlBarTop({font:{weight:"600",size:9}}) },
+      { type:"line", label:"평균설치소요일(일)", data:dev.map(function(x){return x.avgLeadDays==null?null:Math.round(x.avgLeadDays*10)/10;}), borderColor:C["--s-blue-d"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--s-blue-d"], spanGaps:true }
+    ]},
+    options:{ scales:{
+      x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:21}},
+      y:{position:"left",beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]},title:{display:true,text:"건수",color:C["--muted"],font:{size:11}}},
+      y1:{position:"right",beginAtZero:true,grid:{drawOnChartArea:false},ticks:{color:C["--muted"],callback:function(v){return v+"일";}},title:{display:true,text:"소요일",color:C["--muted"],font:{size:11}}}
+    },
+      plugins:{ legend:{display:true,labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false},
+        tooltip:{callbacks:{label:function(ct){ var v=ct.parsed.y; if(v==null) return ct.dataset.label+": –";
+          return ct.dataset.label+": "+(ct.dataset.yAxisID==="y1" ? v+"일" : fmt(v)+"건"); }}} },
+      interaction:{mode:"index",intersect:false} } });
+
+  renderAccelDevTable(dev);
+  paintAccelColdef();
+
+  // ----- 통화 축 -----
+  document.getElementById("accel-sd-tiles").innerHTML =
+    dayTile("당일 통화건","📞", sd, "contacted", {accent:true}) +
+    dayTile("통화당일 설치완료","⚡", sd, "installs") +
+    dayTile("그중 원격접수건","💻", sd, "remote") +
+    dayTile("콜시도(K열)","☎️", sd, "calls") +
+    dayTile("설치예정(D열)","🗓️", sd, "planned") +
+    dayTile("콜시도 대비 설치예정","📈", sd, "plannedRate", {valFn:shipPct, unit:"%"});
+
+  var sdLines = document.getElementById("accelSdLines");
+  if(!sd.length){
+    aclEmpty(sdLines, "선택한 기간에 통화·실적로그 데이터가 없습니다.");
+  } else {
+    var sRecent = sd.slice(-ACCEL_LINE_DAYS), sLast = sRecent.length-1;
+    sdLines.innerHTML = sRecent.map(function(r,i){
+      return '<div class="acl-row'+(i===sLast?' cur':'')+'">'
+        + '<span class="acl-d">'+aclDay(r.date)+'</span>'
+        + aclSeg("당일 통화건", fmt(r.contacted), "건") + aclSep
+        + aclSeg("설치완료건", fmt(r.installs), "건", true) + aclSep
+        + aclSeg("그중 원격접수건", fmt(r.remote), "건")
+        + '<span class="acl-tail">콜시도 '+fmt(r.calls)+'건 · 설치예정 '+fmt(r.planned)+'건</span>'
+        + '</div>';
+    }).reverse().join("");
+  }
+
+  var sLabels = sd.map(function(x){ return dyLabel(x.date); });
+  mk("acSd", { type:"bar",
+    data:{ labels:sLabels, datasets:[
+      { type:"bar", label:"콜시도(K열)", data:sd.map(function(x){return x.calls;}), backgroundColor:C["--s-yellow"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, datalabels:dlBarTop({font:{weight:"600",size:9}}) },
+      { type:"bar", label:"설치예정(D열)", data:sd.map(function(x){return x.planned;}), backgroundColor:C["--s-blue"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, datalabels:dlBarTop({font:{weight:"600",size:9}}) },
+      { type:"line", label:"통화당일 설치완료", data:sd.map(function(x){return x.installs;}), borderColor:C["--s-violet"], backgroundColor:"transparent", yAxisID:"y", borderWidth:2.6, tension:.3, pointRadius:2, pointBackgroundColor:C["--s-violet"] },
+      { type:"line", label:"콜시도 대비 설치예정(%)", data:sd.map(function(x){return x.plannedRate==null?null:Math.round(x.plannedRate*100);}), borderColor:C["--good"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--good"], spanGaps:true }
+    ]},
+    options:{ scales:{
+      x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:21}},
+      y:{position:"left",beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]},title:{display:true,text:"건수",color:C["--muted"],font:{size:11}}},
+      y1:{position:"right",beginAtZero:true,max:100,grid:{drawOnChartArea:false},ticks:{color:C["--muted"],callback:function(v){return v+"%";}},title:{display:true,text:"전환율",color:C["--muted"],font:{size:11}}}
+    },
+      plugins:{ legend:{display:true,labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false},
+        tooltip:{callbacks:{label:function(ct){ var v=ct.parsed.y; if(v==null) return ct.dataset.label+": –";
+          return ct.dataset.label+": "+(ct.dataset.yAxisID==="y1" ? v+"%" : fmt(v)+"건"); }}} },
+      interaction:{mode:"index",intersect:false} } });
+
+  renderAccelSdTable(sd);
+}
+
+// 표에서만 쓰는 컬럼 설명(부제 한 줄로는 T열의 의미가 전달되지 않는다)
+var ACCEL_COLDEF_HTML =
+    '<span class="cd-row"><span class="cd-k">읽는 법</span> 한 행 = <b>그 날 배송완료로 바뀐 물량</b>(T열 각인일)의 현재 처리 상태. 설치완료도 <b>설치한 날이 아니라 배송반영된 날</b>에 계상됩니다.</span>'
+  + '<span class="cd-row"><span class="cd-k">배송업데이트</span> 오후 배송반영 자동화(14:45~15:15)가 그 실행에서 <b>배송완료로 전환한 건수</b>. 오전 자동화·수동 실행은 T열을 건드리지 않아 여기 안 잡힙니다.</span>'
+  + '<span class="cd-row"><span class="cd-k">당일설치건</span> 설치일(S) − 배송반영일(T) = <b>0일</b>. 물건이 도착한 그날 설치까지 끝난 건 = 가속화의 최종 목표치.</span>'
+  + '<span class="cd-row"><span class="cd-k">콜시도·설치예정</span> 같은 날짜의 <b>실적로그 K열(총계)·D열(설치예정)</b>. 배송 코호트와 <b>모수가 다릅니다</b>(콜은 그날 배송분만 거는 게 아님) — 비율이 아니라 <b>그날의 콜 투입량 대비 성과</b>로 읽으세요. 자가설치 담당자는 통화를 하지 않아 제외됩니다.</span>'
+  + '<span class="cd-row"><span class="cd-k">최근 행</span> 아직 설치가 진행중이라 <b>설치완료·완료율·소요일이 계속 올라갑니다</b> → 성숙한 행끼리만 비교하세요.</span>'
+  + '<span class="cd-row"><span class="cd-k">오늘 행</span> 실적로그는 <b>마감 적재(저녁 자동화) 때 그날 행이 만들어집니다</b> → 적재 전에는 오늘의 <b>콜시도·설치예정이 0</b>으로 보입니다. 데이터 누락이 아니라 아직 안 적재된 것입니다.</span>';
+function paintAccelColdef(){
+  var els=document.querySelectorAll(".accel-coldef");
+  for(var i=0;i<els.length;i++) els[i].innerHTML=ACCEL_COLDEF_HTML;
+}
+
+function renderAccelDevTable(rows){
+  var head='<thead><tr>'
+    + '<th>일자</th>'
+    + '<th>콜시도<br><small class="th-tgt">실적로그 K</small></th>'
+    + '<th>설치예정<br><small class="th-tgt">실적로그 D</small></th>'
+    + '<th>콜시도 대비<br><small class="th-tgt">설치예정율</small></th>'
+    + '<th>배송업데이트<br><small class="th-tgt">T열 각인</small></th>'
+    + '<th>설치완료</th><th>당일설치<br><small class="th-tgt">S−T=0</small></th><th>설치완료율</th>'
+    + '<th>배송소요일<br><small class="th-tgt">T−H</small></th><th>평균설치소요일<br><small class="th-tgt">S−T</small></th>'
+    + '</tr></thead>';
+  if(!rows.length){ document.getElementById("accelDevTable").innerHTML = head+'<tbody><tr><td colspan="10" style="text-align:center;color:var(--muted)">데이터 없음</td></tr></tbody>'; return; }
+  var recent=rows.slice(-ACCEL_TABLE_DAYS), lastIdx=recent.length-1;
+  var body=recent.map(function(w,i){
+    var prev=i>0?recent[i-1]:null;
+    var isCur=(i===lastIdx);
+    return '<tr'+(isCur?' class="cur"':'')+'>'
+      + '<td>'+dyLabelW(w.date)+(isCur?'<span class="curtag">최신</span>':'')+'</td>'
+      + wowCell(w.calls, prev&&prev.calls)
+      + wowCell(w.planned, prev&&prev.planned)
+      + wowCell(w.plannedRate, prev?prev.plannedRate:null, {valFn:shipPct, unit:"%"})
+      + wowCell(w.delivered, prev&&prev.delivered)
+      + wowCell(w.installed, prev&&prev.installed, {share: w.delivered>0?Math.round(w.installed/w.delivered*100):null})
+      + wowCell(w.sameDay, prev&&prev.sameDay, {share: w.delivered>0?Math.round(w.sameDay/w.delivered*100):null})
+      + wowCell(w.doneRate, prev?prev.doneRate:null, {valFn:shipPct, unit:"%"})
+      + wowCell(w.avgShipDays, prev?prev.avgShipDays:null, {valFn:round1, unit:"일", lowerBetter:true})
+      + wowCell(w.avgLeadDays, prev?prev.avgLeadDays:null, {valFn:round1, unit:"일", lowerBetter:true})
+      + '</tr>';
+  }).reverse().join("");
+  document.getElementById("accelDevTable").innerHTML = head+'<tbody>'+body+'</tbody>';
+}
+
+function renderAccelSdTable(rows){
+  var head='<thead><tr>'
+    + '<th>일자</th>'
+    + '<th>콜시도<br><small class="th-tgt">실적로그 K</small></th>'
+    + '<th>설치예정<br><small class="th-tgt">실적로그 D</small></th>'
+    + '<th>콜시도 대비<br><small class="th-tgt">설치예정율</small></th>'
+    + '<th>당일 통화건<br><small class="th-tgt">R열 기준</small></th>'
+    + '<th>당일설치 완료<br><small class="th-tgt">U=설치예정 · R=S</small></th>'
+    + '<th>그중 원격접수</th><th>설치예정 대비<br><small class="th-tgt">당일설치÷D</small></th>'
+    + '</tr></thead>';
+  if(!rows.length){ document.getElementById("accelSdTable").innerHTML = head+'<tbody><tr><td colspan="8" style="text-align:center;color:var(--muted)">데이터 없음</td></tr></tbody>'; return; }
+  var recent=rows.slice(-ACCEL_TABLE_DAYS), lastIdx=recent.length-1;
+  var body=recent.map(function(w,i){
+    var prev=i>0?recent[i-1]:null;
+    var isCur=(i===lastIdx);
+    return '<tr'+(isCur?' class="cur"':'')+'>'
+      + '<td>'+dyLabelW(w.date)+(isCur?'<span class="curtag">최신</span>':'')+'</td>'
+      + wowCell(w.calls, prev&&prev.calls)
+      + wowCell(w.planned, prev&&prev.planned)
+      + wowCell(w.plannedRate, prev?prev.plannedRate:null, {valFn:shipPct, unit:"%"})
+      + wowCell(w.contacted, prev&&prev.contacted)
+      + wowCell(w.installs, prev&&prev.installs)
+      + wowCell(w.remote, prev&&prev.remote, {share: w.installs>0?Math.round(w.remote/w.installs*100):null})
+      + wowCell(w.ofPlanned, prev?prev.ofPlanned:null, {valFn:shipPct, unit:"%"})
+      + '</tr>';
+  }).reverse().join("");
+  document.getElementById("accelSdTable").innerHTML = head+'<tbody>'+body+'</tbody>';
+}
+
 // ---------- COHORT ----------
 function renderCohortSummary(ss, total) {
   var order=[
@@ -2743,7 +2989,7 @@ var TAB_SECTIONS={
   board:["perf","cohort","reasons"], ops:["ops","reasons"], dept:["reasons"],
   perf:["perf","reasons"], flow:["perf"], delayweek:["reasons"], cohort:["cohort"],
   weekly:["perf"], daily:["perf"], report:["perf"],
-  shipweekly:["ship"], shipdaily:["ship"]
+  shipweekly:["ship"], shipdaily:["ship"], accel:["accel"]
 };
 var TAB_LOADED={}; // 탭 → 마지막으로 로드된 기간키("start|end", 전체는 ""). 같은 기간 재조회 방지.
 function periodKey(){ return CUR_PERIOD.start ? (CUR_PERIOD.start+"|"+CUR_PERIOD.end) : ""; }
@@ -2751,7 +2997,7 @@ function markAllLoaded(pk){ Object.keys(TAB_SECTIONS).forEach(function(t){ TAB_L
 // 부분 payload(섹션조회)를 기존 LAST_DATA 위에 덮어쓴다 — null 섹션은 이전값 유지(다른 탭은 안 건드림).
 function mergeData(base, part){
   if(!base) return part;
-  ["meta","ops","perf","cohort","reasons","ship","achievement","weeklyNotes","kpiTargets"].forEach(function(k){
+  ["meta","ops","perf","cohort","reasons","ship","accel","achievement","weeklyNotes","kpiTargets"].forEach(function(k){
     if(part[k]!=null) base[k]=part[k];
   });
   return base;
@@ -2924,7 +3170,7 @@ document.getElementById("f-reset").addEventListener("click", function(){
   loadPeriod("","","전체 기간");
 });
 
-var TABMETA={ board:["주간 현황판","주간 회의용 핵심 지표 한눈에 · 전주 대비 · 회의 코멘트"], ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], dept:["부서별 지연원인","로우데이터 L열 사유코드 → 부서별 · 각 부서가 줄일 수 있는 지연 원인 · 모수=지연건만(완료·미완료 모두 출고 후 7일 초과, D+8 이상) · '미룸 횟수→설치 소요일'만 전체 건"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], flow:["월·주·일 흐름","실적로그 기준 · 통화시도·설치완료·최초컨택의 월별/주별/일별 추이"], delayweek:["D+7 초과 설치지연분석","출고→설치 7일+ 완료건을 출고 주(월요일)별로 · 사유 메모 키워드 자동분류"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"] };
+var TABMETA={ board:["주간 현황판","주간 회의용 핵심 지표 한눈에 · 전주 대비 · 회의 코멘트"], ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], dept:["부서별 지연원인","로우데이터 L열 사유코드 → 부서별 · 각 부서가 줄일 수 있는 지연 원인 · 모수=지연건만(완료·미완료 모두 출고 후 7일 초과, D+8 이상) · '미룸 횟수→설치 소요일'만 전체 건"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], flow:["월·주·일 흐름","실적로그 기준 · 통화시도·설치완료·최초컨택의 월별/주별/일별 추이"], delayweek:["D+7 초과 설치지연분석","출고→설치 7일+ 완료건을 출고 주(월요일)별로 · 사유 메모 키워드 자동분류"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(K) 대비 설치예정(D) 병기"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
