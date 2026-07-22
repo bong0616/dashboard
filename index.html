@@ -402,6 +402,18 @@
   .acl .acl-sep { color: var(--muted); }
   .acl .acl-tail { color: var(--muted); font-size: 11.5px; margin-left: auto; }
   .acl .acl-empty { padding: 14px; color: var(--muted); font-size: 12.5px; }
+  /* 일평균 이상인 날을 연파랑으로 — "무슨 요일에 물량이 몰리는가"를 훑어서 보기 위한 표시(운영자 요청 2026-07-22).
+     ⚠️ dtable 의 tr.cur 규칙과 특이도가 같으므로 반드시 그 뒤(여기)에 와야 이긴다. 위로 옮기면 조용히 안 먹는다. */
+  .acl .acl-row.abv { background: color-mix(in srgb, var(--s-blue) 17%, transparent);
+    border-color: color-mix(in srgb, var(--s-blue) 38%, transparent); }
+  .acl .acl-row.abv.cur { background: color-mix(in srgb, var(--s-blue) 24%, transparent); }
+  /* 표는 흰 배경 위라 옅으면 안 보인다 — 11%로 했더니 육안으로 구분이 안 돼 18%로 올렸다(실측). */
+  table.dtable tbody tr.abv td { background: color-mix(in srgb, var(--s-blue) 18%, transparent); }
+  table.dtable tbody tr.abv.cur td { background: color-mix(in srgb, var(--s-blue) 25%, transparent); }
+  /* 평균 이상 표시 칩 */
+  .avgtag { display:inline-block; font-size:10px; font-weight:800; color:var(--s-blue-d);
+    background: color-mix(in srgb, var(--s-blue) 22%, transparent); border-radius:5px;
+    padding:1px 6px; margin-left:6px; vertical-align:middle; white-space:nowrap; }
   /* 집계 자체가 불가능한 구간을 알리는 경고 배너(0으로 그리면 거짓이 되는 경우) */
   .acl-warn { margin: 8px 0 12px; padding: 11px 14px; border-radius: 10px; font-size: 12.5px; line-height: 1.65;
     color: var(--text-secondary); background: color-mix(in srgb, var(--s-orange) 10%, transparent);
@@ -583,7 +595,7 @@
     <div class="grid">
       <div class="card col-12">
         <h3>🚚 배송완료 → 설치 · 일자별 한 줄 요약</h3>
-        <div class="sub">로우데이터 <b>T열(당일배송반영)</b>에 그 날짜가 찍힌 건들의 코호트 · <b>배송업데이트</b>=그날 배송완료로 전환된 건 · <b>당일설치건</b>=설치일(S)−T가 0일 · <b>배송소요일</b>=T−출고일(H) · <b>평균설치소요일</b>=S−T · 과거 코호트도 매 조회 시 재계산되므로 설치가 뒤늦게 찍히면 숫자가 올라갑니다</div>
+        <div class="sub">로우데이터 <b>T열(당일배송반영)</b>에 그 날짜가 찍힌 건들의 코호트 · <b>배송업데이트</b>=그날 배송완료로 전환된 건 · <b>당일설치건</b>=설치일(S)−T가 0일 · <b>배송소요일</b>=T−출고일(H) · <b>평균설치소요일</b>=S−T · 과거 코호트도 매 조회 시 재계산되므로 설치가 뒤늦게 찍히면 숫자가 올라갑니다 · <b style="color:var(--s-blue-d)">연파랑 행(평균↑)</b>은 배송업데이트가 <b>일평균 이상</b>인 날 — 요일별 물량 쏠림을 보세요</div>
         <div id="accelDevLines" class="acl"></div>
       </div>
       <div class="card col-12">
@@ -593,7 +605,7 @@
       </div>
       <div class="card col-12">
         <h3>📋 배송반영 상세표 <small class="th-tgt" style="display:inline">실적로그 K·D 병기</small></h3>
-        <div class="sub">최신 일이 위 · <b>▲▼</b>는 직전 일 대비 · 콜시도·설치예정은 <b>실적로그 K열 총계 / D열 설치예정</b>(자가설치 담당자 제외)</div>
+        <div class="sub">최신 일이 위 · <b>▲▼</b>는 직전 일 대비 · 콜시도·설치예정은 <b>실적로그 K열 총계 / D열 설치예정</b>(상담원만) · <b style="color:var(--s-blue-d)">연파랑 행(평균↑)</b>=배송업데이트가 <b>일평균 이상</b>인 날 · 일자에 요일이 붙어 있어 <b>무슨 요일에 몰리는지</b> 바로 보입니다</div>
         <div class="coldef accel-coldef"></div>
         <div class="tbl-wrap"><table class="dtable no-grp" id="accelDevTable"></table></div>
       </div>
@@ -2195,9 +2207,12 @@ function renderAccel(a){
       : "아직 배송반영(T열) 코호트가 없습니다. 오후 배송반영 자동화(14:45~15:15)가 한 번 돌아야 T열에 날짜가 찍힙니다.");
   } else {
     var dRecent = dev.slice(-ACCEL_LINE_DAYS), dLast = dRecent.length-1;
+    // 배송업데이트가 일평균 이상인 날을 연파랑으로 — 요일별 물량 쏠림을 눈으로 잡기 위함.
+    var devAvg = devSum.deliveredPerDay;
     devLines.innerHTML = dRecent.map(function(r,i){
-      return '<div class="acl-row'+(i===dLast?' cur':'')+'">'
-        + '<span class="acl-d">'+aclDay(r.date)+'</span>'
+      var abv = (devAvg!=null && r.delivered!=null && r.delivered >= devAvg);
+      return '<div class="acl-row'+(i===dLast?' cur':'')+(abv?' abv':'')+'">'
+        + '<span class="acl-d">'+aclDay(r.date)+(abv?'<span class="avgtag">평균↑</span>':'')+'</span>'
         + aclSeg("배송업데이트", fmt(r.delivered), "건") + aclSep
         + aclSeg("설치완료건", fmt(r.installed), "건") + aclSep
         + aclSeg("당일설치건", fmt(r.sameDay), "건", true) + aclSep
@@ -2226,7 +2241,7 @@ function renderAccel(a){
           return ct.dataset.label+": "+(ct.dataset.yAxisID==="y1" ? v+"일" : fmt(v)+"건"); }}} },
       interaction:{mode:"index",intersect:false} } });
 
-  renderAccelDevTable(dev);
+  renderAccelDevTable(dev, devSum.deliveredPerDay);
   paintAccelColdef();
 
   // ----- 통화 축 -----
@@ -2327,7 +2342,7 @@ var ACCEL_REMOTE_COLDEF_HTML =
   + '<span class="cd-row"><span class="cd-k">시작일</span> 통화 축 전체가 <b>U열(통화시점상태)</b>에 의존합니다. <span class="cd-warn">U열은 2026-07-21에 신설된 컬럼이라 그 이전 날짜는 집계가 불가능</span>합니다 — <b>J열(상태)로 대신할 수 없습니다.</b> 설치가 끝나면 J는 \'설치완료\'로 덮여, 그 통화 시점에 설치예정이었는지 되짚을 수 없기 때문입니다. 이전 구간은 0이 아니라 <b>표시에서 제외</b>했습니다.</span>'
   + '<span class="cd-row"><span class="cd-k">R열 한계</span> 당일설치는 R열(마지막통화일)=S열(설치일)로 판정하는데 R은 <b>마지막 통화 1회만</b> 남습니다. 나중에 다시 통화하면 과거 흔적이 덮이므로 <b>며칠 지난 행은 값이 내려갈 수 있습니다.</b> 접수량 추이는 사후에 안 변하는 왼쪽 <b>실적로그</b> 칸으로 보세요.</span>';
 
-function renderAccelDevTable(rows){
+function renderAccelDevTable(rows, avgDelivered){
   var head='<thead><tr>'
     + '<th>일자</th>'
     + '<th>콜시도<br><small class="th-tgt">실적로그 K</small></th>'
@@ -2342,8 +2357,11 @@ function renderAccelDevTable(rows){
   var body=recent.map(function(w,i){
     var prev=i>0?recent[i-1]:null;
     var isCur=(i===lastIdx);
-    return '<tr'+(isCur?' class="cur"':'')+'>'
-      + '<td>'+dyLabelW(w.date)+(isCur?'<span class="curtag">최신</span>':'')+'</td>'
+    // 배송업데이트가 일평균 이상인 날 → 행 전체를 연파랑으로(요일별 쏠림 확인용)
+    var abv=(avgDelivered!=null && w.delivered!=null && w.delivered>=avgDelivered);
+    var cls=(isCur?"cur":"")+(abv?(isCur?" abv":"abv"):"");
+    return '<tr'+(cls?' class="'+cls+'"':'')+'>'
+      + '<td>'+dyLabelW(w.date)+(isCur?'<span class="curtag">최신</span>':'')+(abv?'<span class="avgtag">평균↑</span>':'')+'</td>'
       + wowCell(w.calls, prev&&prev.calls)
       + wowCell(w.planned, prev&&prev.planned)
       + wowCell(w.plannedRate, prev?prev.plannedRate:null, {valFn:shipPct, unit:"%"})
