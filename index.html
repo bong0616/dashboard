@@ -369,6 +369,9 @@
   /* 설치완료 그룹이 없는 표(nth-child(5)/(7) 아쿠아 세로선 규칙에서 제외) */
   table.dtable.no-grp td:nth-child(5) { border-left: 0; }
   table.dtable.no-grp td:nth-child(7) { border-right: 0; }
+  /* 설치가속화 통화표 — 원격 그룹은 8~10열이라 위 5·7열 고정 규칙으로는 안 잡힌다(본문 셀만 별도 지정) */
+  table.dtable#accelSdTable td:nth-child(8) { border-left: 1.5px solid color-mix(in srgb, var(--s-aqua) 42%, transparent); }
+  table.dtable#accelSdTable td:nth-child(10) { border-right: 1.5px solid color-mix(in srgb, var(--s-aqua) 42%, transparent); }
   /* 출고월별 현재 상태 표 — 셀 = 건수 + 그 달 출고 대비 % */
   table.dtable .cell-pct2 { font-size: 10.5px; font-weight: 600; color: var(--muted); margin-left: 5px; }
   /* 주차별 D+N 누적 설치완료율 표 — 33열 가로스크롤 + 좌측 2열 고정 + 히트맵 */
@@ -567,6 +570,7 @@
       <div class="card col-12">
         <h3>📋 통화 당일설치 상세표 <small class="th-tgt" style="display:inline">실적로그 K·D 병기</small></h3>
         <div class="sub">최신 일이 위 · <b>▲▼</b>는 직전 일 대비 · <b>설치예정 대비</b>=당일설치 ÷ 그날 설치예정(D열) — 잡은 일정이 그 자리에서 끝난 비율 · <b>오늘 행의 콜시도·설치예정 0</b>은 실적로그가 아직 마감 적재되기 전이라는 뜻입니다</div>
+        <div class="coldef accel-remote-coldef"></div>
         <div class="tbl-wrap"><table class="dtable no-grp" id="accelSdTable"></table></div>
       </div>
     </div>
@@ -1803,7 +1807,7 @@ function dayTile(label, ic, rows, key, opts){
   }
   var tg = tgtMeta(cur, opts.target);
   var valOut = cur==null ? "–" : ('<span class="'+tg.cls+'">'+valFn(cur)+'</span>');
-  return tile(label, ic, valOut, unit, (sub||"")+tg.badge, opts.accent);
+  return tile(label, ic, valOut, unit, (sub||"")+tg.badge, opts.accent, opts.tip);
 }
 
 function renderDaily(p){
@@ -2104,10 +2108,12 @@ function renderAccel(a){
   document.getElementById("accel-sd-tiles").innerHTML =
     dayTile("당일 통화건","📞", sd, "contacted", {accent:true}) +
     dayTile("통화당일 설치완료","⚡", sd, "installs") +
-    dayTile("그중 원격접수건","💻", sd, "remote") +
+    dayTile("원격접수 정본","💻", sd, "logRemote", {tip:"원격 접수량의 <b>정본</b>입니다.<br><br>로우데이터 N열(외주/원격)은 진행이 안 되면 상담원이 <b>콜리스트에서 지워버려</b> 나중에 값이 사라집니다(미러링으로 로우데이터까지 반영). 실적로그는 그날 적재된 스냅샷이라 사후에 흔들리지 않습니다."}) +
+    dayTile("그중 당일완결","✅", sd, "remote", {tip:"접수한 원격 중 <b>그날 설치까지 끝난 건</b>(로우데이터 N열 기준).<br><br>분자가 로우데이터라 시간이 지나면 줄어듭니다 → <b>당일~어제치만 신뢰</b>하세요."}) +
+    dayTile("원격 당일완결률","📈", sd, "remoteSameDayRate", {valFn:shipPct, unit:"%"}) +
     dayTile("콜시도(K열)","☎️", sd, "calls") +
     dayTile("설치예정(D열)","🗓️", sd, "planned") +
-    dayTile("콜시도 대비 설치예정","📈", sd, "plannedRate", {valFn:shipPct, unit:"%"});
+    dayTile("설치예정 전환율","📊", sd, "plannedRate", {valFn:shipPct, unit:"%", tip:"실적로그 <b>D열(설치예정) ÷ K열(콜시도 총계)</b> — 그날 콜을 걸어 설치예정을 얼마나 잡았는지."});
 
   var sdLines = document.getElementById("accelSdLines");
   if(!sd.length){
@@ -2119,7 +2125,10 @@ function renderAccel(a){
         + '<span class="acl-d">'+aclDay(r.date)+'</span>'
         + aclSeg("당일 통화건", fmt(r.contacted), "건") + aclSep
         + aclSeg("설치완료건", fmt(r.installs), "건", true) + aclSep
-        + aclSeg("그중 원격접수건", fmt(r.remote), "건")
+        + aclSeg("그중 원격접수건", fmt(r.remote), "건") + aclSep
+        // 접수량 정본(실적로그 M)을 분모로 붙여 "접수 15건 중 12건(80%) 당일완결"로 읽히게 한다.
+        + aclSeg("원격접수(실적로그)", fmt(r.logRemote), "건 중 "
+            + (r.remoteSameDayRate==null ? "–" : shipPct(r.remoteSameDayRate)+"%") + " 당일완결")
         + '<span class="acl-tail">콜시도 '+fmt(r.calls)+'건 · 설치예정 '+fmt(r.planned)+'건</span>'
         + '</div>';
     }).reverse().join("");
@@ -2157,7 +2166,18 @@ var ACCEL_COLDEF_HTML =
 function paintAccelColdef(){
   var els=document.querySelectorAll(".accel-coldef");
   for(var i=0;i<els.length;i++) els[i].innerHTML=ACCEL_COLDEF_HTML;
+  var els2=document.querySelectorAll(".accel-remote-coldef");
+  for(var j=0;j<els2.length;j++) els2[j].innerHTML=ACCEL_REMOTE_COLDEF_HTML;
 }
+
+// 원격 관련 두 숫자가 왜 다른지 — 운영자가 가장 많이 물을 지점이라 표 위에 고정으로 적어둔다.
+// ⚠️ '실적로그가 정본'은 운영자 확인 사실이다(2026-07-22). 진행이 안 되면 상담원이 콜리스트에서
+//    원격 표기를 지우고, 그게 미러링으로 로우데이터까지 넘어가 뒤늦게 값이 사라진다.
+var ACCEL_REMOTE_COLDEF_HTML =
+    '<span class="cd-row"><span class="cd-k">원격접수</span> <b>실적로그 M열(원격설치 접수)</b> = 그날 원격으로 접수된 건수. <b>이 숫자가 정본</b>입니다 — 실적로그는 그날 적재된 스냅샷이라 사후에 변하지 않습니다.</span>'
+  + '<span class="cd-row"><span class="cd-k">그중 당일완결</span> 접수된 원격 중 <b>그날 통화로 그날 설치까지 끝난 건</b>(로우데이터 N열 기준). <span class="cd-warn">⚠️ 이 칸은 로우데이터라 시간이 지나면 줄어듭니다</span> — 진행이 안 된 건은 상담원이 <b>콜리스트에서 원격 표기를 지우고</b> 그게 로우데이터까지 미러링되기 때문입니다. <b>당일~어제치만 신뢰</b>하세요.</span>'
+  + '<span class="cd-row"><span class="cd-k">왜 두 숫자가 다른가</span> 모수가 다릅니다. 원격접수는 <b>접수만 되면</b> 계상되고, 당일완결은 거기에 <b>그날 설치까지 끝났을 것</b>이 더 붙습니다 → <b>당일완결 ≤ 원격접수</b>가 정상입니다. 실측(07/21): 접수 15건 중 12건 당일완결, 판정 예외 0건.</span>'
+  + '<span class="cd-row"><span class="cd-k">과거 행이 0</span> 당일완결은 R열(마지막통화일)=S열(설치일)로 판정하는데 R은 <b>마지막 통화 1회만</b> 남습니다. 나중에 다시 통화하면 과거 흔적이 덮여 사라지므로 <b>며칠 지난 행은 0으로 떨어집니다</b>(고장 아님). 접수량은 왼쪽 실적로그 칸으로 보세요.</span>';
 
 function renderAccelDevTable(rows){
   var head='<thead><tr>'
@@ -2198,9 +2218,12 @@ function renderAccelSdTable(rows){
     + '<th>콜시도 대비<br><small class="th-tgt">설치예정율</small></th>'
     + '<th>당일 통화건<br><small class="th-tgt">R열 기준</small></th>'
     + '<th>당일설치 완료<br><small class="th-tgt">U=설치예정 · R=S</small></th>'
-    + '<th>그중 원격접수</th><th>설치예정 대비<br><small class="th-tgt">당일설치÷D</small></th>'
+    + '<th>설치예정 대비<br><small class="th-tgt">당일설치÷D</small></th>'
+    + '<th class="grp gl" title="실적로그 M열. 원격 접수량의 정본이며 사후에 변하지 않습니다.">원격접수<br><small class="th-tgt">실적로그 M · 정본</small></th>'
+    + '<th class="grp" title="접수한 원격 중 그날 설치까지 끝난 건(로우데이터 N열 기준).">그중 당일완결<br><small class="th-tgt">로우 N열</small></th>'
+    + '<th class="grp gr">당일완결률</th>'
     + '</tr></thead>';
-  if(!rows.length){ document.getElementById("accelSdTable").innerHTML = head+'<tbody><tr><td colspan="8" style="text-align:center;color:var(--muted)">데이터 없음</td></tr></tbody>'; return; }
+  if(!rows.length){ document.getElementById("accelSdTable").innerHTML = head+'<tbody><tr><td colspan="10" style="text-align:center;color:var(--muted)">데이터 없음</td></tr></tbody>'; return; }
   var recent=rows.slice(-ACCEL_TABLE_DAYS), lastIdx=recent.length-1;
   var body=recent.map(function(w,i){
     var prev=i>0?recent[i-1]:null;
@@ -2212,8 +2235,10 @@ function renderAccelSdTable(rows){
       + wowCell(w.plannedRate, prev?prev.plannedRate:null, {valFn:shipPct, unit:"%"})
       + wowCell(w.contacted, prev&&prev.contacted)
       + wowCell(w.installs, prev&&prev.installs)
-      + wowCell(w.remote, prev&&prev.remote, {share: w.installs>0?Math.round(w.remote/w.installs*100):null})
       + wowCell(w.ofPlanned, prev?prev.ofPlanned:null, {valFn:shipPct, unit:"%"})
+      + wowCell(w.logRemote, prev&&prev.logRemote)
+      + wowCell(w.remote, prev&&prev.remote)
+      + wowCell(w.remoteSameDayRate, prev?prev.remoteSameDayRate:null, {valFn:shipPct, unit:"%"})
       + '</tr>';
   }).reverse().join("");
   document.getElementById("accelSdTable").innerHTML = head+'<tbody>'+body+'</tbody>';
