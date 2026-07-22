@@ -399,6 +399,11 @@
   .acl .acl-sep { color: var(--muted); }
   .acl .acl-tail { color: var(--muted); font-size: 11.5px; margin-left: auto; }
   .acl .acl-empty { padding: 14px; color: var(--muted); font-size: 12.5px; }
+  /* 집계 자체가 불가능한 구간을 알리는 경고 배너(0으로 그리면 거짓이 되는 경우) */
+  .acl-warn { margin: 8px 0 12px; padding: 11px 14px; border-radius: 10px; font-size: 12.5px; line-height: 1.65;
+    color: var(--text-secondary); background: color-mix(in srgb, var(--s-orange) 10%, transparent);
+    border-left: 3px solid var(--s-orange); word-break: keep-all; }
+  .acl-warn b { color: var(--text-primary); }
 
   /* Passcode gate */
   #gate { position: fixed; inset: 0; background: var(--page); z-index: 100; display:flex; align-items:center; justify-content:center; }
@@ -559,7 +564,8 @@
     <div class="grid">
       <div class="card col-12">
         <h3>📞 통화 → 당일설치 · 일자별 한 줄 요약</h3>
-        <div class="sub"><b>통화당일설치</b> 탭과 동일 판정 — U열(통화시점상태)=설치예정 이면서 R열(마지막통화일)=S열(설치일) · <b>원격접수건</b>=그중 N열(외주/원격)에 '원격'이 들어간 건 · <b>당일 통화건</b>은 R열 기준이라 <b>과거 날짜일수록 과소집계</b>됩니다(R은 마지막 1회만 남음) → 콜 시도량의 정본은 실적로그 K열</div>
+        <div class="sub"><b>통화당일설치</b> 탭과 동일 판정 · <b>당일 통화건</b>=로우데이터 <b>U열(통화시점상태)이 '설치예정'</b>인 건 = 부재가 아니라 <b>실제로 통화가 된 매장</b> · <b>설치완료건</b>=그중 R열(마지막통화일)=S열(설치일) · <b>원격접수건</b>=그중 N열(외주/원격)에 '원격'이 들어간 건 · 세 숫자는 <b>포함관계</b>입니다</div>
+        <div class="acl-warn" id="accelSdNote" style="display:none"></div>
         <div id="accelSdLines" class="acl"></div>
       </div>
       <div class="card col-12">
@@ -784,7 +790,15 @@ function setDefaults() {
   Chart.defaults.plugins.datalabels.display = false; // opt-in per chart
   Chart.defaults.plugins.legend.display = false;
   Chart.defaults.plugins.tooltip.backgroundColor = C["--text-primary"];
-  Chart.defaults.plugins.tooltip.padding = 10;
+  // 툴팁 글자가 작아 회의 중 화면공유로 안 보인다는 지적(2026-07-22) → 기본 12px에서 약 2배로 키움.
+  // 전 탭 공통으로 적용한다(같은 불편이 모든 차트에 있음). 여백·색상칩도 함께 키워야 균형이 맞는다.
+  Chart.defaults.plugins.tooltip.padding = 16;
+  Chart.defaults.plugins.tooltip.titleFont = { size: 19, weight: "700" };
+  Chart.defaults.plugins.tooltip.bodyFont = { size: 22, weight: "600" };
+  Chart.defaults.plugins.tooltip.boxWidth = 16;
+  Chart.defaults.plugins.tooltip.boxHeight = 16;
+  Chart.defaults.plugins.tooltip.boxPadding = 8;
+  Chart.defaults.plugins.tooltip.caretSize = 9;
   Chart.defaults.plugins.tooltip.cornerRadius = 8;
   Chart.defaults.plugins.tooltip.titleColor = C["--surface-1"];
   Chart.defaults.plugins.tooltip.bodyColor = C["--surface-1"];
@@ -2042,6 +2056,39 @@ function renderShipDaily(ship){
 var ACCEL_LINE_DAYS = 10;   // 한 줄 요약에 노출할 최근 일수(표는 더 길게 본다)
 var ACCEL_TABLE_DAYS = 30;
 
+// ⚠️ 날짜 카테고리가 적으면 막대가 슬롯 전체로 퍼져 "어느 날짜의 막대인지" 안 보인다(운영자 지적 2026-07-22).
+//    날짜가 2개일 때 한 슬롯이 600px씩 잡혀 같은 날 막대 3개가 100px씩 벌어지고,
+//    x축 라벨은 가운데 막대 밑에만 붙어 첫 막대가 어느 날 것인지 읽히지 않았다.
+//    → 날짜 수에 따라 그룹 폭(categoryPercentage)을 좁히고 막대는 서로 붙인다(barPercentage=1).
+//
+// 🚨 여기에 maxBarThickness 를 같이 주면 안 된다. 좁은 categoryPercentage 와 겹치면 Chart.js 가
+//    막대 폭을 0으로 계산해 **막대가 통째로 사라진다**(축·범례는 그대로라 '데이터가 없는' 것처럼 보임).
+//    실제로 겪음: cat .26 + barPct 1 + maxBarThickness 58 → 폭 0. 셋 중 maxBarThickness 만 빼면 정상.
+//    전역 Chart.defaults.datasets.bar.maxBarThickness(46)로 충분하다 — 슬롯이 이미 좁아
+//    46px 상한에 걸려도 막대끼리 몇 px 만 떨어져 한 덩어리로 읽힌다.
+function acBarGeom(n){
+  return {
+    categoryPercentage: n<=2 ? .26 : n<=4 ? .40 : n<=8 ? .58 : .76,
+    barPercentage: 1
+  };
+}
+// 날짜 라벨 — 적을 땐 요일까지 보여 어느 날인지 분명히(7.21(화)), 많을 땐 짧게(7/21)
+function acLabels(rows){ return rows.map(function(x){ return rows.length<=14 ? dyLabelW(x.date) : dyLabel(x.date); }); }
+// 날짜축 눈금 — 카테고리가 적으면 전부 표시하고 글자도 키운다
+function acXTicks(n){
+  return { color:C["--text-secondary"], maxRotation:0, autoSkip:n>14, maxTicksLimit:21,
+    font:{ size: n<=14 ? 12.5 : 11, weight:"700" } };
+}
+// 선 그래프 점 위 숫자 — 점이 많으면 겹치므로 14개 이하일 때만
+function acLineDL(unit){
+  return { display:function(ctx){ return ctx.chart.data.labels.length<=14 && ctx.dataset.data[ctx.dataIndex]!=null; },
+    anchor:"end", align:"top", offset:4, clamp:true,
+    color:C["--text-primary"], font:{weight:"700",size:11.5},
+    backgroundColor:C["--surface-1"], borderRadius:4, padding:{top:2,bottom:1,left:5,right:5},
+    formatter:function(v){ return v+unit; } };
+}
+var AC_BAR_DL = {font:{weight:"700",size:12.5}};   // 막대 위 숫자(기본 9px는 너무 작다는 지적)
+
 // 사용자 요청 표기: "21일 배송업데이트 54건 / 설치완료건 21건 / …" — 일(日) + 요일만 붙인다.
 function aclDay(s){ var p=s.split("-"); var d=new Date(+p[0],+p[1]-1,+p[2]); return (+p[2])+"일("+DY_WD[d.getDay()]+")"; }
 function aclSeg(label, val, unit, hi){
@@ -2083,16 +2130,16 @@ function renderAccel(a){
     }).reverse().join("");
   }
 
-  var dLabels = dev.map(function(x){ return dyLabel(x.date); });
+  var dGeom = acBarGeom(dev.length);
   mk("acDev", { type:"bar",
-    data:{ labels:dLabels, datasets:[
-      { type:"bar", label:"배송업데이트", data:dev.map(function(x){return x.delivered;}), backgroundColor:C["--s-blue-l"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, datalabels:dlBarTop({font:{weight:"600",size:9}}) },
-      { type:"bar", label:"설치완료", data:dev.map(function(x){return x.installed;}), backgroundColor:C["--s-aqua"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, datalabels:dlBarTop({font:{weight:"600",size:9}}) },
-      { type:"bar", label:"당일설치", data:dev.map(function(x){return x.sameDay;}), backgroundColor:C["--s-violet"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, datalabels:dlBarTop({font:{weight:"600",size:9}}) },
-      { type:"line", label:"평균설치소요일(일)", data:dev.map(function(x){return x.avgLeadDays==null?null:Math.round(x.avgLeadDays*10)/10;}), borderColor:C["--s-blue-d"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--s-blue-d"], spanGaps:true }
+    data:{ labels:acLabels(dev), datasets:[
+      Object.assign({ type:"bar", label:"배송업데이트", data:dev.map(function(x){return x.delivered;}), backgroundColor:C["--s-blue-l"], yAxisID:"y", borderRadius:3, datalabels:dlBarTop(AC_BAR_DL) }, dGeom),
+      Object.assign({ type:"bar", label:"설치완료", data:dev.map(function(x){return x.installed;}), backgroundColor:C["--s-aqua"], yAxisID:"y", borderRadius:3, datalabels:dlBarTop(AC_BAR_DL) }, dGeom),
+      Object.assign({ type:"bar", label:"당일설치", data:dev.map(function(x){return x.sameDay;}), backgroundColor:C["--s-violet"], yAxisID:"y", borderRadius:3, datalabels:dlBarTop(AC_BAR_DL) }, dGeom),
+      { type:"line", label:"평균설치소요일(일)", data:dev.map(function(x){return x.avgLeadDays==null?null:Math.round(x.avgLeadDays*10)/10;}), borderColor:C["--s-blue-d"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2.4, borderDash:[5,3], tension:.3, pointRadius:4, pointBackgroundColor:C["--s-blue-d"], spanGaps:true, datalabels:acLineDL("일") }
     ]},
     options:{ scales:{
-      x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:21}},
+      x:{grid:{display:false},ticks:acXTicks(dev.length)},
       y:{position:"left",beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]},title:{display:true,text:"건수",color:C["--muted"],font:{size:11}}},
       y1:{position:"right",beginAtZero:true,grid:{drawOnChartArea:false},ticks:{color:C["--muted"],callback:function(v){return v+"일";}},title:{display:true,text:"소요일",color:C["--muted"],font:{size:11}}}
     },
@@ -2105,15 +2152,31 @@ function renderAccel(a){
   paintAccelColdef();
 
   // ----- 통화 축 -----
+  // 🔴 U열(통화시점상태)이 2026-07-21에 신설됐다. 그 이전 날짜는 '설치예정을 잡은 통화'인지
+  //    판별할 근거가 아예 없다(J열은 설치완료로 덮여 되짚을 수 없음) → 0으로 그리면 거짓이라
+  //    화면에서 통째로 제외하고, 몇 일을 뺐는지 명시한다. 시간이 지나면 자동으로 늘어난다.
+  var sdAll = sd;
+  sd = sd.filter(function(x){ return x.uReady; });
+  var sdSkipped = sdAll.length - sd.length;
+  var sdNote = document.getElementById("accelSdNote");
+  if (sdNote) {
+    sdNote.innerHTML = sdSkipped > 0
+      ? '⚠️ <b>' + (a.samedayStart || "2026-07-21") + ' 이전 ' + sdSkipped + '일은 제외</b>했습니다 — '
+        + '통화당일설치 판별에 쓰는 <b>U열(통화시점상태)이 그날 신설</b>돼 이전 데이터가 존재하지 않습니다. '
+        + '0으로 표시하면 "그날은 당일설치가 없었다"는 뜻이 되어 뺐습니다. 날이 갈수록 구간이 늘어납니다.'
+      : '';
+    sdNote.style.display = sdSkipped > 0 ? "block" : "none";
+  }
+
   document.getElementById("accel-sd-tiles").innerHTML =
-    dayTile("당일 통화건","📞", sd, "contacted", {accent:true}) +
-    dayTile("통화당일 설치완료","⚡", sd, "installs") +
-    dayTile("원격접수 정본","💻", sd, "logRemote", {tip:"원격 접수량의 <b>정본</b>입니다.<br><br>로우데이터 N열(외주/원격)은 진행이 안 되면 상담원이 <b>콜리스트에서 지워버려</b> 나중에 값이 사라집니다(미러링으로 로우데이터까지 반영). 실적로그는 그날 적재된 스냅샷이라 사후에 흔들리지 않습니다."}) +
-    dayTile("그중 당일완결","✅", sd, "remote", {tip:"접수한 원격 중 <b>그날 설치까지 끝난 건</b>(로우데이터 N열 기준).<br><br>분자가 로우데이터라 시간이 지나면 줄어듭니다 → <b>당일~어제치만 신뢰</b>하세요."}) +
-    dayTile("원격 당일완결률","📈", sd, "remoteSameDayRate", {valFn:shipPct, unit:"%"}) +
+    dayTile("당일 통화건","📞", sd, "contacted", {accent:true, tip:"로우데이터 <b>U열(통화시점상태)='설치예정'</b>이면서 마지막통화일(R)이 그날인 건.<br><br>부재가 아니라 <b>실제로 통화가 된 매장</b>만 셉니다. U열은 2026-07-21 신설이라 그 이전은 집계 불가입니다."}) +
+    dayTile("당일 설치완료","⚡", sd, "installs", {tip:"위 당일 통화건 중 <b>마지막통화일(R) = 설치일(S)</b> 인 건. 통화한 그 자리에서 설치까지 끝난 건입니다."}) +
+    dayTile("원격접수","💻", sd, "logRemote", {tip:"원격 접수량의 <b>정본</b>입니다.<br><br>로우데이터 N열(외주/원격)은 진행이 안 되면 상담원이 <b>콜리스트에서 지워버려</b> 나중에 값이 사라집니다(미러링으로 로우데이터까지 반영). 실적로그는 그날 적재된 스냅샷이라 사후에 흔들리지 않습니다."}) +
+    dayTile("원격 당일완결","✅", sd, "remote", {tip:"접수한 원격 중 <b>그날 설치까지 끝난 건</b>(로우데이터 N열 기준).<br><br>분자가 로우데이터라 시간이 지나면 줄어듭니다 → <b>당일~어제치만 신뢰</b>하세요."}) +
+    dayTile("원격 완결률","📈", sd, "remoteSameDayRate", {valFn:shipPct, unit:"%"}) +
     dayTile("콜시도(K열)","☎️", sd, "calls") +
     dayTile("설치예정(D열)","🗓️", sd, "planned") +
-    dayTile("설치예정 전환율","📊", sd, "plannedRate", {valFn:shipPct, unit:"%", tip:"실적로그 <b>D열(설치예정) ÷ K열(콜시도 총계)</b> — 그날 콜을 걸어 설치예정을 얼마나 잡았는지."});
+    dayTile("예정 전환율","📊", sd, "plannedRate", {valFn:shipPct, unit:"%", tip:"실적로그 <b>D열(설치예정) ÷ K열(콜시도 총계)</b> — 그날 콜을 걸어 설치예정을 얼마나 잡았는지."});
 
   var sdLines = document.getElementById("accelSdLines");
   if(!sd.length){
@@ -2134,16 +2197,16 @@ function renderAccel(a){
     }).reverse().join("");
   }
 
-  var sLabels = sd.map(function(x){ return dyLabel(x.date); });
+  var sGeom = acBarGeom(sd.length);
   mk("acSd", { type:"bar",
-    data:{ labels:sLabels, datasets:[
-      { type:"bar", label:"콜시도(K열)", data:sd.map(function(x){return x.calls;}), backgroundColor:C["--s-yellow"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, datalabels:dlBarTop({font:{weight:"600",size:9}}) },
-      { type:"bar", label:"설치예정(D열)", data:sd.map(function(x){return x.planned;}), backgroundColor:C["--s-blue"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, datalabels:dlBarTop({font:{weight:"600",size:9}}) },
-      { type:"line", label:"통화당일 설치완료", data:sd.map(function(x){return x.installs;}), borderColor:C["--s-violet"], backgroundColor:"transparent", yAxisID:"y", borderWidth:2.6, tension:.3, pointRadius:2, pointBackgroundColor:C["--s-violet"] },
-      { type:"line", label:"콜시도 대비 설치예정(%)", data:sd.map(function(x){return x.plannedRate==null?null:Math.round(x.plannedRate*100);}), borderColor:C["--good"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--good"], spanGaps:true }
+    data:{ labels:acLabels(sd), datasets:[
+      Object.assign({ type:"bar", label:"콜시도(K열)", data:sd.map(function(x){return x.calls;}), backgroundColor:C["--s-yellow"], yAxisID:"y", borderRadius:3, datalabels:dlBarTop(AC_BAR_DL) }, sGeom),
+      Object.assign({ type:"bar", label:"설치예정(D열)", data:sd.map(function(x){return x.planned;}), backgroundColor:C["--s-blue"], yAxisID:"y", borderRadius:3, datalabels:dlBarTop(AC_BAR_DL) }, sGeom),
+      Object.assign({ type:"bar", label:"통화당일 설치완료", data:sd.map(function(x){return x.installs;}), backgroundColor:C["--s-violet"], yAxisID:"y", borderRadius:3, datalabels:dlBarTop(AC_BAR_DL) }, sGeom),
+      { type:"line", label:"콜시도 대비 설치예정(%)", data:sd.map(function(x){return x.plannedRate==null?null:Math.round(x.plannedRate*100);}), borderColor:C["--good"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2.4, borderDash:[5,3], tension:.3, pointRadius:4, pointBackgroundColor:C["--good"], spanGaps:true, datalabels:acLineDL("%") }
     ]},
     options:{ scales:{
-      x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:21}},
+      x:{grid:{display:false},ticks:acXTicks(sd.length)},
       y:{position:"left",beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]},title:{display:true,text:"건수",color:C["--muted"],font:{size:11}}},
       y1:{position:"right",beginAtZero:true,max:100,grid:{drawOnChartArea:false},ticks:{color:C["--muted"],callback:function(v){return v+"%";}},title:{display:true,text:"전환율",color:C["--muted"],font:{size:11}}}
     },
@@ -2177,7 +2240,8 @@ var ACCEL_REMOTE_COLDEF_HTML =
     '<span class="cd-row"><span class="cd-k">원격접수</span> <b>실적로그 M열(원격설치 접수)</b> = 그날 원격으로 접수된 건수. <b>이 숫자가 정본</b>입니다 — 실적로그는 그날 적재된 스냅샷이라 사후에 변하지 않습니다.</span>'
   + '<span class="cd-row"><span class="cd-k">그중 당일완결</span> 접수된 원격 중 <b>그날 통화로 그날 설치까지 끝난 건</b>(로우데이터 N열 기준). <span class="cd-warn">⚠️ 이 칸은 로우데이터라 시간이 지나면 줄어듭니다</span> — 진행이 안 된 건은 상담원이 <b>콜리스트에서 원격 표기를 지우고</b> 그게 로우데이터까지 미러링되기 때문입니다. <b>당일~어제치만 신뢰</b>하세요.</span>'
   + '<span class="cd-row"><span class="cd-k">왜 두 숫자가 다른가</span> 모수가 다릅니다. 원격접수는 <b>접수만 되면</b> 계상되고, 당일완결은 거기에 <b>그날 설치까지 끝났을 것</b>이 더 붙습니다 → <b>당일완결 ≤ 원격접수</b>가 정상입니다. 실측(07/21): 접수 15건 중 12건 당일완결, 판정 예외 0건.</span>'
-  + '<span class="cd-row"><span class="cd-k">과거 행이 0</span> 당일완결은 R열(마지막통화일)=S열(설치일)로 판정하는데 R은 <b>마지막 통화 1회만</b> 남습니다. 나중에 다시 통화하면 과거 흔적이 덮여 사라지므로 <b>며칠 지난 행은 0으로 떨어집니다</b>(고장 아님). 접수량은 왼쪽 실적로그 칸으로 보세요.</span>';
+  + '<span class="cd-row"><span class="cd-k">시작일</span> 통화 축 전체가 <b>U열(통화시점상태)</b>에 의존합니다. <span class="cd-warn">U열은 2026-07-21에 신설된 컬럼이라 그 이전 날짜는 집계가 불가능</span>합니다 — <b>J열(상태)로 대신할 수 없습니다.</b> 설치가 끝나면 J는 \'설치완료\'로 덮여, 그 통화 시점에 설치예정이었는지 되짚을 수 없기 때문입니다. 이전 구간은 0이 아니라 <b>표시에서 제외</b>했습니다.</span>'
+  + '<span class="cd-row"><span class="cd-k">R열 한계</span> 당일설치는 R열(마지막통화일)=S열(설치일)로 판정하는데 R은 <b>마지막 통화 1회만</b> 남습니다. 나중에 다시 통화하면 과거 흔적이 덮이므로 <b>며칠 지난 행은 값이 내려갈 수 있습니다.</b> 접수량 추이는 사후에 안 변하는 왼쪽 <b>실적로그</b> 칸으로 보세요.</span>';
 
 function renderAccelDevTable(rows){
   var head='<thead><tr>'
