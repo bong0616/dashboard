@@ -375,6 +375,16 @@
   /* 설치가속화 통화표 — 원격 그룹은 8~10열이라 위 5·7열 고정 규칙으로는 안 잡힌다(본문 셀만 별도 지정) */
   table.dtable#accelSdTable td:nth-child(8) { border-left: 1.5px solid color-mix(in srgb, var(--s-aqua) 42%, transparent); }
   table.dtable#accelSdTable td:nth-child(10) { border-right: 1.5px solid color-mix(in srgb, var(--s-aqua) 42%, transparent); }
+  /* 설치가속화 배송반영 상세표 — 성격이 다른 세 묶음이라 경계를 긋는다(2026-07-23 요청).
+     ① 2~4열 콜 투입(실적로그 K·D) ② 5~7열 배송 코호트 건수(T열 각인) ③ 8~10열 비율·소요일
+     ⚠️ 이 표는 no-grp 라 위 nth-child(5)/(7) 기본 규칙이 꺼져 있다. ID 선택자로 다시 켜는 것이므로
+        (ID 1개 > no-grp 클래스) 특이도로 이긴다. no-grp 를 떼는 방식은 쓰지 말 것 —
+        기본 규칙이 7열에 오른쪽 선까지 그어 8열 왼쪽 선과 겹쳐 이중선이 된다.
+     ⚠️ 열 순서를 바꾸면 이 숫자도 같이 바꿔야 한다. renderAccelDevTable 의 th 순서가 정본이다. */
+  table.dtable#accelDevTable th:nth-child(5), table.dtable#accelDevTable td:nth-child(5),
+  table.dtable#accelDevTable th:nth-child(8), table.dtable#accelDevTable td:nth-child(8) {
+    border-left: 1.5px solid color-mix(in srgb, var(--s-aqua) 42%, transparent);
+  }
   /* 출고월별 현재 상태 표 — 셀 = 건수 + 그 달 출고 대비 % */
   table.dtable .cell-pct2 { font-size: 10.5px; font-weight: 600; color: var(--muted); margin-left: 5px; }
   /* 주차별 D+N 누적 설치완료율 표 — 33열 가로스크롤 + 좌측 2열 고정 + 히트맵 */
@@ -434,7 +444,10 @@
     background: color-mix(in srgb, var(--s-blue) 6%, transparent); border-bottom: 1px solid var(--border); }
   .acg-row.cur .acg-head { background: color-mix(in srgb, var(--s-blue) 13%, transparent); }
   .acg-d { font-size: 14.5px; font-weight: 800; color: var(--text-primary); }
-  .acg-hint { font-size: 11.5px; color: var(--muted); margin-left: auto; }
+  /* 통화완료건 대비 설치완료율 배지. 2026-07-23 요청으로 키우고 진하게 했다(11.5px/muted → 13.5px/secondary).
+     날짜(acg-d 14.5px/800)보다는 작게 유지한다 — 넘어서면 행의 시선 순서가 뒤집힌다. */
+  .acg-hint { font-size: 13.5px; font-weight: 600; color: var(--text-secondary); margin-left: auto; }
+  .acg-hint b { font-weight: 800; color: var(--text-primary); }
   .acg-cells { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); }
   .acg-cell { padding: 12px 14px; border-right: 1px solid var(--border); min-width: 0; }
   .acg-cell:last-child { border-right: 0; }
@@ -594,7 +607,7 @@
     <div class="tiles" id="accel-dev-tiles"></div>
     <div class="grid">
       <div class="card col-12">
-        <h3>🚚 배송완료 → 설치 · 일자별 한 줄 요약</h3>
+        <h3>🚚 당일배송/당일설치완료 요약</h3>
         <div class="sub">로우데이터 <b>T열(당일배송반영)</b>에 그 날짜가 찍힌 건들의 코호트 · <b>배송업데이트</b>=그날 배송완료로 전환된 건 · <b>당일설치건</b>=설치일(S)−T가 0일 · <b>배송소요일</b>=T−출고일(H) · <b>평균설치소요일</b>=S−T · 과거 코호트도 매 조회 시 재계산되므로 설치가 뒤늦게 찍히면 숫자가 올라갑니다 · <b style="color:var(--s-blue-d)">연파랑 행(평균↑)</b>은 배송업데이트가 <b>일평균 이상</b>인 날 — 요일별 물량 쏠림을 보세요</div>
         <div id="accelDevLines" class="acl"></div>
       </div>
