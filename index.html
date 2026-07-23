@@ -494,25 +494,31 @@
 
   /* 설치가속화 통화 축 — 슬래시 나열은 칸 구분이 안 돼 읽기 힘들다는 지적(2026-07-22).
      날짜당 한 행, 지표당 넓은 칸(라벨·숫자·출처를 세로로) 으로 바꾼다. */
-  .acg { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+  .acg { display: flex; flex-direction: column; gap: 7px; margin-top: 4px; }
   .acg-row { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface-1); }
   .acg-row.cur { border-color: color-mix(in srgb, var(--s-blue) 45%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--s-blue) 22%, transparent); }
-  .acg-head { display: flex; align-items: baseline; gap: 10px; padding: 9px 14px;
+  .acg-head { display: flex; align-items: baseline; gap: 10px; padding: 6px 12px;
     background: color-mix(in srgb, var(--s-blue) 6%, transparent); border-bottom: 1px solid var(--border); }
   .acg-row.cur .acg-head { background: color-mix(in srgb, var(--s-blue) 13%, transparent); }
-  .acg-d { font-size: 14.5px; font-weight: 800; color: var(--text-primary); }
-  /* 통화완료건 대비 설치완료율 배지. 2026-07-23 요청으로 키우고 진하게 했다(11.5px/muted → 13.5px/secondary).
-     날짜(acg-d 14.5px/800)보다는 작게 유지한다 — 넘어서면 행의 시선 순서가 뒤집힌다. */
-  .acg-hint { font-size: 13.5px; font-weight: 600; color: var(--text-secondary); margin-left: auto; }
+  .acg-d { font-size: 13px; font-weight: 800; color: var(--text-primary); }
+  /* 통화완료건 대비 설치완료율 배지 — 날짜(acg-d)보다는 작게 유지한다. 넘어서면 행의 시선 순서가 뒤집힌다. */
+  .acg-hint { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-left: auto; }
   .acg-hint b { font-weight: 800; color: var(--text-primary); }
-  .acg-cells { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); }
-  .acg-cell { padding: 12px 14px; border-right: 1px solid var(--border); min-width: 0; }
+  .acg-cells { display: grid; grid-template-columns: repeat(auto-fit, minmax(146px, 1fr)); }
+  /* 🔻 일자별 블록 압축(운영자 요청 2026-07-23 '일데이터 크기 축소').
+     라벨/숫자/출처를 3줄로 쌓던 것을 → [라벨 … 숫자] 한 줄 + 출처 한 줄, 2줄로 줄였다.
+     칸 높이가 약 절반이 되어 위 '당일배송 요약'(.acl 한 줄 요약)과 밀도가 비슷해진다.
+     ⚠️ 출처(.acg-s)는 지우지 않는다 — 어느 시트 어느 열에서 온 숫자인지가 이 카드의 신뢰 근거다.
+        flex-basis:100% 로 강제 개행시켜 살려 둔다. */
+  .acg-cell { padding: 7px 11px; border-right: 1px solid var(--border); min-width: 0;
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 1px 8px; }
   .acg-cell:last-child { border-right: 0; }
-  .acg-k { display: block; font-size: 11.5px; font-weight: 700; color: var(--text-secondary); white-space: nowrap; }
-  .acg-v { display: block; margin-top: 5px; font-size: 25px; font-weight: 800; color: var(--text-primary);
-    line-height: 1.1; font-variant-numeric: tabular-nums; }
-  .acg-v i { font-style: normal; font-size: 13px; font-weight: 700; color: var(--muted); margin-left: 2px; }
-  .acg-s { display: block; margin-top: 3px; font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+  .acg-k { flex: 1 1 auto; font-size: 11px; font-weight: 700; color: var(--text-secondary); white-space: nowrap; }
+  .acg-v { flex: 0 0 auto; font-size: 18px; font-weight: 800; color: var(--text-primary);
+    line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .acg-v i { font-style: normal; font-size: 11px; font-weight: 700; color: var(--muted); margin-left: 2px; }
+  .acg-s { flex: 1 0 100%; font-size: 10px; color: var(--muted); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; }
   .acg-cell.hi { background: color-mix(in srgb, var(--s-violet) 8%, transparent); }
   .acg-cell.hi .acg-v { color: var(--s-violet); }
   /* 상세(원격) 칸 — 본 지표의 하위임을 배경과 좌측선으로 구분 */
@@ -520,11 +526,22 @@
   .acg-cell.sub .acg-k::before { content: "└ "; color: var(--muted); font-weight: 400; }
   /* 원격 묶음의 머리칸(총계) — 하위항목이 아니므로 '└' 를 붙이지 않는다 */
   .acg-cell.subtop .acg-k::before { content: none; }
-  .acg-cell.sub .acg-v { font-size: 21px; }
+  .acg-cell.sub .acg-v { font-size: 16px; }
   /* 라벨이 길어져도(당일 총 원격접수건) 칸 밖으로 새지 않게 */
   .acg-k { overflow: hidden; text-overflow: ellipsis; }
   .acg-empty { padding: 16px; color: var(--muted); font-size: 12.5px; }
-  @media (max-width: 900px) { .acg-cells { grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); } .acg-v { font-size: 21px; } }
+  @media (max-width: 900px) { .acg-cells { grid-template-columns: repeat(auto-fit, minmax(124px, 1fr)); } .acg-v { font-size: 16px; } }
+
+  /* 📦 카드 묶음 — 타일 6~8개와 '그 타일을 날짜별로 풀어 쓴 요약 카드'는 같은 계열인데
+     따로 떠 있어 가독성이 나쁘다는 지적(운영자 2026-07-23). 한 판으로 묶어 계열을 눈에 보이게 한다.
+     ⚠️ 묶음 안쪽은 반드시 .grid 를 유지할 것 — 배치 편집(layoutContainers)이 .grid/.stack 만
+        컨테이너로 인식한다. .cgrp 를 카드의 직접 부모로 만들면 그 카드가 편집에서 빠진다. */
+  .cgrp { border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 18px;
+    background: color-mix(in srgb, var(--s-blue) 3.5%, transparent); }
+  .cgrp > .tiles { margin-bottom: 14px; }
+  .cgrp-t { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; margin: 0 2px 12px;
+    font-size: 14.5px; font-weight: 800; letter-spacing: -.3px; color: var(--text-primary); }
+  .cgrp-t small { font-size: 11.5px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
 
   /* Passcode gate */
   #gate { position: fixed; inset: 0; background: var(--page); z-index: 100; display:flex; align-items:center; justify-content:center; }
@@ -678,13 +695,19 @@
 
   <!-- ACCEL (설치가속화 Action) — 첫 화면(운영자 지정 2026-07-23) -->
   <section class="tab-content active" id="tab-accel">
-    <div class="tiles" id="accel-dev-tiles"></div>
-    <div class="grid">
-      <div class="card col-12" data-cid="accelDevLines">
+    <!-- 📦 배송 계열 묶음 — 타일(일평균)과 그것을 날짜별로 풀어 쓴 요약은 같은 데이터다. 한 판에 넣는다. -->
+    <div class="cgrp">
+      <div class="cgrp-t">🚚 배송반영 계열 <small>타일 = 구간 일평균 · 아래 = 그 값을 날짜별로 풀어 쓴 것 (같은 데이터)</small></div>
+      <div class="tiles" id="accel-dev-tiles"></div>
+      <div class="grid">
+        <div class="card col-12" data-cid="accelDevLines">
         <h3>🚚 당일배송/당일설치완료 요약</h3>
         <div class="sub">로우데이터 <b>T열(당일배송반영)</b>에 그 날짜가 찍힌 건들의 코호트 · <b>배송업데이트</b>=그날 배송완료로 전환된 건 · <b>당일설치건</b>=설치일(S)−T가 0일 · <b>배송소요일</b>=T−출고일(H) · <b>평균설치소요일</b>=S−T · 과거 코호트도 매 조회 시 재계산되므로 설치가 뒤늦게 찍히면 숫자가 올라갑니다 · <b style="color:var(--s-blue-d)">연파랑 행(평균↑)</b>은 배송업데이트가 <b>일평균 이상</b>인 날 — 요일별 물량 쏠림을 보세요</div>
         <div id="accelDevLines" class="acl"></div>
+        </div>
       </div>
+    </div>
+    <div class="grid">
       <div class="card col-12" data-cid="acDev">
         <h3>📊 배송반영 대비 설치 전환</h3>
         <div class="sub">막대=배송업데이트·설치완료·당일설치 <b>(왼쪽축 건수)</b> · 점선=평균 설치소요일 <b>(오른쪽축 일)</b> · 최근 코호트는 아직 설치 진행중이라 완료·소요일이 낮게 나옵니다</div>
@@ -698,15 +721,21 @@
       </div>
     </div>
 
-    <div class="tiles" id="accel-sd-tiles" style="margin-top:4px"></div>
-    <div class="grid">
-      <div class="card col-12" data-cid="accelSdNote">
+    <!-- 📦 통화 계열 묶음 — 위 배송 계열과 같은 구조(타일=일평균, 아래=날짜별 상세) -->
+    <div class="cgrp">
+      <div class="cgrp-t">📞 통화 계열 <small>타일 = 구간 일평균 · 아래 = 그 값을 날짜별로 풀어 쓴 것 (같은 데이터)</small></div>
+      <div class="tiles" id="accel-sd-tiles"></div>
+      <div class="grid">
+        <div class="card col-12" data-cid="accelSdNote">
         <h3>📞 통화 → 당일설치 · 일자별 한 줄 요약</h3>
         <div class="sub">콜 투입부터 당일 설치까지 한 흐름으로 · <b>콜시도·통화성공·부재·원격접수는 실적로그</b>(그날 적재 스냅샷이라 사후에 안 변함) · <b>당일설치·원격 설치완료만 로우데이터</b>(U열=설치예정 ∧ 마지막통화일=설치일) · 상담원 담당자만 집계하며 자가설치·문자발송은 제외합니다 · 행 오른쪽 <b>통화완료건 대비 설치완료율</b>=당일 통화·당일설치 ÷ 통화성공 — 통화가 된 건 중 <b>그날 설치까지 끝난 비율</b>입니다</div>
         <div class="acl-info">⏱️ <b>해당일 +1일부터 값을 확인할 수 있습니다.</b> 당일 건은 업무 종료 후 집계되어 <b>다음날 오전 9시 30분에 갱신</b>됩니다 — 오늘 행이 0으로 보이는 것은 정상이며, 내일 아침에 채워집니다. <b>전일(어제) 행부터 확정값</b>으로 보세요.</div>
         <div class="acl-warn" id="accelSdNote" style="display:none"></div>
         <div id="accelSdLines" class="acg"></div>
+        </div>
       </div>
+    </div>
+    <div class="grid">
       <div class="card col-12" data-cid="acSd">
         <h3>📊 콜시도 → 설치예정 → 당일설치</h3>
         <div class="sub">막대=콜시도(K열)·설치예정(D열) <b>(왼쪽축 건수)</b> · 선=통화당일 설치완료 · 점선=콜시도 대비 설치예정율 <b>(오른쪽축 %)</b></div>
