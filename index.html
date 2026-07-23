@@ -230,6 +230,25 @@
   .sort-btn { cursor:pointer; border:1px solid var(--border); background: var(--page); color: var(--text-secondary); border-radius:5px; font-size:10.5px; font-weight:600; padding:1px 6px; margin-left:5px; font-family:var(--font); }
   .sort-btn:hover { border-color: var(--s-blue); color: var(--s-blue); }
   .sort-btn.active { border-color: var(--s-blue); color:#fff; background: var(--s-blue); }
+  /* 탭 안 섹션 구분 — 한 탭이 성격이 다른 두 묶음을 담게 되면서 추가(2026-07-23 현황판·D+7탭 통합).
+     기준이 다른 카드(현재시점 잔여 vs 선택 주)가 같은 화면에 있으면 반드시 이걸로 갈라 놓을 것. */
+  .sec-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin:30px 0 14px; padding-top:22px; border-top:1px solid var(--border); font-size:15.5px; font-weight:800; letter-spacing:-.3px; color: var(--text-primary); }
+  .sec-head small { font-size:12px; font-weight:500; color: var(--muted); letter-spacing:0; }
+  /* 🟠 임시 표식 — 같은 데이터가 어느 탭에 또 있는지 운영자가 화면에서 보고 삭제를 판단하기 위한 것.
+     정리가 끝나면 dup-tag span 을 지우고 이 CSS 두 줄도 함께 지운다. 남겨두면 운영 화면에 계속 노출된다. */
+  .dup-tag { font-size:10.5px; font-weight:700; color: var(--s-orange); background: color-mix(in srgb, var(--s-orange) 15%, transparent); border-radius:6px; padding:2px 7px; margin-left:6px; vertical-align:middle; white-space:nowrap; }
+  /* 📚 전체 주차 메모(메모장) — 주차별 리포트 탭 하단 */
+  .memo-log { display:flex; flex-direction:column; gap:12px; margin-top:8px; }
+  .memo-item { border:1px solid var(--border); border-radius:12px; padding:13px 15px; background: var(--page); }
+  .memo-item.cur { border-color: var(--s-blue); box-shadow: 0 0 0 1px color-mix(in srgb, var(--s-blue) 28%, transparent); }
+  .memo-h { display:flex; align-items:baseline; gap:9px; flex-wrap:wrap; margin-bottom:7px; }
+  .memo-wk { font-size:13.5px; font-weight:800; color: var(--text-primary); }
+  .memo-badge { font-size:10.5px; font-weight:700; color:#fff; background: var(--s-blue); border-radius:6px; padding:2px 7px; }
+  .memo-kpi { font-size:11.5px; color: var(--muted); font-variant-numeric:tabular-nums; margin-left:auto; }
+  .memo-kpi b { color: var(--text-secondary); font-weight:700; }
+  .memo-body { font-size:13px; line-height:1.75; color: var(--text-secondary); white-space:pre-wrap; word-break:break-word; }
+  .memo-empty { font-size:12.5px; color: var(--muted); padding:22px 0; text-align:center; }
+  .memo-cnt { font-size:11.5px; font-weight:600; color: var(--muted); margin-left:auto; }
   .col-4 { grid-column: span 4; } .col-5 { grid-column: span 5; } .col-6 { grid-column: span 6; }
   .col-7 { grid-column: span 7; } .col-8 { grid-column: span 8; } .col-12 { grid-column: span 12; }
   .chart-wrap { position: relative; width: 100%; }
@@ -520,14 +539,12 @@
     <div class="logo">📊</div>
     <div><b>아이샵케어</b><span>설치 운영 대시보드</span></div>
   </div>
-  <div class="navitem active" data-tab="board"><span class="ic">📊</span><div>현황판<small>주간 회의용 요약</small></div></div>
-  <div class="navitem" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량</small></div></div>
-  <div class="navitem" data-tab="accel"><span class="ic">🚀</span><div>설치가속화 Action<small>배송반영·통화 당일설치</small></div></div>
+  <div class="navitem active" data-tab="accel"><span class="ic">🚀</span><div>설치가속화 Action<small>배송반영·통화 당일설치</small></div></div>
+  <div class="navitem" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량 · 주간 요약</small></div></div>
   <div class="navitem" data-tab="cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div></div>
   <div class="navitem" data-tab="perf" id="nav-perf"><span class="ic">⚡</span><div>성과<small>설치속도·작업량</small></div><span class="navcaret" id="perf-caret">▸</span></div>
   <div class="navitem navchild" data-tab="flow" id="nav-flow" style="display:none"><span class="ic">📈</span><div>월·주·일 흐름<small>기간별 추이</small></div></div>
-  <div class="navitem navchild" data-tab="delayweek" id="nav-delayweek" style="display:none"><span class="ic">🐢</span><div>D+7 초과 지연분석<small>출고 주별 사유</small></div></div>
-  <div class="navitem" data-tab="dept"><span class="ic">🏢</span><div>부서별 지연원인<small>영업·물류·전산·온보딩</small></div></div>
+  <div class="navitem" data-tab="dept"><span class="ic">🏢</span><div>부서별 지연원인<small>부서·사유·출고주별 D+7</small></div></div>
   <div class="navitem" data-tab="weekly" id="nav-weekly"><span class="ic">🗓️</span><div>주간 비교<small>주차별 처리속도현황</small></div><span class="navcaret" id="weekly-caret">▸</span></div>
   <div class="navitem navchild" data-tab="daily" id="nav-daily" style="display:none"><span class="ic">📆</span><div>일간 비교<small>일자별 처리속도현황</small></div></div>
   <div class="navitem" data-tab="shipweekly" id="nav-shipweekly"><span class="ic">🚚</span><div>출고주 비교<small>출고 물량 처리현황</small></div><span class="navcaret" id="shipweekly-caret">▸</span></div>
@@ -543,8 +560,8 @@
 <main id="main" style="display:none">
   <div class="page-head">
     <div>
-      <h1 id="page-title">주간 현황판</h1>
-      <p id="page-desc">주간 회의용 핵심 지표 한눈에 · 전주 대비</p>
+      <h1 id="page-title">설치가속화 Action</h1>
+      <p id="page-desc">배송완료 당일 설치 전환 · 통화 당일 설치 전환</p>
     </div>
     <div class="head-right">
       <div class="filters">
@@ -562,34 +579,19 @@
     </div>
   </div>
 
-  <!-- BOARD (주간 현황판) -->
-  <section class="tab-content active" id="tab-board">
-    <div class="filters" id="board-wksel" style="margin-bottom:14px">
-      <span class="flab">🗓️ 기준 주</span>
-      <select id="board-wk-sel"></select>
-      <span class="board-wk" id="board-wk-hint"></span>
-    </div>
-    <div class="grid" style="margin-bottom:14px">
-      <div class="card col-12"><h3>🎯 월 목표 달성률</h3><div class="sub">이번 달 설치완료 vs 목표(출고 코호트 탭과 동일 데이터) · 목표 수정은 코호트 탭에서</div><div id="achBoardBox" class="ach"></div></div>
-    </div>
-    <div class="tiles" id="board-tiles"></div>
-    <div class="grid">
-      <div class="card col-12"><h3>📝 회의 코멘트 <span id="board-week" class="board-wk"></span></h3><div class="sub">이번 주 회의 메모 · 저장 시 공유(주차별 리포트와 동일 저장소)</div><div id="boardNote" class="rpt-note"></div></div>
-      <div class="card col-12"><h3>🔧 설치 채널 비율</h3><div class="sub">자가설치 vs 상담원(문자발송 합산) · 이번주 %(전주 대비 %p)</div><div id="boardChannel" class="bch"></div></div>
-      <div class="card col-6 fill"><h3>⏳ 미설치 잔여 경과일 <small class="th-tgt" style="display:inline">배송완료 기준</small></h3><div class="sub">설치예정·보류·부재(1~4회)만 · 배송완료 기준(배송중 제외) · 출고 후 경과일 · 장기미설치·위약금·반품/폐업 제외 · <b style="color:var(--s-blue-d)">막대 클릭 시 주문번호·경과일·메모</b></div><div class="chart-wrap ch-m"><canvas id="boardAging"></canvas></div></div>
-      <div class="card col-6 fill"><h3>📐 설치소요일 분포 <small class="th-tgt" style="display:inline">최초컨택 주 기준</small></h3><div class="sub"><b>그 주에 최초컨택한 건들</b>이 출고→설치까지 며칠 걸렸는지 분포 · 전주 vs 금주 · 막대 위 %는 그 주 총건 대비 비중 (빠를수록 왼쪽)</div><div class="chart-wrap ch-m"><canvas id="boardLead"></canvas></div></div>
-      <div class="card col-12"><h3>🐢 D+7 지연사유 · 최근 4주 <span class="board-imp">핵심</span></h3><div class="sub">출고→설치 7일+ 완료건 사유 · 왼쪽이 오래된 주 · 증감=선택주 vs 직전주(▲증가=악화·빨강) · 출고주 기준이라 최근주는 아직 누적중 · <b style="color:var(--s-blue-d)">건수 클릭 시 주문번호·D+N·메모</b></div><div class="tbl-wrap"><table class="dtable" id="boardDelay"></table></div></div>
-    </div>
-  </section>
-
-  <!-- OPS -->
+  <!-- OPS — ① 현재 잔여(지금 이 순간 기준) + ② 주간 요약(구 '현황판' 전량 이관, 2026-07-23)
+       ⚠️ 두 섹션은 기준 시점이 다르다. ①은 조회 시점의 잔여, ②는 드롭다운으로 고른 '기준 주'.
+          섞이면 운영자가 같은 화면의 두 숫자를 같은 기간으로 오해한다 — .sec-head 로 반드시 갈라 둘 것. -->
   <section class="tab-content" id="tab-ops">
+    <div class="sec-head">📋 현재 잔여 <small>조회 시점 기준 · 지금 처리해야 할 업무량</small></div>
     <div class="tiles" id="ops-tiles"></div>
     <div class="grid">
       <div class="card col-5 fill"><h3>📊 상태 분포</h3><div class="sub">콜리스트 점주의사 기준 · 미설치는 배송완료/배송중으로 분리</div><div class="chart-wrap ch-m"><canvas id="opsStatus"></canvas></div></div>
       <div class="card col-7 fill"><h3>🚚 배송상태 · 미설치 즉시 컨택 대상</h3><div class="sub">미설치 중 배송완료/구매확정 건은 바로 설치 유도 가능</div><div class="chart-wrap ch-m"><canvas id="opsDelivery"></canvas></div><div class="insight" id="ops-insight"></div></div>
-      <div class="card col-5 fill"><h3>📵 부재 단계별</h3><div class="sub">재컨택 우선순위 판단용</div><div class="chart-wrap ch-m"><canvas id="opsAbsent"></canvas></div></div>
-      <div class="card col-7 fill"><h3>🧾 미설치 사유 (현재 잔여)</h3><div class="sub">로우데이터 L열 코드화 사유 · 반품/폐업 및 <b>배송중 전체 제외</b>(배송완료·구매확정만) · '(사유미기재) 배송완료'=설치 가능한데 사유 미입력</div><div class="chart-wrap ch-m"><canvas id="opsReason"></canvas></div></div>
+      <div class="card col-6 fill"><h3>📵 부재 단계별</h3><div class="sub">재컨택 우선순위 판단용</div><div class="chart-wrap ch-m"><canvas id="opsAbsent"></canvas></div></div>
+      <!-- 구 현황판 '미설치 잔여 경과일' — 선택 주와 무관한 현재시점 지표라 ①현재 잔여 섹션에 둔다(2026-07-23 이관) -->
+      <div class="card col-6 fill"><h3>⏳ 미설치 잔여 경과일 <small class="th-tgt" style="display:inline">배송완료 기준</small></h3><div class="sub">설치예정·보류·부재(1~4회)만 · 배송완료 기준(배송중 제외) · 출고 후 경과일 · 장기미설치·위약금·반품/폐업 제외 · <b style="color:var(--s-blue-d)">막대 클릭 시 주문번호·경과일·메모</b></div><div class="chart-wrap ch-m"><canvas id="boardAging"></canvas></div></div>
+      <div class="card col-12 fill"><h3>🧾 미설치 사유 (현재 잔여)</h3><div class="sub">로우데이터 L열 코드화 사유 · 반품/폐업 및 <b>배송중 전체 제외</b>(배송완료·구매확정만) · '(사유미기재) 배송완료'=설치 가능한데 사유 미입력</div><div class="chart-wrap ch-m"><canvas id="opsReason"></canvas></div></div>
       <div class="card col-12"><h3>📞 마지막 통화일 경과 현황</h3>
         <div class="sub">콜리스트 <b>T열(마지막통화일)</b>에 날짜가 있는 잔여 <b id="lca-total">–</b>건 기준 · 경과일 = 오늘 − 마지막통화일 · 표의 <b>누적</b>은 그 구간 <b>이상</b> 통화가 끊긴 건수 · <b>오래 방치된 건일수록 재컨택 우선순위</b></div>
         <div class="lca-split">
@@ -600,10 +602,31 @@
       </div>
       <div class="card col-12"><h3>🔑 미설치 사유 (메모 키워드 분류)</h3><div class="sub">현재 미설치 잔여건(반품·폐업 제외)의 <b>메모를 키워드 자동분류</b> · 설치일 무관 · 7일+ 지연 사유와 동일 로직(부재·문자안내/미룸/방문설치 접수/원격접수/전산·결제단말 등) · <b>기타 막대 클릭 시 세부내역</b> · <span id="ops-kw-skip"></span></div><div class="chart-wrap ch-xl"><canvas id="opsReasonKw"></canvas></div></div>
     </div>
+
+    <!-- ② 주간 요약 — 구 '현황판' 탭 전량 이관(2026-07-23). 아래 카드는 모두 '기준 주' 드롭다운을 따라간다.
+         🟠 dup-tag 표식은 같은 데이터가 남아 있는 탭을 알리는 임시 안내다. 삭제 판단이 끝나면 표식도 함께 지운다. -->
+    <div class="sec-head">📊 주간 요약 <small>구 현황판 · 아래 카드는 선택한 <b>기준 주</b> 기준 (위 '현재 잔여'와 시점이 다릅니다)</small></div>
+    <div class="filters" id="board-wksel" style="margin-bottom:14px">
+      <span class="flab">🗓️ 기준 주</span>
+      <select id="board-wk-sel"></select>
+      <span class="board-wk" id="board-wk-hint"></span>
+    </div>
+    <div class="grid" style="margin-bottom:14px">
+      <div class="card col-12"><h3>🎯 월 목표 달성률 <span class="dup-tag">↔ 출고 코호트 탭에도 있음</span></h3><div class="sub">이번 달 설치완료 vs 목표(출고 코호트 탭과 동일 데이터) · 목표 수정은 코호트 탭에서</div><div id="achBoardBox" class="ach"></div></div>
+    </div>
+    <div style="margin:-4px 0 10px"><span class="dup-tag">↔ 아래 KPI 타일 7개 중 6개는 '주간 비교' 탭 타일과 같은 지표 · '상담원설치'만 여기 고유</span></div>
+    <div class="tiles" id="board-tiles"></div>
+    <div class="grid">
+      <div class="card col-12"><h3>📝 회의 코멘트 <span id="board-week" class="board-wk"></span></h3><div class="sub">이번 주 회의 메모 · 저장 시 공유 · <b>지난 주차 메모는 '주차별 리포트' 탭 하단 📚 전체 주차 메모</b>에서 한 번에 볼 수 있습니다</div><div id="boardNote" class="rpt-note"></div></div>
+      <!-- 채널 비율은 막대 2줄뿐이라 fill 을 주면 옆 차트 높이만큼 늘어나 아래가 통째로 빈다 — 내용 높이로 둔다 -->
+      <div class="card col-6"><h3>🔧 설치 채널 비율 <span class="dup-tag">↔ 주간 비교 탭에도 있음</span></h3><div class="sub">자가설치 vs 상담원(문자발송 합산) · 이번주 %(전주 대비 %p)</div><div id="boardChannel" class="bch"></div></div>
+      <div class="card col-6 fill"><h3>📐 설치소요일 분포 <small class="th-tgt" style="display:inline">최초컨택 주 기준</small></h3><div class="sub"><b>그 주에 최초컨택한 건들</b>이 출고→설치까지 며칠 걸렸는지 분포 · 전주 vs 금주 · 막대 위 %는 그 주 총건 대비 비중 (빠를수록 왼쪽)</div><div class="chart-wrap ch-m"><canvas id="boardLead"></canvas></div></div>
+      <div class="card col-12"><h3>🐢 D+7 지연사유 · 최근 4주 <span class="board-imp">핵심</span><span class="dup-tag">↔ 부서별 지연원인 탭에 12주표 있음</span></h3><div class="sub">출고→설치 7일+ 완료건 사유 · 왼쪽이 오래된 주 · 증감=선택주 vs 직전주(▲증가=악화·빨강) · 출고주 기준이라 최근주는 아직 누적중 · <b style="color:var(--s-blue-d)">건수 클릭 시 주문번호·D+N·메모</b></div><div class="tbl-wrap"><table class="dtable" id="boardDelay"></table></div></div>
+    </div>
   </section>
 
-  <!-- ACCEL (설치가속화 Action) -->
-  <section class="tab-content" id="tab-accel">
+  <!-- ACCEL (설치가속화 Action) — 첫 화면(운영자 지정 2026-07-23) -->
+  <section class="tab-content active" id="tab-accel">
     <div class="tiles" id="accel-dev-tiles"></div>
     <div class="grid">
       <div class="card col-12">
@@ -647,8 +670,10 @@
     </div>
   </section>
 
-  <!-- DEPT -->
+  <!-- DEPT — ① 부서별 원인 + ② 출고주·소요일별 D+7 사유(구 'D+7 초과 지연분석' 탭 전량 이관, 2026-07-23)
+       두 섹션은 축이 다르다. ①은 부서·출고월, ②는 출고주·사유·소요일 구간. 모수도 다르니 아래 안내 문구를 지우지 말 것. -->
   <section class="tab-content" id="tab-dept">
+    <div class="sec-head">🏢 부서별 원인 <small>모수 = 지연건(완료 D+7 이상 + 미완료 7일 이상) · 고객사정 제외가 '개선대상'</small></div>
     <div class="tiles" id="dept-tiles"></div>
     <div class="grid">
       <div class="card col-5 fill"><h3>🏢 부서별 원인 건수 <span class="board-imp">클릭</span></h3>
@@ -690,6 +715,23 @@
         <div class="insight" id="dept-quality"></div>
       </div>
     </div>
+
+    <!-- ② 구 'D+7 초과 지연분석' 탭 전량 이관(2026-07-23). 위 부서 섹션과 겹치는 카드는 없다 —
+         부서 섹션은 부서·출고월 축, 이 섹션은 출고주·사유·소요일 구간 축이다. 모수도 다르다(여기는 D+7 초과 '완료건'만). -->
+    <div class="sec-head">🐢 D+7 초과 지연분석 <small>모수 = 출고→설치 <b>7일 이상 걸려 완료된 건</b> · 사유는 메모 키워드 자동분류 · 위 부서 섹션과 모수가 다릅니다</small></div>
+    <div class="tiles" id="delayweek-tiles"></div>
+    <div class="grid">
+      <div class="card col-12"><h3>🐢 출고 주별 D+7 초과 지연건 · 사유 구성</h3><div class="sub">출고→설치 <b>7일 이상</b> 걸려 완료된 건을 <b>출고일 기준 주(월요일)</b>로 집계 · 사유는 메모 키워드 자동분류 · 최근 16주 · <b>최근 주는 아직 설치 진행중이라 낮게 나옴(정상)</b></div><div class="chart-wrap ch-xl"><canvas id="dwBar"></canvas></div></div>
+      <div class="card col-12"><h3>📋 주차별 사유 상세표</h3><div class="sub">최근 12주 · 최신 주가 위 · 각 셀=그 출고주의 사유별 D+7 지연 건수</div><div class="tbl-wrap"><table class="dtable" id="delayWeekTable"></table></div></div>
+      <div class="card col-12">
+        <h3 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">⏳ 지연일자별 사유
+          <span class="flab" style="font-weight:400">🗓️ 출고월</span>
+          <select id="delaylead-mo-sel" style="font-size:12.5px;padding:3px 8px"></select>
+        </h3>
+        <div class="sub">출고→설치 <b>소요일 구간</b>별 사유 분포 · 각 셀=그 구간에서 해당 사유로 지연된 건수 · 괄호=구간 내 비중 · 굵게=그 구간 최다 사유 · <b>이 월 선택은 위 '세분류 상세'·'원인별 상세' 표와 별개로 동작합니다</b> · <span id="delaylead-scope"></span></div>
+        <div class="tbl-wrap"><table class="dtable" id="delayLeadTable"></table></div>
+      </div>
+    </div>
   </section>
 
   <!-- PERF -->
@@ -715,23 +757,6 @@
       <div class="card col-12"><h3>📆 월별 흐름</h3><div class="sub">통화시도·최초컨택 = 실적로그(자가설치 제외) · 설치완료 = 로우데이터 설치일(U열) 기준, 2026 출고분 (전체 월)</div><div class="chart-wrap ch-l"><canvas id="flowMonthly"></canvas></div></div>
       <div class="card col-12"><h3>📅 주별 흐름</h3><div class="sub">최근 16주 · 월요일 시작 주 기준 · 설치완료=설치일 기준(2026 출고분)</div><div class="chart-wrap ch-l"><canvas id="flowWeekly"></canvas></div></div>
       <div class="card col-12"><h3>🗓️ 일별 흐름</h3><div class="sub">최근 45영업일 · 설치완료=설치일 기준(2026 출고분)</div><div class="chart-wrap ch-l"><canvas id="flowDaily"></canvas></div></div>
-    </div>
-  </section>
-
-  <!-- DELAYWEEK (성과 하위: D+7 초과 설치지연분석 · 출고 주별) -->
-  <section class="tab-content" id="tab-delayweek">
-    <div class="tiles" id="delayweek-tiles"></div>
-    <div class="grid">
-      <div class="card col-12"><h3>🐢 출고 주별 D+7 초과 지연건 · 사유 구성</h3><div class="sub">출고→설치 <b>7일 이상</b> 걸려 완료된 건을 <b>출고일 기준 주(월요일)</b>로 집계 · 사유는 메모 키워드 자동분류 · 최근 16주 · <b>최근 주는 아직 설치 진행중이라 낮게 나옴(정상)</b></div><div class="chart-wrap ch-xl"><canvas id="dwBar"></canvas></div></div>
-      <div class="card col-12"><h3>📋 주차별 사유 상세표</h3><div class="sub">최근 12주 · 최신 주가 위 · 각 셀=그 출고주의 사유별 D+7 지연 건수</div><div class="tbl-wrap"><table class="dtable" id="delayWeekTable"></table></div></div>
-      <div class="card col-12">
-        <h3 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">⏳ 지연일자별 사유
-          <span class="flab" style="font-weight:400">🗓️ 출고월</span>
-          <select id="delaylead-mo-sel" style="font-size:12.5px;padding:3px 8px"></select>
-        </h3>
-        <div class="sub">출고→설치 <b>소요일 구간</b>별 사유 분포 · 각 셀=그 구간에서 해당 사유로 지연된 건수 · 괄호=구간 내 비중 · 굵게=그 구간 최다 사유 · <span id="delaylead-scope"></span></div>
-        <div class="tbl-wrap"><table class="dtable" id="delayLeadTable"></table></div>
-      </div>
     </div>
   </section>
 
@@ -807,6 +832,13 @@
         <h3>📝 주차별 리포트</h3>
         <div class="sub">주(월요일 시작) 선택 · <b>전주 대비 자동 요약</b> + 수기 코멘트(저장 시 모든 사용자 공유)</div>
         <div id="reportBox" class="rpt"></div>
+      </div>
+      <!-- 📚 전체 주차 메모 — 위 리포트는 한 번에 한 주차만 보이므로, 지난 메모를 훑으려면 드롭다운을 계속
+           바꿔야 했다. 여기서 시간순으로 한 번에 읽는다. 메모가 있는 주만 나온다(빈 주는 노이즈). -->
+      <div class="card col-12">
+        <h3>📚 전체 주차 메모 <span class="memo-cnt" id="memoLogCnt"></span></h3>
+        <div class="sub">지금까지 저장된 <b>주차 코멘트를 최신순으로 모아 봅니다</b> · 메모가 있는 주만 표시 · 오른쪽은 그 주 실적(설치완료·통화·설치속도) · <b>작성·수정은 위 리포트 또는 운영 탭 '회의 코멘트'</b>에서 (같은 저장소라 어디서 써도 여기 쌓입니다)</div>
+        <div id="memoLog" class="memo-log"></div>
       </div>
     </div>
   </section>
@@ -2709,6 +2741,41 @@ function renderReport(perf, notesIn){
   var ta=document.getElementById("rptNote");
   ta.addEventListener("input", function(){ document.getElementById("rptCnt").textContent=ta.value.length+"/1000"; });
   paintReport(rows, notes);
+  renderMemoLog(rows, notes);
+}
+// 📚 전체 주차 메모 — 저장된 주차 코멘트를 최신주부터 한 화면에 쌓는다.
+// 저장소는 weeklyNotes 하나뿐이라(리포트 탭·운영 탭 '회의 코멘트'가 같은 곳에 쓴다) 여기가 그 단일 아카이브다.
+// ⚠️ 메모는 사용자 입력이므로 반드시 esc() 로 이스케이프한다. white-space:pre-wrap 이 줄바꿈을 살린다.
+function renderMemoLog(rows, notes){
+  var box=document.getElementById("memoLog"); if(!box) return;
+  var cntEl=document.getElementById("memoLogCnt");
+  notes=notes||{};
+  var latest=rows.length?rows[rows.length-1].week:null;
+  var byWeek={}; rows.forEach(function(r){ byWeek[r.week]=r; });
+  // 메모가 있는 주만 — 주 키가 perf.weekly 범위 밖(기간필터로 잘린 주)이어도 메모는 남아 있으므로 함께 보여준다.
+  var weeks=Object.keys(notes).filter(function(w){ return w && String(notes[w]||"").trim(); }).sort().reverse();
+  if(cntEl) cntEl.textContent = weeks.length ? (weeks.length+"개 주차") : "";
+  if(!weeks.length){
+    box.innerHTML='<div class="memo-empty">아직 저장된 주차 메모가 없습니다.<br>위 <b>주차별 리포트</b> 또는 <b>운영 탭 → 회의 코멘트</b>에서 저장하면 여기에 쌓입니다.</div>';
+    return;
+  }
+  box.innerHTML=weeks.map(function(w){
+    var r=byWeek[w];
+    var kpi="";
+    if(r){
+      var parts=[];
+      if(r.installs!=null) parts.push("설치 <b>"+fmt(r.installs)+"</b>건");
+      if(r.calls!=null) parts.push("통화 <b>"+fmt(r.calls)+"</b>건");
+      if(r.avgSpeed!=null) parts.push("속도 <b>"+round1(r.avgSpeed)+"</b>일");
+      kpi=parts.join(" · ");
+    }
+    return '<div class="memo-item'+(w===latest?' cur':'')+'">'
+      +'<div class="memo-h"><span class="memo-wk">'+rptWeekLabel(w)+' 주</span>'
+      +(w===latest?'<span class="memo-badge">이번주</span>':'')
+      +(kpi?'<span class="memo-kpi">'+kpi+'</span>':'')
+      +'</div>'
+      +'<div class="memo-body">'+esc(notes[w])+'</div></div>';
+  }).join("");
 }
 function paintReport(rows, notes){
   var idx=-1; for(var i=0;i<rows.length;i++){ if(rows[i].week===RPT.week){ idx=i; break; } }
@@ -2765,6 +2832,8 @@ function saveReportNote(notes){
       notes[w]=res.note||"";
       if(LAST_DATA&&LAST_DATA.weeklyNotes) LAST_DATA.weeklyNotes[w]=notes[w];
       msg.textContent="저장됨 ✓"; msg.className="rpt-msg ok";
+      // 아래 📚 전체 주차 메모도 같이 갱신 — 안 하면 방금 쓴 메모가 목록에 안 보여 저장이 안 된 걸로 오해한다
+      renderMemoLog((LAST_DATA&&LAST_DATA.perf&&LAST_DATA.perf.weekly)||[], notes);
     } else { msg.textContent=(res&&res.error)||"저장 실패"; msg.className="rpt-msg err"; }
   }, function(){ btn.disabled=false; msg.textContent="통신 오류"; msg.className="rpt-msg err"; },
   { params:{ action:"setnote", week:w, note:ta.value } });
@@ -2822,7 +2891,8 @@ function renderBoard(d){
   var wkEl=document.getElementById("board-week");
   if(wkEl) wkEl.textContent="· "+rptWeekLabel(cur.week)+"주"+(prev?(" (전주 "+rptWeekLabel(prev.week)+" 대비)"):"");
   var hintEl=document.getElementById("board-wk-hint");
-  if(hintEl) hintEl.textContent=isLatest?"" : "※ 아래 ‘미설치 잔여 경과일·월 목표 달성률’은 선택 주와 무관하게 현재 시점 기준입니다";
+  // '미설치 잔여 경과일'은 ①현재 잔여 섹션으로 옮겼으므로(2026-07-23) 여기 남은 현재시점 카드는 월 목표뿐이다
+  if(hintEl) hintEl.textContent=isLatest?"" : "※ ‘월 목표 달성률’은 선택 주와 무관하게 현재 시점 기준입니다";
   // KPI 타일: weekTile 재사용(선택 주 vs 전주). 순서=설치완료·자가·상담원·출고·통화·속도·재컨택
   tbox.innerHTML =
     weekTile((isLatest?"이번주 ":"")+"설치완료","✅", wrows, "installs", {accent:true}) +
@@ -3194,13 +3264,16 @@ function fetchData(passcode, cb, err, opts) {
 
 var LAST_PASS=null, LAST_DATA=null;
 var CUR_PERIOD={start:"",end:"",label:"전체 기간"};
-var CUR_TAB="board"; // 현재 보고 있는 메뉴(탭). 날짜조회 시 이 탭 섹션만 서버에 요청한다.
+var CUR_TAB="accel"; // 현재 보고 있는 메뉴(탭). 날짜조회 시 이 탭 섹션만 서버에 요청한다. 첫 화면=설치가속화.
 
 // 탭 → 그 탭이 렌더에 실제로 쓰는 서버 섹션(ops/perf/cohort/reasons). 날짜조회를 이 섹션으로 한정 → 집계 속도개선.
-// ⚠️ perf 탭엔 '7일+ 지연 사유'(reasons)가 같이 있어 reasons도 필요. board는 요약이라 perf·cohort·reasons 모두 씀.
+// ⚠️ perf 탭엔 '7일+ 지연 사유'(reasons)가 같이 있어 reasons도 필요.
+// ⚠️ ops 는 구 현황판을 통째로 흡수해(2026-07-23) perf·cohort 까지 쓴다 — 4섹션 전부다.
+//    카드를 지워 실제로 안 쓰게 되면 여기서도 섹션을 빼야 커스텀 날짜조회가 다시 빨라진다.
+//    (cohort=미설치 잔여 경과일·월 목표 / perf=KPI 타일·채널비율·설치소요일 분포 / reasons=D+7 지연사유)
 var TAB_SECTIONS={
-  board:["perf","cohort","reasons"], ops:["ops","reasons"], dept:["reasons"],
-  perf:["perf","reasons"], flow:["perf"], delayweek:["reasons"], cohort:["cohort"],
+  ops:["ops","perf","cohort","reasons"], dept:["reasons"],
+  perf:["perf","reasons"], flow:["perf"], cohort:["cohort"],
   weekly:["perf"], daily:["perf"], report:["perf"],
   shipweekly:["ship"], shipdaily:["ship"], accel:["accel"]
 };
@@ -3245,7 +3318,7 @@ function boot(passcode) {
     document.getElementById("main").style.display="block";
     populateMonthFilter(d.meta.availableMonths||[]);
     CUR_PERIOD={start:"",end:"",label:"전체 기간"};
-    CUR_TAB="board"; markAllLoaded("");   // 초기 전체 payload → 모든 탭이 전체기간으로 최신
+    CUR_TAB="accel"; markAllLoaded("");   // 초기 전체 payload → 모든 탭이 전체기간으로 최신
     applyData(d);
   }, function(msg){ setLoading(false); showGate(msg); });
 }
@@ -3383,14 +3456,15 @@ document.getElementById("f-reset").addEventListener("click", function(){
   loadPeriod("","","전체 기간");
 });
 
-var TABMETA={ board:["주간 현황판","주간 회의용 핵심 지표 한눈에 · 전주 대비 · 회의 코멘트"], ops:["운영 대시보드","콜리스트 기준 · 현재 처리해야 할 잔여 업무량"], dept:["부서별 지연원인","로우데이터 L열 사유코드 → 부서별 · 각 부서가 줄일 수 있는 지연 원인 · 모수=지연건만(완료·미완료 모두 출고 후 7일 초과, D+8 이상) · '미룸 횟수→설치 소요일'만 전체 건"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], flow:["월·주·일 흐름","실적로그 기준 · 통화시도·설치완료·최초컨택의 월별/주별/일별 추이"], delayweek:["D+7 초과 설치지연분석","출고→설치 7일+ 완료건을 출고 주(월요일)별로 · 사유 메모 키워드 자동분류"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(K) 대비 설치예정(D) 병기"] };
+var TABMETA={ ops:["운영 대시보드","① 현재 잔여 업무량(콜리스트 기준) + ② 주간 요약(구 현황판) · 두 섹션은 기준 시점이 다릅니다"], dept:["부서별 지연원인 · D+7 초과 지연분석","① 부서별 원인(모수=지연건, 완료 D+7 이상 + 미완료 7일 이상) + ② D+7 초과 지연분석(모수=D+7 초과 완료건, 출고주·사유·소요일 구간)"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], flow:["월·주·일 흐름","실적로그 기준 · 통화시도·설치완료·최초컨택의 월별/주별/일별 추이"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(K) 대비 설치예정(D) 병기"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
     n.classList.add("active");
     var t=n.dataset.tab;
-    // 상위 메뉴 클릭 시 하위 메뉴 토글(펼침/접힘) — 성과→흐름·D+7지연분석, 주간비교→일간비교
-    var TOGGLE = { perf:{children:["nav-flow","nav-delayweek"], caret:"perf-caret"}, weekly:{children:["nav-daily"], caret:"weekly-caret"}, shipweekly:{children:["nav-shipdaily"], caret:"shipweekly-caret"} };
+    // 상위 메뉴 클릭 시 하위 메뉴 토글(펼침/접힘) — 성과→흐름, 주간비교→일간비교, 출고주비교→출고일비교
+    // (D+7 지연분석은 2026-07-23 부서별 지연원인 탭으로 통합돼 하위 메뉴에서 빠졌다)
+    var TOGGLE = { perf:{children:["nav-flow"], caret:"perf-caret"}, weekly:{children:["nav-daily"], caret:"weekly-caret"}, shipweekly:{children:["nav-shipdaily"], caret:"shipweekly-caret"} };
     if (TOGGLE[t]) {
       var first = document.getElementById(TOGGLE[t].children[0]);
       var open = (first.style.display === "none");
