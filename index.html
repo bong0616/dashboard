@@ -545,6 +545,16 @@
   .cgrp-t { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; margin: 0 2px 12px;
     font-size: 14.5px; font-weight: 800; letter-spacing: -.3px; color: var(--text-primary); }
   .cgrp-t small { font-size: 11.5px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+  /* 설치가속화 큰 섹션 배너 — 배송/통화 두 데이터 묶음의 경계를 크게·색으로 구분(운영자 2026-07-24 요청) */
+  .accel-sec { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
+    font-size:19px; font-weight:800; letter-spacing:-.3px; color:var(--text-primary);
+    padding:12px 16px; margin:6px 0 16px; border-radius:10px;
+    border-left:7px solid var(--s-blue-d);
+    background: color-mix(in srgb, var(--s-blue-d) 10%, transparent); }
+  .accel-sec small { font-size:12.5px; font-weight:600; color:var(--text-secondary); letter-spacing:0; }
+  /* 통화 섹션 — 위 배송 섹션과 큰 간격 + 보라 계열로 구분(그래프 당일설치 막대색과 통일) */
+  .accel-sec.sec-call { margin-top:44px; border-left-color:var(--s-violet);
+    background: color-mix(in srgb, var(--s-violet) 12%, transparent); }
 
   /* Passcode gate */
   #gate { position: fixed; inset: 0; background: var(--page); z-index: 100; display:flex; align-items:center; justify-content:center; }
@@ -698,6 +708,8 @@
 
   <!-- ACCEL (설치가속화 Action) — 첫 화면(운영자 지정 2026-07-23) -->
   <section class="tab-content active" id="tab-accel">
+    <!-- 큰 섹션 배너 ① 배송 (운영자 지시 이미지: 빨간 제목 '오후 배송완료 당일 설치건') -->
+    <div class="accel-sec">🚚 오후 배송완료 당일 설치건 <small>오후 배송반영(T열)으로 배송완료 전환된 코호트가 그날 설치까지 끝난 흐름</small></div>
     <!-- 📦 배송 계열 묶음 — 타일(일평균)과 그것을 날짜별로 풀어 쓴 요약은 같은 데이터다. 한 판에 넣는다. -->
     <div class="cgrp">
       <div class="cgrp-t">🚚 배송반영 계열 <small>타일 = 구간 일평균 · 아래 = 그 값을 날짜별로 풀어 쓴 것 (같은 데이터)</small></div>
@@ -724,6 +736,8 @@
       </div>
     </div>
 
+    <!-- 큰 섹션 배너 ② 통화 (운영자 지시 이미지: 빨간 제목 '당일 통화 당일설치 집계') -->
+    <div class="accel-sec sec-call">📞 당일 통화 당일설치 집계 <small>상담원이 통화한 그날(및 다음날 D+1) 설치까지 끝난 흐름</small></div>
     <!-- 📦 통화 계열 묶음 — 위 배송 계열과 같은 구조(타일=일평균, 아래=날짜별 상세) -->
     <div class="cgrp">
       <div class="cgrp-t">📞 통화후 D+1일 이내 설치 <small>타일 = 구간 일평균 · 아래 = 그 값을 날짜별로 풀어 쓴 것 (같은 데이터)</small></div>
