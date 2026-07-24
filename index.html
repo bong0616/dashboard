@@ -521,6 +521,9 @@
     overflow: hidden; text-overflow: ellipsis; }
   .acg-cell.hi { background: color-mix(in srgb, var(--s-violet) 8%, transparent); }
   .acg-cell.hi .acg-v { color: var(--s-violet); }
+  /* D+1 설치 칸 — 당일설치(violet)와 나란히 놓이므로 주황으로 구분(그래프 D+1 막대와 같은 색) */
+  .acg-cell.hi2 { background: color-mix(in srgb, var(--s-orange) 9%, transparent); }
+  .acg-cell.hi2 .acg-v { color: var(--s-orange); }
   /* 상세(원격) 칸 — 본 지표의 하위임을 배경과 좌측선으로 구분 */
   .acg-cell.sub { background: color-mix(in srgb, var(--s-aqua) 7%, transparent); }
   .acg-cell.sub .acg-k::before { content: "└ "; color: var(--muted); font-weight: 400; }
@@ -723,7 +726,7 @@
 
     <!-- 📦 통화 계열 묶음 — 위 배송 계열과 같은 구조(타일=일평균, 아래=날짜별 상세) -->
     <div class="cgrp">
-      <div class="cgrp-t">📞 통화 계열 <small>타일 = 구간 일평균 · 아래 = 그 값을 날짜별로 풀어 쓴 것 (같은 데이터)</small></div>
+      <div class="cgrp-t">📞 통화후 D+1일 이내 설치 <small>타일 = 구간 일평균 · 아래 = 그 값을 날짜별로 풀어 쓴 것 (같은 데이터)</small></div>
       <div class="tiles" id="accel-sd-tiles"></div>
       <div class="grid">
         <div class="card col-12" data-cid="accelSdNote">
@@ -737,8 +740,8 @@
     </div>
     <div class="grid">
       <div class="card col-12" data-cid="acSd">
-        <h3>📊 콜시도 → 설치예정 → 당일설치</h3>
-        <div class="sub">막대=콜시도(K열)·설치예정(D열) <b>(왼쪽축 건수)</b> · 선=통화당일 설치완료 · 점선=콜시도 대비 설치예정율 <b>(오른쪽축 %)</b></div>
+        <h3>📊 콜시도 → 설치예정 → 당일·D+1일 설치</h3>
+        <div class="sub">막대=콜시도(K열)·설치예정(D열)·통화당일 설치완료·통화 다음날(D+1) 설치완료 <b>(왼쪽축 건수)</b> · 점선=콜시도 대비 설치예정율 <b>(오른쪽축 %)</b></div>
         <div class="chart-wrap ch-xl"><canvas id="acSd"></canvas></div>
       </div>
       <div class="card col-12" data-cid="accelSdTable">
@@ -2394,6 +2397,7 @@ function renderAccel(a){
     avgTile("일평균 통화성공","🗓️", sdSum, "plannedPerDay", {totalKey:"planned", tip:"실적로그 <b>D열(설치예정)</b> — 고객과 통화가 되어 <b>설치 일정을 잡은 건</b>."}) +
     avgTile("일평균 부재·기타","📵", sdSum, "othersPerDay", {totalKey:"others", tip:"실적로그 <b>E~J열 합</b> — 통화성공(설치예정)을 뺀 나머지 전부입니다.<br><br>부재 · 명의변경 · 미설치/보류 · 반품/폐업 · 설치거부/장기지연 · 위약금청구.<br><br>이렇게 합쳐야 <b>총 콜시도 = 통화성공 + 이 칸</b> 이 성립합니다."}) +
     avgTile("일평균 당일설치","⚡", sdSum, "installsPerDay", {totalKey:"installs", tip:"로우데이터 <b>U열='설치예정'</b> 이면서 <b>마지막통화일(R) = 설치일(S)</b> 인 건.<br><br>U열은 2026-07-21 신설이라 그 이전은 집계 불가입니다."}) +
+    avgTile("일평균 D+1일 설치","📆", sdSum, "installsD1PerDay", {totalKey:"installsD1", tip:"로우데이터 <b>U열='설치예정'</b> 이면서 <b>설치일(S) − 마지막통화일(R) = 1일</b> 인 건(통화한 <b>다음날</b> 설치).<br><br>당일설치(S=R)와는 겹치지 않는 별개 집계입니다. U열은 2026-07-21 신설이라 그 이전은 집계 불가입니다."}) +
     avgTile("일평균 원격접수","💻", sdSum, "logRemotePerDay", {totalKey:"logRemote", tip:"실적로그 <b>M열(원격설치 접수)</b> — 원격 접수량의 <b>정본</b>입니다.<br><br>로우데이터 N열은 진행이 안 되면 상담원이 <b>콜리스트에서 지워버려</b> 나중에 값이 사라집니다(미러링 반영)."}) +
     avgTile("일평균 원격완료","✅", sdSum, "remotePerDay", {totalKey:"remote", tip:"접수한 원격 중 <b>그날 설치까지 끝난 건</b>(로우데이터 N열 기준). 시간이 지나면 줄어드니 <b>최근치만 신뢰</b>하세요."}) +
     avgTile("통화성공률","📊", sdSum, "plannedRate", {valFn:shipPct, unit:"%", basis:"합계 기준", tip:"구간 <b>합계 기준</b> — 실적로그 D열(설치예정) ÷ K열(콜시도)."}) +
@@ -2422,6 +2426,7 @@ function renderAccel(a){
         +   acgCell("통화성공", r.planned, "실적로그 D · 설치예정")
         +   acgCell("부재/보류/반품 및 기타", r.others, "실적로그 E~J 합")
         +   acgCell("당일 통화·당일설치", r.installs, "U=설치예정 · R=S", "hi")
+        +   acgCell("당일 통화·D+1일 설치", r.installsD1, "U=설치예정 · S−R=1", "hi2")
         // 원격접수는 '당일설치의 하위'가 아니라 그날 원격 접수 총량이다 → '└' 없이 총계로 읽히게 한다.
         // 그 아래 '원격 설치완료'만 이 총량의 하위(그중 당일 끝난 건)라 '└' 를 남긴다.
         +   acgCell("당일 총 원격접수건", r.logRemote, "실적로그 M · 정본", "sub subtop")
@@ -2436,6 +2441,7 @@ function renderAccel(a){
       Object.assign({ type:"bar", label:"콜시도(K열)", data:sd.map(function(x){return x.calls;}), backgroundColor:C["--s-yellow"], yAxisID:"y", borderRadius:3, datalabels:dlBarTop(AC_BAR_DL) }, sGeom),
       Object.assign({ type:"bar", label:"설치예정(D열)", data:sd.map(function(x){return x.planned;}), backgroundColor:C["--s-blue"], yAxisID:"y", borderRadius:3, datalabels:dlBarTop(AC_BAR_DL) }, sGeom),
       Object.assign({ type:"bar", label:"통화당일 설치완료", data:sd.map(function(x){return x.installs;}), backgroundColor:C["--s-violet"], yAxisID:"y", borderRadius:3, datalabels:dlBarTop(AC_BAR_DL) }, sGeom),
+      Object.assign({ type:"bar", label:"통화 D+1일 설치완료", data:sd.map(function(x){return x.installsD1;}), backgroundColor:C["--s-orange"], yAxisID:"y", borderRadius:3, datalabels:dlBarTop(AC_BAR_DL) }, sGeom),
       { type:"line", label:"콜시도 대비 설치예정(%)", data:sd.map(function(x){return x.plannedRate==null?null:Math.round(x.plannedRate*100);}), borderColor:C["--good"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2.4, borderDash:[5,3], tension:.3, pointRadius:4, pointBackgroundColor:C["--good"], spanGaps:true, datalabels:acLineDL("%") }
     ]},
     options:{ scales:{
