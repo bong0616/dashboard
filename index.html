@@ -612,8 +612,8 @@
   <div class="navitem active" data-tab="accel"><span class="ic">🚀</span><div>설치가속화 Action<small>배송반영·통화 당일설치</small></div></div>
   <div class="navitem" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량 · 주간 요약</small></div></div>
   <div class="navitem" data-tab="cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div></div>
-  <div class="navitem" data-tab="perf" id="nav-perf"><span class="ic">⚡</span><div>성과<small>설치속도·작업량</small></div><span class="navcaret" id="perf-caret">▸</span></div>
-  <div class="navitem navchild" data-tab="flow" id="nav-flow" style="display:none"><span class="ic">📈</span><div>월·주·일 흐름<small>기간별 추이</small></div></div>
+  <!-- 하위 '월·주·일 흐름'은 2026-07-28 삭제(주간/일간 비교와 완전 중복) → 성과는 이제 하위메뉴 없음(캐럿 제거) -->
+  <div class="navitem" data-tab="perf" id="nav-perf"><span class="ic">⚡</span><div>성과<small>설치속도·작업량</small></div></div>
   <div class="navitem" data-tab="dept"><span class="ic">🏢</span><div>부서별 지연원인<small>부서·사유·출고주별 D+7</small></div></div>
   <div class="navitem" data-tab="weekly" id="nav-weekly"><span class="ic">🗓️</span><div>주간 비교<small>주차별 처리속도현황</small></div><span class="navcaret" id="weekly-caret">▸</span></div>
   <div class="navitem navchild" data-tab="daily" id="nav-daily" style="display:none"><span class="ic">📆</span><div>일간 비교<small>일자별 처리속도현황</small></div></div>
@@ -833,22 +833,16 @@
       <div class="card col-4 fill" data-cid="perfGauge"><h3>🎯 설치 완료율</h3><div class="sub">2026 출고 대비 설치완료</div>
         <div class="gauge-wrap"><canvas id="perfGauge"></canvas><div class="gauge-center"><div class="g-val" id="gauge-val">–</div><div class="g-lab">설치 완료율</div></div></div>
       </div>
-      <div class="card col-8 fill" data-cid="perfMonthly"><h3>📈 월별 처리량 추세</h3><div class="sub">실적로그 · 통화시도(처리)량 vs 설치완료</div><div class="chart-wrap ch-m"><canvas id="perfMonthly"></canvas></div></div>
+      <div class="card col-8 fill" data-cid="perfMonthly"><h3>📈 월별 처리량 추세</h3><div class="sub">실적로그 · 통화시도(처리)량 vs 설치완료 <b>(설치완료도 실적로그 기록 기준)</b></div><div class="chart-wrap ch-m"><canvas id="perfMonthly"></canvas></div></div>
       <div class="card col-5 fill" data-cid="perfChannel"><h3>🔌 설치 채널 비중</h3><div class="sub">자가설치 vs 상담원 · 5/6 출고건부터(채널 분류 시작일 기준)</div><div class="chart-wrap ch-s"><canvas id="perfChannel"></canvas></div><div class="legend" id="channel-legend"></div></div>
       <div class="card col-7 fill" data-cid="perfSpeed"><h3>⏱️ 설치 소요일 분포</h3><div class="sub">출고 → 설치완료 (일). 평균 <b id="perf-avglead">–</b>일 · 5일 이내 <b id="perf-within5">–</b></div><div class="chart-wrap ch-s"><canvas id="perfSpeed"></canvas></div></div>
       <div class="card col-6 fill" data-cid="perfRetouch"><h3>🔁 재컨택 주기 → 설치 속도</h3><div class="sub">메모 재컨택 간격이 짧을수록 실제로 빨리 설치되는가?</div><div class="chart-wrap ch-l"><canvas id="perfRetouch"></canvas></div><div class="insight" id="retouch-insight"></div></div>
       <div class="card col-6 fill" data-cid="perfDelay"><h3>🐢 7일+ 지연 사유</h3><div class="sub">설치완료됐지만 7일 이상 걸린 건 (메모 자동분류) · <b style="color:var(--s-blue-d)">기타 막대 클릭 시 세부내역</b></div><div class="chart-wrap ch-xl"><canvas id="perfDelay"></canvas></div></div>
-      <div class="card col-12" data-cid="perfDaily"><h3>📅 일별 처리량</h3><div class="sub">최근 45영업일 · 통화시도량 & 설치완료</div><div class="chart-wrap ch-m"><canvas id="perfDaily"></canvas></div></div>
-    </div>
-  </section>
-
-  <!-- FLOW (성과 하위: 월·주·일 흐름) -->
-  <section class="tab-content" id="tab-flow">
-    <div class="tiles" id="flow-tiles"></div>
-    <div class="grid">
-      <div class="card col-12" data-cid="flowMonthly"><h3>📆 월별 흐름</h3><div class="sub">통화시도·최초컨택 = 실적로그(자가설치 제외) · 설치완료 = 로우데이터 설치일(U열) 기준, 2026 출고분 (전체 월)</div><div class="chart-wrap ch-l"><canvas id="flowMonthly"></canvas></div></div>
-      <div class="card col-12" data-cid="flowWeekly"><h3>📅 주별 흐름</h3><div class="sub">최근 16주 · 월요일 시작 주 기준 · 설치완료=설치일 기준(2026 출고분)</div><div class="chart-wrap ch-l"><canvas id="flowWeekly"></canvas></div></div>
-      <div class="card col-12" data-cid="flowDaily"><h3>🗓️ 일별 흐름</h3><div class="sub">최근 45영업일 · 설치완료=설치일 기준(2026 출고분)</div><div class="chart-wrap ch-l"><canvas id="flowDaily"></canvas></div></div>
+      <div class="card col-12" data-cid="perfDaily"><h3>📅 일별 처리량</h3><div class="sub">최근 45영업일 · 통화시도량 &amp; 설치완료 <b>(둘 다 실적로그 기록 기준)</b></div><div class="chart-wrap ch-m"><canvas id="perfDaily"></canvas></div></div>
+      <!-- 구 '월·주·일 흐름' 탭의 월별 카드(2026-07-28 흡수). 주별·일별은 주간/일간 비교와 값이 완전히 같아 버렸고,
+           월별만 대응물이 없어 여기로 옮겼다. 바로 위 perfMonthly 와 '설치완료'의 기준이 달라 숫자가 다르다 —
+           둘 다 부제에 기준을 명시했다. 지우지 말 것. -->
+      <div class="card col-12" data-cid="flowMonthly"><h3>📆 월별 흐름 <small class="th-tgt" style="display:inline">설치일 기준</small></h3><div class="sub">통화시도·최초컨택 = 실적로그(자가설치 제외) · <b>설치완료 = 로우데이터 설치일(S열) 기준</b>, 2026 출고분 (전체 월) · 위 '월별 처리량 추세'는 설치완료를 <b>실적로그 기록</b>으로 세므로 숫자가 다릅니다</div><div class="chart-wrap ch-l"><canvas id="flowMonthly"></canvas></div></div>
     </div>
   </section>
 
@@ -876,7 +870,7 @@
   <section class="tab-content" id="tab-weekly">
     <div class="tiles" id="weekly-tiles"></div>
     <div class="grid">
-      <div class="card col-12" data-cid="wkVolume"><h3>📊 주별 업무량 · 속도 종합 비교</h3><div class="sub">막대=출고·통화건수, 초록선=설치완료 <b>(왼쪽축 건수)</b> · 점선=평균 설치속도·재컨택주기 <b>(오른쪽축 일, 낮을수록 빠름)</b>. 최근 16주 · 맨 오른쪽이 이번 주(진행중)</div><div class="chart-wrap ch-xl"><canvas id="wkVolume"></canvas></div></div>
+      <div class="card col-12" data-cid="wkVolume"><h3>📊 주별 업무량 · 속도 종합 비교</h3><div class="sub">막대=출고·통화건수, 실선=설치완료·최초컨택 <b>(왼쪽축 건수)</b> · 점선=평균 설치속도·재컨택주기 <b>(오른쪽축 일, 낮을수록 빠름)</b>. 최근 16주 · 맨 오른쪽이 이번 주(진행중)</div><div class="chart-wrap ch-xl"><canvas id="wkVolume"></canvas></div></div>
       <div class="card col-12" data-cid="wkChannel"><h3>🔧 주별 설치 채널 구성</h3><div class="sub">자가설치 · 상담원 완료 건수(설치일 기준) · 막대 안 %는 그 주 설치완료 대비 비중</div><div class="chart-wrap ch-m"><canvas id="wkChannel"></canvas></div></div>
       <div class="card col-12" data-cid="weeklyTable"><h3>🗓️ 주차별 상세 비교표</h3><div class="sub">최근 12주 · 최신 주가 위 · <b>▲▼</b>는 직전 주 대비 증감(속도·재컨택주기는 낮을수록 개선)</div><div class="tbl-wrap"><table class="dtable" id="weeklyTable"></table></div></div>
     </div>
@@ -886,7 +880,7 @@
   <section class="tab-content" id="tab-daily">
     <div class="tiles" id="daily-tiles"></div>
     <div class="grid">
-      <div class="card col-12" data-cid="dyVolume"><h3>📊 일별 업무량 · 속도 종합 비교</h3><div class="sub">막대=출고·통화건수, 초록선=설치완료 <b>(왼쪽축 건수)</b> · 점선=평균 설치속도·재컨택주기 <b>(오른쪽축 일, 낮을수록 빠름)</b>. 최근 31일 · 맨 오른쪽이 오늘</div><div class="chart-wrap ch-xl"><canvas id="dyVolume"></canvas></div></div>
+      <div class="card col-12" data-cid="dyVolume"><h3>📊 일별 업무량 · 속도 종합 비교</h3><div class="sub">막대=출고·통화건수, 실선=설치완료·최초컨택 <b>(왼쪽축 건수)</b> · 점선=평균 설치속도·재컨택주기 <b>(오른쪽축 일, 낮을수록 빠름)</b>. 최근 45일 · 맨 오른쪽이 오늘</div><div class="chart-wrap ch-xl"><canvas id="dyVolume"></canvas></div></div>
       <div class="card col-12" data-cid="dyChannel"><h3>🔧 일별 설치 채널 구성</h3><div class="sub">자가설치 · 상담원 완료 건수(설치일 기준) · 막대 안 %는 그 날 설치완료 대비 비중</div><div class="chart-wrap ch-m"><canvas id="dyChannel"></canvas></div></div>
       <div class="card col-12" data-cid="dailyTable"><h3>📆 일자별 상세 비교표</h3><div class="sub">최근 30일 · 최신 일이 위 · <b>▲▼</b>는 직전 일 대비 증감(속도·재컨택주기는 낮을수록 개선)</div><div class="tbl-wrap"><table class="dtable" id="dailyTable"></table></div></div>
     </div>
@@ -1791,23 +1785,8 @@ function renderPerf(p) {
       plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false} }, interaction:{mode:"index",intersect:false} } });
 }
 
-// ---------- FLOW (월·주·일 흐름) ----------
-// 직전 기간 대비 증감 타일: rows 배열의 마지막(현재) vs 직전 값
-function deltaTile(label, ic, rows, key, accent) {
-  var n = rows ? rows.length : 0;
-  var cur = n > 0 ? (rows[n-1][key]||0) : 0;
-  var prev = n > 1 ? (rows[n-2][key]||0) : null;
-  var sub;
-  if (prev == null) sub = '<span style="color:var(--muted)">직전 기간 데이터 없음</span>';
-  else if (prev === 0) sub = '<span style="color:var(--muted)">직전 '+fmt(prev)+'건</span>';
-  else {
-    var d = (cur - prev) / prev * 100;
-    var up = d >= 0;
-    sub = '<span style="color:'+(up?C["--good"]:C["--s-red"])+';font-weight:700">'+(up?"▲":"▼")+' '+Math.abs(Math.round(d))+'%</span>'
-        + ' <span style="color:var(--muted)">직전 '+fmt(prev)+'건</span>';
-  }
-  return tile(label, ic, fmt(cur), "건", sub, accent);
-}
+// ---------- 월별 흐름(구 '월·주·일 흐름' 탭의 잔여 카드, 성과 탭에 있음) ----------
+// deltaTile 은 흐름 탭 타일 전용이었어서 탭과 함께 삭제했다(2026-07-28).
 
 // 통화시도량(막대) + 설치완료·최초컨택(선) 콤보 추이
 function trendCombo(id, rows, labelFn) {
@@ -1822,17 +1801,14 @@ function trendCombo(id, rows, labelFn) {
       plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false} }, interaction:{mode:"index",intersect:false} } });
 }
 
+// 2026-07-28: '월·주·일 흐름' 탭 삭제. 주별·일별은 주간/일간 비교 탭과 값이 **완전히 동일**해서(실측 대조:
+// 16주·31일 전부 calls·installs·firstContacts 일치 — 같은 fWeek/dScore 맵에서 나온다) 카드를 없애고,
+// 두 탭 차트에 '최초컨택' 계열만 추가해 흡수했다. 월별은 대응물이 없어 성과 탭으로 옮겨 이 함수가 계속 그린다.
+// ⚠️ payload 의 p.flow 는 지우지 말 것 — action=audit 이 flow.monthly 로 '설치완료 월합계'를 대조한다
+//    (대시보드API.js flow_설치완료월합). 화면에서 안 쓴다고 집계까지 지우면 검증이 조용히 깨진다.
 function renderFlow(p) {
-  var f = p.flow || { monthly:[], weekly:[], daily:[] };
-  var mo = f.monthly||[], wk = f.weekly||[], dd = f.daily||[];
-  document.getElementById("flow-tiles").innerHTML =
-    deltaTile("이번달 설치완료","✅", mo, "installs", true) +
-    deltaTile("이번달 통화시도","📞", mo, "calls") +
-    deltaTile("이번주 설치완료","✅", wk, "installs") +
-    deltaTile("이번주 통화시도","📞", wk, "calls");
+  var mo = (p.flow && p.flow.monthly) || [];
   trendCombo("flowMonthly", mo, function(x){ return x.ym.slice(2); });
-  trendCombo("flowWeekly", wk, function(x){ return x.week.slice(5); });
-  trendCombo("flowDaily", dd, function(x){ return x.date.slice(5); });
 }
 
 // ---------- WEEKLY (주간 비교 스코어보드) ----------
@@ -1910,6 +1886,9 @@ function renderWeekly(p){
         { type:"bar", label:"출고건수", data:rows.map(function(x){return x.shipped;}), backgroundColor:C["--s-blue-l"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:5, datalabels: dlBarTop({font:{weight:"600",size:9}}) },
         { type:"bar", label:"통화건수", data:rows.map(function(x){return x.calls;}), backgroundColor:C["--s-yellow"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:5, datalabels: dlBarTop({font:{weight:"600",size:9}}) },
         { type:"line", label:"설치완료", data:rows.map(function(x){return x.installs;}), borderColor:C["--s-aqua"], backgroundColor:"transparent", yAxisID:"y", borderWidth:2.6, tension:.3, pointRadius:2, pointBackgroundColor:C["--s-aqua"], order:3 },
+        // 최초컨택 — 구 '주별 흐름' 카드가 갖고 있던 계열(2026-07-28 흡수). 값은 payload에 원래 있었고 안 그리고 있었을 뿐이다.
+        // 왼쪽축(건수)이라 실선으로 둔다 — 이 차트는 '실선=건수 / 점선=일수' 규칙으로 읽는다.
+        { type:"line", label:"최초컨택", data:rows.map(function(x){return x.firstContacts;}), borderColor:C["--s-violet"], backgroundColor:"transparent", yAxisID:"y", borderWidth:2, tension:.3, pointRadius:2, pointBackgroundColor:C["--s-violet"], order:2 },
         { type:"line", label:"설치속도(일)", data:rows.map(function(x){return r1(x.avgSpeed);}), borderColor:C["--s-blue-d"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--s-blue-d"], spanGaps:true, order:1 },
         { type:"line", label:"재컨택주기(일)", data:rows.map(function(x){return r1(x.avgRetouch);}), borderColor:C["--s-orange"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--s-orange"], spanGaps:true, order:1 }
       ] },
@@ -2033,6 +2012,8 @@ function renderDaily(p){
         { type:"bar", label:"출고건수", data:rows.map(function(x){return x.shipped;}), backgroundColor:C["--s-blue-l"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:5, datalabels: dlBarTop({font:{weight:"600",size:9}}) },
         { type:"bar", label:"통화건수", data:rows.map(function(x){return x.calls;}), backgroundColor:C["--s-yellow"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:5, datalabels: dlBarTop({font:{weight:"600",size:9}}) },
         { type:"line", label:"설치완료", data:rows.map(function(x){return x.installs;}), borderColor:C["--s-aqua"], backgroundColor:"transparent", yAxisID:"y", borderWidth:2.6, tension:.3, pointRadius:2, pointBackgroundColor:C["--s-aqua"], order:3 },
+        // 최초컨택 — 구 '일별 흐름' 카드가 갖고 있던 계열(2026-07-28 흡수). 주간 비교와 같은 색·같은 규칙.
+        { type:"line", label:"최초컨택", data:rows.map(function(x){return x.firstContacts;}), borderColor:C["--s-violet"], backgroundColor:"transparent", yAxisID:"y", borderWidth:2, tension:.3, pointRadius:2, pointBackgroundColor:C["--s-violet"], order:2 },
         { type:"line", label:"설치속도(일)", data:rows.map(function(x){return r1(x.avgSpeed);}), borderColor:C["--s-blue-d"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--s-blue-d"], spanGaps:true, order:1 },
         { type:"line", label:"재컨택주기(일)", data:rows.map(function(x){return r1(x.avgRetouch);}), borderColor:C["--s-orange"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--s-orange"], spanGaps:true, order:1 }
       ] },
@@ -3266,7 +3247,7 @@ var CUR_TAB="accel"; // 현재 보고 있는 메뉴(탭). 날짜조회 시 이 �
 //    (cohort=미설치 잔여 경과일·월 목표 / perf=KPI 타일·채널비율·설치소요일 분포 / reasons=D+7 지연사유)
 var TAB_SECTIONS={
   ops:["ops","perf","cohort","reasons"], dept:["reasons"],
-  perf:["perf","reasons"], flow:["perf"], cohort:["cohort"],
+  perf:["perf","reasons"], cohort:["cohort"],
   weekly:["perf"], daily:["perf"], report:["perf"],
   shipweekly:["ship"], shipdaily:["ship"], accel:["accel"]
 };
@@ -3717,7 +3698,7 @@ function shareTabLayout(){
   if(s) s.addEventListener("click", shareTabLayout);
 })();
 
-var TABMETA={ ops:["운영 대시보드","① 현재 잔여 업무량(콜리스트 기준) + ② 주간 요약(구 현황판) · 두 섹션은 기준 시점이 다릅니다"], dept:["부서별 지연원인 · D+7 초과 지연분석","① 부서별 원인(모수=지연건, 완료 D+7 이상 + 미완료 7일 이상) + ② D+7 초과 지연분석(모수=D+7 초과 완료건, 출고주·사유·소요일 구간)"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량"], flow:["월·주·일 흐름","실적로그 기준 · 통화시도·설치완료·최초컨택의 월별/주별/일별 추이"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(K) 대비 설치예정(D) 병기"] };
+var TABMETA={ ops:["운영 대시보드","① 현재 잔여 업무량(콜리스트 기준) + ② 주간 요약(구 현황판) · 두 섹션은 기준 시점이 다릅니다"], dept:["부서별 지연원인 · D+7 초과 지연분석","① 부서별 원인(모수=지연건, 완료 D+7 이상 + 미완료 7일 이상) + ② D+7 초과 지연분석(모수=D+7 초과 완료건, 출고주·사유·소요일 구간)"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(K) 대비 설치예정(D) 병기"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
@@ -3725,7 +3706,9 @@ document.querySelectorAll(".navitem").forEach(function(n){
     var t=n.dataset.tab;
     // 상위 메뉴 클릭 시 하위 메뉴 토글(펼침/접힘) — 성과→흐름, 주간비교→일간비교, 출고주비교→출고일비교
     // (D+7 지연분석은 2026-07-23 부서별 지연원인 탭으로 통합돼 하위 메뉴에서 빠졌다)
-    var TOGGLE = { perf:{children:["nav-flow"], caret:"perf-caret"}, weekly:{children:["nav-daily"], caret:"weekly-caret"}, shipweekly:{children:["nav-shipdaily"], caret:"shipweekly-caret"} };
+    // perf 는 2026-07-28 하위메뉴(월·주·일 흐름)가 사라져 TOGGLE 에서 뺐다.
+    // ⚠️ 여기 남겨두면 getElementById("nav-flow") 가 null 이라 성과 탭 클릭이 통째로 죽는다.
+    var TOGGLE = { weekly:{children:["nav-daily"], caret:"weekly-caret"}, shipweekly:{children:["nav-shipdaily"], caret:"shipweekly-caret"} };
     if (TOGGLE[t]) {
       var first = document.getElementById(TOGGLE[t].children[0]);
       var open = (first.style.display === "none");
