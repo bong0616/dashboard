@@ -674,7 +674,7 @@
       <div class="card col-6 fill" data-cid="opsAbsent"><h3>📵 부재 단계별</h3><div class="sub">재컨택 우선순위 판단용</div><div class="chart-wrap ch-m"><canvas id="opsAbsent"></canvas></div></div>
       <!-- 구 현황판 '미설치 잔여 경과일' — 선택 주와 무관한 현재시점 지표라 ①현재 잔여 섹션에 둔다(2026-07-23 이관) -->
       <div class="card col-6 fill" data-cid="boardAging"><h3>⏳ 미설치 잔여 경과일 <small class="th-tgt" style="display:inline">배송완료 기준</small></h3><div class="sub">설치예정·보류·부재(1~4회)만 · 배송완료 기준(배송중 제외) · 출고 후 경과일 · 장기미설치·위약금·반품/폐업 제외 · <b style="color:var(--s-blue-d)">막대 클릭 시 주문번호·경과일·메모</b></div><div class="chart-wrap ch-m"><canvas id="boardAging"></canvas></div></div>
-      <div class="card col-12 fill" data-cid="opsReason"><h3>🧾 미설치 사유 (현재 잔여)</h3><div class="sub">로우데이터 L열 코드화 사유 · 반품/폐업 및 <b>배송중 전체 제외</b>(배송완료·구매확정만) · '(사유미기재) 배송완료'=설치 가능한데 사유 미입력</div><div class="chart-wrap ch-m"><canvas id="opsReason"></canvas></div></div>
+      <div class="card col-12 fill" data-cid="opsReason"><h3>🧾 미설치 사유 (현재 잔여)</h3><div class="sub">로우데이터 K열 코드화 사유 · 반품/폐업 및 <b>배송중 전체 제외</b>(배송완료·구매확정만) · '(사유미기재) 배송완료'=설치 가능한데 사유 미입력</div><div class="chart-wrap ch-m"><canvas id="opsReason"></canvas></div></div>
       <div class="card col-12" data-cid="opsLastCall"><h3>📞 마지막 통화일 경과 현황</h3>
         <div class="sub">콜리스트 <b>T열(마지막통화일)</b>에 날짜가 있는 잔여 <b id="lca-total">–</b>건 기준 · 경과일 = 오늘 − 마지막통화일 · 표의 <b>누적</b>은 그 구간 <b>이상</b> 통화가 끊긴 건수 · <b>오래 방치된 건일수록 재컨택 우선순위</b></div>
         <div class="lca-split">
@@ -712,7 +712,7 @@
       <div class="grid">
         <div class="card col-12" data-cid="accelDevLines">
         <h3>🚚 당일배송/당일설치완료 요약</h3>
-        <div class="sub">로우데이터 <b>T열(당일배송반영)</b>에 그 날짜가 찍힌 건들의 코호트 · <b>전일출고</b>=하루 전 출고건수(H열) — 배송소요일이 약 1일이라 <b>그날 배송전환의 모집단</b>입니다 · <b>배송업데이트</b>=그날 배송완료로 전환된 건 · <b>당일설치건</b>=설치일(S)−T가 0일 · <b>배송소요일</b>=T−출고일(H) · <b>평균설치소요일</b>=S−T · 과거 코호트도 매 조회 시 재계산되므로 설치가 뒤늦게 찍히면 숫자가 올라갑니다 · <b style="color:var(--s-blue-d)">연파랑 행(평균↑)</b>은 배송업데이트가 <b>일평균 이상</b>인 날 — 요일별 물량 쏠림을 보세요</div>
+        <div class="sub">로우데이터 <b>T열(당일배송반영)</b>에 그 날짜가 찍힌 건들의 코호트 · <b>전일출고</b>=하루 전 출고건수(G열) — 배송소요일이 약 1일이라 <b>그날 배송전환의 모집단</b>입니다 · <b>배송업데이트</b>=그날 배송완료로 전환된 건 · <b>당일설치건</b>=설치일(S)−T가 0일 · <b>배송소요일</b>=T−출고일(H) · <b>평균설치소요일</b>=S−T · 과거 코호트도 매 조회 시 재계산되므로 설치가 뒤늦게 찍히면 숫자가 올라갑니다 · <b style="color:var(--s-blue-d)">연파랑 행(평균↑)</b>은 배송업데이트가 <b>일평균 이상</b>인 날 — 요일별 물량 쏠림을 보세요</div>
         <div id="accelDevLines" class="acl"></div>
         </div>
       </div>
@@ -769,7 +769,7 @@
     <div class="tiles" id="dept-tiles"></div>
     <div class="grid">
       <div class="card col-5 fill" data-cid="deptBar"><h3>🏢 부서별 원인 건수 <span class="board-imp">클릭</span></h3>
-        <div class="sub">로우데이터 L열 사유코드 → 부서 매핑 · <b>고객사정</b>은 부서가 손쓰기 어려운 축이라 참고용 · <b style="color:var(--s-blue-d)">막대 클릭 시 그 부서 주문번호·메모</b></div>
+        <div class="sub">로우데이터 K열 사유코드 → 부서 매핑 · <b>고객사정</b>은 부서가 손쓰기 어려운 축이라 참고용 · <b style="color:var(--s-blue-d)">막대 클릭 시 그 부서 주문번호·메모</b></div>
         <div class="chart-wrap ch-m"><canvas id="deptBar"></canvas></div>
       </div>
       <div class="card col-7 fill" data-cid="deptMonth"><h3>📈 출고월별 추이 <small class="th-tgt" style="display:inline">개선대상만</small></h3>
@@ -779,7 +779,7 @@
       <!-- 긴 표(세분류 상세) 옆에는 짧은 카드 2개를 세로로 쌓아 높이를 맞춘다 — 하나만 두면 밑이 통째로 빈다 -->
       <div class="col-5 stack">
         <div class="card" data-cid="natBar"><h3>🔁 지연 성격 <span class="board-imp">클릭</span></h3>
-          <div class="sub">L열 사유코드와 <b>별개 축</b> · 막대 클릭 시 주문번호·메모 · <b>반품·폐업</b>=J열 기준(설치 불가라 별도) · <b>방문설치</b>=N열 기준(방문 접수돼 조치 잡힌 건) · <b>반복미룸</b>=2번 이상 약속하고 안 지킴 · <b>환경대기</b>=인터넷·공사 등 매장 준비 미비 · <b>연락안됨</b>=첫 컨택부터 부재 + 부재 2회 이상(한 번도 못 잡은 건) · 나머지는 K열 메모 파생</div>
+          <div class="sub">K열 사유코드와 <b>별개 축</b> · 막대 클릭 시 주문번호·메모 · <b>반품·폐업</b>=I열 기준(설치 불가라 별도) · <b>방문설치</b>=N열 기준(방문 접수돼 조치 잡힌 건) · <b>반복미룸</b>=2번 이상 약속하고 안 지킴 · <b>환경대기</b>=인터넷·공사 등 매장 준비 미비 · <b>연락안됨</b>=첫 컨택부터 부재 + 부재 2회 이상(한 번도 못 잡은 건) · 나머지는 J열 메모 파생</div>
           <div class="chart-wrap ch-m"><canvas id="natBar"></canvas></div>
         </div>
         <div class="card" data-cid="ppLead"><h3>📉 미룸 횟수 → 설치 소요일 <span class="board-imp">핵심</span></h3>
@@ -800,7 +800,7 @@
         <div class="tbl-wrap"><table class="dtable" id="deptTbl"></table></div>
       </div>
       <div class="card col-12" data-cid="rootBar"><h3>🎯 근본원인 대분류 <span class="board-imp">핵심</span></h3>
-        <div class="sub">개선대상을 <b>어떤 액션으로 막을 수 있나</b>로 묶음 · L열 코드 + K열 메모 병합 판정 · <b>정상 대기·고객 변심·사유 미기재</b>는 액션 대상이 아니라 회색 · <b id="rootbar-scope"></b> <small class="th-tgt" style="display:inline">'세분류 상세' 표의 월 선택을 따라감</small></div>
+        <div class="sub">개선대상을 <b>어떤 액션으로 막을 수 있나</b>로 묶음 · K열 코드 + J열 메모 병합 판정 · <b>정상 대기·고객 변심·사유 미기재</b>는 액션 대상이 아니라 회색 · <b id="rootbar-scope"></b> <small class="th-tgt" style="display:inline">'세분류 상세' 표의 월 선택을 따라감</small></div>
         <div class="chart-wrap ch-m"><canvas id="rootBar"></canvas></div>
       </div>
       <div class="card col-12" data-cid="dept-quality"><h3>⚠️ 데이터 품질</h3><div class="sub">집계 신뢰도에 영향을 주는 원천 이슈</div>
@@ -1164,7 +1164,7 @@ function renderOps(o, reasons) {
     data:{ labels:kz.map(function(r){return r.label;}),
       datasets:[{ data:kz.map(function(r){return r.count;}), backgroundColor:kz.map(function(r){return delayCatColor(r.label);}), borderRadius:5, categoryPercentage:.74, barPercentage:.82 }] },
     options:{ indexAxis:"y", scales:kwSc,
-      onClick:function(evt, els){ if(els&&els.length&&isKwEtc(els[0].index)) openDelayModal(kwEtc, kwEtcTotal, "미설치 사유 · 기타 세부내역", "메모 키워드 → 없으면 L열 코드 → 그것도 없으면 상태·배송단계 · 배송완료·사유없음=관리필요 · 개인정보 미포함"); },
+      onClick:function(evt, els){ if(els&&els.length&&isKwEtc(els[0].index)) openDelayModal(kwEtc, kwEtcTotal, "미설치 사유 · 기타 세부내역", "메모 키워드 → 없으면 K열 코드 → 그것도 없으면 상태·배송단계 · 배송완료·사유없음=관리필요 · 개인정보 미포함"); },
       onHover:function(evt, els){ if(evt.native&&evt.native.target) evt.native.target.style.cursor=(els.length&&isKwEtc(els[0].index))?"pointer":"default"; },
       plugins:{ datalabels: dl({anchor:"end",align:"end"}),
         tooltip:{ callbacks:{ afterLabel:function(ct){ return isKwEtc(ct.dataIndex)?"▶ 클릭 시 세부내역":undefined; } } } } } });
@@ -1206,7 +1206,7 @@ function renderDept(reasons){
     tile("아직 미완료","⛔", fmt(d.actionableOpen), "건", "개선대상 중 설치 안 끝난 건") +
     (top ? tile("최다 부서","🔺", top.dept, "", fmt(top.total)+"건 · 미완료 "+pctS(top.openRate)) : "") +
     tile("사유 기재율","📝", pctS(d.coverage.rate), "", "지연건 중 상담원 배정 "+fmt(d.coverage.agentHasReason)+"/"+fmt(d.coverage.agent), false,
-      "<b>상담원이 배정된 건</b>만 분모로 셉니다.<br><br><b>자가설치("+fmt(d.coverage.self)+"건)는 제외</b> — 상담원이 컨택하지 않으므로 L열 사유가 비어 있는 게 정상입니다. 이걸 분모에 넣으면 기재율이 "+pctS(d.coverage.rateAll)+"로 보여 마치 절반이 누락된 것처럼 오해하게 됩니다.<br><br>⚠️ 이 탭의 다른 지표와 같이 <b>지연건만</b>을 모수로 씁니다 — 전체 출고건 기준 기재율과는 다른 숫자입니다.");
+      "<b>상담원이 배정된 건</b>만 분모로 셉니다.<br><br><b>자가설치("+fmt(d.coverage.self)+"건)는 제외</b> — 상담원이 컨택하지 않으므로 K열 사유가 비어 있는 게 정상입니다. 이걸 분모에 넣으면 기재율이 "+pctS(d.coverage.rateAll)+"로 보여 마치 절반이 누락된 것처럼 오해하게 됩니다.<br><br>⚠️ 이 탭의 다른 지표와 같이 <b>지연건만</b>을 모수로 씁니다 — 전체 출고건 기준 기재율과는 다른 숫자입니다.");
 
   // 부서별 막대(개선대상 → 고객사정 순, DEPT_ORDER 유지) · 막대 클릭 = 그 부서 원인 전체 드릴다운
   DEPT_BARS_SEEN = d.byDept.map(function(x){ return x.dept; });
@@ -1259,7 +1259,7 @@ function renderDept(reasons){
 
   DEPT_CAUSES_SEEN = causeRows.map(function(c){ return {dept:c.dept, cause:c.cause}; });
   document.getElementById("deptTbl").innerHTML =
-    "<thead><tr><th>부서</th><th>원인 (L열 사유코드)</th><th>건수</th><th>완료</th><th>미완료</th><th>미완료율</th></tr></thead><tbody>"+
+    "<thead><tr><th>부서</th><th>원인 (K열 사유코드)</th><th>건수</th><th>완료</th><th>미완료</th><th>미완료율</th></tr></thead><tbody>"+
     causeRows.map(function(c,i){
       var warn = c.openRate>=0.5 && c.total>=5; // 절반 이상 미완료 = 설치를 끝까지 막는 원인
       return "<tr class='dept-row"+(c.actionable?"":" dept-dim")+"' data-i='"+i+"'>"+
@@ -1291,7 +1291,7 @@ function renderDept(reasons){
   var agentBlank=d.coverage.agent-d.coverage.agentHasReason;
   document.getElementById("dept-quality").innerHTML =
     "상담원 배정 <b>"+fmt(d.coverage.agent)+"건</b> 중 사유 미기재는 <b>"+fmt(agentBlank)+"건</b>뿐입니다("+pctS(1-d.coverage.rate)+") — <b>기재는 사실상 잘 되고 있습니다.</b><br>"+
-    "자가설치 <b>"+fmt(d.coverage.self)+"건</b>은 상담원 컨택이 없어 L열이 비는 게 정상이라 <b>모수에서 제외</b>했습니다. "+
+    "자가설치 <b>"+fmt(d.coverage.self)+"건</b>은 상담원 컨택이 없어 K열이 비는 게 정상이라 <b>모수에서 제외</b>했습니다. "+
     "(제외 안 하면 기재율이 "+pctS(d.coverage.rateAll)+"로 보여 절반이 누락된 것처럼 오해됩니다.) "+
     "담당자 공란·문자발송 <b>"+fmt(d.coverage.other)+"건</b>도 같은 이유로 사유가 없습니다.<br>"+
     "⚠️ 원천 코드번호가 겹칩니다 — <b>10</b>번(비용부담/비용문제), <b>4</b>번(설치중도포기/바쁨). "+
@@ -1416,11 +1416,11 @@ function paintRootDetail(t, r){
   var rows=r.rows||[];
   var moTag = r.ym ? " · "+(+r.ym.slice(5))+"월 출고" : "";
   document.getElementById("modal-title").textContent=t.major+" · "+t.minor+moTag+" ("+fmt(r.count||0)+"건)";
-  document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · K열 메모 원문 · 미완료 "+fmt(r.open||0)+"건 먼저 · 오래된 출고순";
+  document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · J열 메모 원문 · 미완료 "+fmt(r.open||0)+"건 먼저 · 오래된 출고순";
   if(!rows.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">해당 원인에 건이 없습니다.</div>'; return; }
   document.getElementById("modal-body").innerHTML=
     '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
-    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>부서</th><th>출고</th><th>설치</th><th>메모 (K열)</th></tr></thead><tbody>'+
+    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>부서</th><th>출고</th><th>설치</th><th>메모 (J열)</th></tr></thead><tbody>'+
     rows.map(function(x){
       var memo=String(x.memo||"").trim();
       var inst = leadCell(x);
@@ -1432,7 +1432,7 @@ function paintRootDetail(t, r){
     }).join('')+'</tbody></table>';
 }
 
-// 지연 성격(미룸/환경) — K열 메모 파생, L열과 별개 축
+// 지연 성격(미룸/환경) — J열 메모 파생, K열과 별개 축
 // 방문설치=조치 잡힌 건(초록) · 반품·폐업=이미 죽은 건(회색 계열, 재컨택 대상 아님)
 var NAT_COLOR = { "반복미룸":"--s-red", "환경대기":"--s-orange", "연락안됨":"--s-violet", "약속1회":"--s-blue-l",
   "방문설치":"--s-aqua", "반품·폐업":"--baseline", "신호없음":"--muted" };
@@ -1506,11 +1506,11 @@ function paintNatureDetail(key, r){
   var isUnreach = (key==="연락안됨");
   var cntHead = isUnreach ? "부재" : "미룸";
   document.getElementById("modal-title").textContent="지연 성격 · "+key+" ("+fmt(r.count||0)+"건)";
-  document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · K열 메모 원문 · "+cntHead+" 많은 순 · 미완료 "+fmt(r.open||0)+"건";
+  document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · J열 메모 원문 · "+cntHead+" 많은 순 · 미완료 "+fmt(r.open||0)+"건";
   if(!rows.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">해당 성격의 건이 없습니다.</div>'; return; }
   document.getElementById("modal-body").innerHTML=
     '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
-    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>'+cntHead+'</th><th>출고</th><th>설치</th><th>메모 (K열)</th></tr></thead><tbody>'+
+    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>'+cntHead+'</th><th>출고</th><th>설치</th><th>메모 (J열)</th></tr></thead><tbody>'+
     rows.slice(0,300).map(function(x){
       var memo=String(x.memo||"").trim();
       var inst = leadCell(x);
@@ -1554,11 +1554,11 @@ function paintDeptDetail(t, r, showCause){
   document.getElementById("modal-title").textContent=t.dept+" · "+t.cause+moLab+" ("+fmt(r.count||0)+"건)";
   document.getElementById("modal-sub").textContent=
     "미완료 "+fmt(r.open||0)+"건 + D+7 초과 완료 "+fmt(r.delayedDone||0)+"건"
-    +" · 로우데이터 A열 주문번호 · K열 메모 원문 · 미완료 먼저 · 오래된 출고순";
+    +" · 로우데이터 A열 주문번호 · J열 메모 원문 · 미완료 먼저 · 오래된 출고순";
   if(!rows.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">해당 원인에 지연건이 없습니다.</div>'; return; }
   document.getElementById("modal-body").innerHTML=
     '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
-    '<table class="lcd-tbl"><thead><tr><th>주문번호</th>'+(showCause?'<th>원인 (L열)</th>':'')+'<th>출고</th><th>설치</th><th>메모 (K열)</th></tr></thead><tbody>'+
+    '<table class="lcd-tbl"><thead><tr><th>주문번호</th>'+(showCause?'<th>원인 (K열)</th>':'')+'<th>출고</th><th>설치</th><th>메모 (J열)</th></tr></thead><tbody>'+
     rows.map(function(x){
       var memo=String(x.memo||"").trim();
       var inst = leadCell(x);
@@ -2140,7 +2140,7 @@ function shipSpeedChart(cid, rows, labels, maxTicks){
 var SHIP_COLDEF_HTML =
     '<span class="cd-row"><span class="cd-k">읽는 법</span> 한 행 = <b>그 날(주) 출고된 물량</b>의 현재 처리 상태. 설치완료·완료율도 <b>설치한 날이 아니라 출고한 날</b>에 계상됩니다(주간·일간 비교 탭은 반대로 설치일 기준).</span>'
   + '<span class="cd-row"><span class="cd-k">최초컨택</span> 그 날 출고분 중 <b>상담원이 첫 컨택을 기록한 건수</b>(로우데이터 P열 최초컨택일) = <b>이 물량에 컨택이 들어갔는지</b>를 보는 칸. <span class="cd-warn">⚠️ 자가설치로 처리되는 건은 상담원 컨택이 없어 여기 안 잡힙니다</span> → 출고 대비 100%가 정상이 아니며, 실측상 <b>최초컨택 ≈ 출고 − 자가설치</b>(상담원이 맡은 물량)입니다.</span>'
-  + '<span class="cd-row"><span class="cd-k">컨택 시도</span> 그 날 출고건들의 K열 메모 <b>[날짜] 스탬프 줄 수 합</b> = 통화·부재 <b>시도 횟수</b>(1건을 3번 컨택하면 3). 최초컨택이 <b>건수</b>라면 이건 <b>횟수</b>입니다. 자동문자 제외 · <span class="cd-warn">메모 미기재분은 0</span>이라 실제 시도량보다 적게 잡힙니다.</span>'
+  + '<span class="cd-row"><span class="cd-k">컨택 시도</span> 그 날 출고건들의 J열 메모 <b>[날짜] 스탬프 줄 수 합</b> = 통화·부재 <b>시도 횟수</b>(1건을 3번 컨택하면 3). 최초컨택이 <b>건수</b>라면 이건 <b>횟수</b>입니다. 자동문자 제외 · <span class="cd-warn">메모 미기재분은 0</span>이라 실제 시도량보다 적게 잡힙니다.</span>'
   + '<span class="cd-row"><span class="cd-k">건당 컨택</span> 컨택 시도 ÷ 출고. 자가설치·메모공란 때문에 <b>1회 미만이 정상</b>이고, 물량 대비 컨택 노력의 <b>추세</b>를 봅니다(좋고 나쁨 판단이 애매해 회색 화살표).</span>'
   + '<span class="cd-row"><span class="cd-k">진행중</span> 코호트가 닫힌 뒤 10일이 안 지난 행. 컨택·설치가 아직 돌아가는 중이라 <b>위 세 칸이 계속 올라갑니다</b> → 성숙한 행끼리만 비교하세요.</span>';
 function paintShipColdef(){
@@ -2152,7 +2152,7 @@ function shipTableHTML(rows, opts){
   var head='<thead><tr>'
     + '<th rowspan="2">'+opts.dateHead+'</th><th rowspan="2">출고<br><small class="th-tgt">업무량</small></th>'
     + '<th rowspan="2" title="그 날 출고분 중 상담원이 첫 컨택을 기록한 건수(P열). 자가설치 건은 상담원 컨택이 없어 잡히지 않습니다.">최초컨택<br><small class="th-tgt">컨택 들어간 건수<br>자가설치 제외</small></th>'
-    + '<th rowspan="2" title="K열 메모 [날짜] 스탬프 줄 수 합 = 통화·부재 시도 횟수(건수 아님). 메모 미기재분은 0.">컨택 시도<br><small class="th-tgt">시도 횟수<br>통화+부재</small></th>'
+    + '<th rowspan="2" title="J열 메모 [날짜] 스탬프 줄 수 합 = 통화·부재 시도 횟수(건수 아님). 메모 미기재분은 0.">컨택 시도<br><small class="th-tgt">시도 횟수<br>통화+부재</small></th>'
     + '<th rowspan="2" title="컨택 시도 ÷ 출고. 자가설치·메모공란 때문에 1회 미만이 정상입니다.">건당 컨택<br><small class="th-tgt">시도÷출고</small></th>'
     + '<th colspan="3" class="grp grp-top gl gr">설치완료 <small>합계 = 자가설치 + 상담원</small></th>'
     + '<th rowspan="2">완료율</th><th rowspan="2">미완료<br><small class="th-tgt">잔량</small></th>'
@@ -2484,7 +2484,7 @@ function renderAccelDevTable(rows, avgDelivered){
     + '<th>콜시도<br><small class="th-tgt">실적로그 K</small></th>'
     + '<th>설치예정<br><small class="th-tgt">실적로그 D</small></th>'
     + '<th>콜시도 대비<br><small class="th-tgt">설치예정율</small></th>'
-    + '<th title="하루 전 출고건수(H열). 배송소요일이 약 1일이라 그날 배송전환의 모집단으로 봅니다.">전일 출고<br><small class="th-tgt">H열 D−1</small></th>'
+    + '<th title="하루 전 출고건수(G열). 배송소요일이 약 1일이라 그날 배송전환의 모집단으로 봅니다.">전일 출고<br><small class="th-tgt">G열 D−1</small></th>'
     + '<th>배송업데이트<br><small class="th-tgt">T열 각인</small></th>'
     + '<th>설치완료</th><th>당일설치<br><small class="th-tgt">S−T=0</small></th><th>설치완료율</th>'
     + '<th>배송소요일<br><small class="th-tgt">T−H</small></th><th>평균설치소요일<br><small class="th-tgt">S−T</small></th>'
@@ -3134,12 +3134,12 @@ function failLastCallDetail(msg){
 function paintLastCallDetail(def, d){
   var rows=d.rows||[];
   document.getElementById("modal-title").textContent="마지막 통화일 · "+def[1]+" ("+fmt(d.count||0)+"건)";
-  document.getElementById("modal-sub").textContent="콜리스트 A열 주문번호 · K열 메모 원문 · 오래 방치된 건 순";
+  document.getElementById("modal-sub").textContent="콜리스트 A열 주문번호 · J열 메모 원문 · 오래 방치된 건 순";
   if(!rows.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">해당 구간에 건이 없습니다.</div>'; return; }
   // 메모는 시트 자유입력 → esc() 필수(HTML 주입 방지)
   document.getElementById("modal-body").innerHTML=
     '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
-    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>마지막통화</th><th>상태</th><th>메모 (K열)</th></tr></thead><tbody>'+
+    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>마지막통화</th><th>상태</th><th>메모 (J열)</th></tr></thead><tbody>'+
     rows.map(function(r){
       var memo=String(r.memo||"").trim();
       return '<tr><td class="lcd-ord">'+esc(r.order)+'</td>'+
@@ -3171,12 +3171,12 @@ function openAgingDetail(idx){
 function paintAgingDetail(def, r){
   var rows=r.rows||[];
   document.getElementById("modal-title").textContent="미설치 잔여 · 출고 후 "+def[1]+" ("+fmt(r.count||0)+"건)";
-  document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · K열 메모 원문 · 오래 방치된 건 순 · 배송완료·구매확정 + 설치예정·보류·부재만";
+  document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · J열 메모 원문 · 오래 방치된 건 순 · 배송완료·구매확정 + 설치예정·보류·부재만";
   if(!rows.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">해당 구간에 건이 없습니다.</div>'; return; }
   // 메모는 시트 자유입력 → esc() 필수(HTML 주입 방지)
   document.getElementById("modal-body").innerHTML=
     '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
-    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>경과</th><th>출고</th><th>상태</th><th>메모 (K열)</th></tr></thead><tbody>'+
+    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>경과</th><th>출고</th><th>상태</th><th>메모 (J열)</th></tr></thead><tbody>'+
     rows.map(function(x){
       var memo=String(x.memo||"").trim();
       return '<tr><td class="lcd-ord">'+esc(x.order)+'</td>'+
@@ -3199,12 +3199,12 @@ function openDelayWeekDetail(week, cat){
 function paintDelayWeekDetail(lab, r){
   var rows=r.rows||[];
   document.getElementById("modal-title").textContent="D+7 지연 · "+lab+" ("+fmt(r.count||0)+"건)";
-  document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · K열 메모 원문 · 출고주 기준 · 오래 걸린 순";
+  document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · J열 메모 원문 · 출고주 기준 · 오래 걸린 순";
   if(!rows.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">해당 주·사유에 건이 없습니다.</div>'; return; }
   var showCat=!r.cat; // 합계(전체 사유) 조회일 때만 사유 열을 보여준다
   document.getElementById("modal-body").innerHTML=
     '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
-    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>소요</th>'+(showCat?'<th>사유</th>':'')+'<th>출고</th><th>설치</th><th>메모 (K열)</th></tr></thead><tbody>'+
+    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>소요</th>'+(showCat?'<th>사유</th>':'')+'<th>출고</th><th>설치</th><th>메모 (J열)</th></tr></thead><tbody>'+
     rows.map(function(x){
       var memo=String(x.memo||"").trim();
       return '<tr><td class="lcd-ord">'+esc(x.order)+'</td>'+
