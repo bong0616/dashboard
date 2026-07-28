@@ -495,6 +495,10 @@
   .acg { display: flex; flex-direction: column; gap: 7px; margin-top: 4px; }
   .acg-row { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface-1); }
   .acg-row.cur { border-color: color-mix(in srgb, var(--s-blue) 45%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--s-blue) 22%, transparent); }
+  /* 주말(토·일) = 일평균 모수에서 제외한 날. 표엔 남기되 회색으로 낮춰 '평균에 안 들어간 날'임을 눈으로 알린다(2026-07-27). */
+  .acg-row.wknd { opacity: .6; background: var(--surface-2, #f3f4f6); }
+  .acg-row.wknd .acg-head { background: color-mix(in srgb, var(--muted) 10%, transparent); }
+  .wkndtag { display:inline-block; font-size:10px; font-weight:700; color:var(--text-secondary); background:color-mix(in srgb, var(--muted) 22%, transparent); border-radius:5px; padding:1px 6px; margin-left:6px; vertical-align:middle; }
   .acg-head { display: flex; align-items: baseline; gap: 10px; padding: 6px 12px;
     background: color-mix(in srgb, var(--s-blue) 6%, transparent); border-bottom: 1px solid var(--border); }
   .acg-row.cur .acg-head { background: color-mix(in srgb, var(--s-blue) 13%, transparent); }
@@ -708,7 +712,7 @@
       <div class="grid">
         <div class="card col-12" data-cid="accelDevLines">
         <h3>🚚 당일배송/당일설치완료 요약</h3>
-        <div class="sub">로우데이터 <b>T열(당일배송반영)</b>에 그 날짜가 찍힌 건들의 코호트 · <b>배송업데이트</b>=그날 배송완료로 전환된 건 · <b>당일설치건</b>=설치일(S)−T가 0일 · <b>배송소요일</b>=T−출고일(H) · <b>평균설치소요일</b>=S−T · 과거 코호트도 매 조회 시 재계산되므로 설치가 뒤늦게 찍히면 숫자가 올라갑니다 · <b style="color:var(--s-blue-d)">연파랑 행(평균↑)</b>은 배송업데이트가 <b>일평균 이상</b>인 날 — 요일별 물량 쏠림을 보세요</div>
+        <div class="sub">로우데이터 <b>T열(당일배송반영)</b>에 그 날짜가 찍힌 건들의 코호트 · <b>전일출고</b>=하루 전 출고건수(H열) — 배송소요일이 약 1일이라 <b>그날 배송전환의 모집단</b>입니다 · <b>배송업데이트</b>=그날 배송완료로 전환된 건 · <b>당일설치건</b>=설치일(S)−T가 0일 · <b>배송소요일</b>=T−출고일(H) · <b>평균설치소요일</b>=S−T · 과거 코호트도 매 조회 시 재계산되므로 설치가 뒤늦게 찍히면 숫자가 올라갑니다 · <b style="color:var(--s-blue-d)">연파랑 행(평균↑)</b>은 배송업데이트가 <b>일평균 이상</b>인 날 — 요일별 물량 쏠림을 보세요</div>
         <div id="accelDevLines" class="acl"></div>
         </div>
       </div>
@@ -2291,7 +2295,9 @@ function avgTile(label, ic, sum, valKey, opts){
     // 일평균 칸은 '평균', 비율·소요일 칸은 '합계 기준'이라고 정확히 쓴다(날짜별 평균의 평균이 아님).
     // 당일은 아직 미완성이라 평균에서 뺀다 — 그 사실을 부제에 적어야 "왜 오늘이 안 들어갔지"를 안 묻는다.
     var scope = sum.includesToday ? '<span style="color:var(--s-orange)">오늘 포함</span>' : '오늘 제외';
-    sub = '<span style="color:var(--muted)">최근 <b>'+days+'일</b> '+(opts.basis || "평균")+' · '+scope+'</span>';
+    // 통화 축은 주말(토·일)을 일평균에서 뺀다(상담원 미근무). 배송 축 sum엔 이 플래그가 없어 표기 안 됨.
+    var wknd = sum.weekdaysOnly ? ' · 주말 제외' : '';
+    sub = '<span style="color:var(--muted)">최근 <b>'+days+'일</b> '+(opts.basis || "평균")+' · '+scope+wknd+'</span>';
     if (opts.totalKey && sum[opts.totalKey]!=null) {
       sub += ' <span style="color:var(--text-secondary)">· 합계 '+fmt(sum[opts.totalKey])+'건</span>';
     }
@@ -2348,6 +2354,7 @@ function renderAccel(a){
       var abv = (devAvg!=null && r.delivered!=null && r.delivered >= devAvg);
       return '<div class="acl-row'+(i===dLast?' cur':'')+(abv?' abv':'')+'">'
         + '<span class="acl-d">'+aclDay(r.date)+(abv?'<span class="avgtag">평균↑</span>':'')+'</span>'
+        + aclSeg("전일출고", fmt(r.prevShipped), "건") + aclSep
         + aclSeg("배송업데이트", fmt(r.delivered), "건") + aclSep
         + aclSeg("설치완료건", fmt(r.installed), "건") + aclSep
         + aclSeg("당일설치건", fmt(r.sameDay), "건", true) + aclSep
@@ -2422,9 +2429,11 @@ function renderAccel(a){
       //    U열 신설(2026-07-21) 이전 날짜는 installs 가 null(집계 불가)이라 ofPlanned 도 null → 배지 생략.
       var instRate = (r.ofPlanned==null) ? ""
         : '통화완료건 대비 설치완료율 <b>'+Math.round(r.ofPlanned*100)+'%</b>';
-      return '<div class="acg-row'+(i===sLast?' cur':'')+'">'
+      // 주말(토·일)은 일평균 모수에서 빠졌다 → 표엔 남기되 회색+'평균제외' 배지로 구분(운영자 2026-07-27).
+      return '<div class="acg-row'+(i===sLast?' cur':'')+(r.isWeekend?' wknd':'')+'">'
         + '<div class="acg-head"><span class="acg-d">'+aclDay(r.date)+'</span>'
         +   (i===sLast?'<span class="curtag">최신</span>':'')
+        +   (r.isWeekend?'<span class="wkndtag">주말·평균제외</span>':'')
         +   '<span class="acg-hint" title="당일 통화·당일설치 ÷ 통화성공(실적로그 D열 설치예정) — 통화가 된 건 중 그날 설치까지 끝난 비율">'+instRate+'</span></div>'
         + '<div class="acg-cells">'
         +   acgCell("당일 총 콜시도", r.calls, "실적로그 K · 상담원만")
@@ -2465,6 +2474,7 @@ function renderAccel(a){
 // 표에서만 쓰는 컬럼 설명(부제 한 줄로는 T열의 의미가 전달되지 않는다)
 var ACCEL_COLDEF_HTML =
     '<span class="cd-row"><span class="cd-k">읽는 법</span> 한 행 = <b>그 날 배송완료로 바뀐 물량</b>(T열 각인일)의 현재 처리 상태. 설치완료도 <b>설치한 날이 아니라 배송반영된 날</b>에 계상됩니다.</span>'
+  + '<span class="cd-row"><span class="cd-k">전일 출고</span> 그 날짜의 <b>하루 전 출고건수</b>(로우데이터 H열). 배송소요일(T−H)이 평균 1일 안팎이라 <b>어제 출고분이 오늘 배송완료로 전환</b>됩니다 → 배송업데이트가 적은 날이 <b>물량이 없었던 날인지, 물량은 있었는데 전환이 덜 된 날인지</b> 가릅니다. <b>출고일 코호트 탭의 출고건수와 같은 기준</b>(자가설치 포함)입니다. ⚠️ 배송이 하루 넘게 걸린 건은 그 전 날짜 출고분이라 <b>배송업데이트 ÷ 전일출고를 전환율로 읽으면 안 됩니다</b>(100%를 넘을 수 있음).</span>'
   + '<span class="cd-row"><span class="cd-k">배송업데이트</span> 오후 배송반영 자동화(14:45~15:15)가 그 실행에서 <b>배송완료로 전환한 건수</b>. 오전 자동화·수동 실행은 T열을 건드리지 않아 여기 안 잡힙니다.</span>'
   + '<span class="cd-row"><span class="cd-k">당일설치건</span> 설치일(S) − 배송반영일(T) = <b>0일</b>. 물건이 도착한 그날 설치까지 끝난 건 = 가속화의 최종 목표치.</span>'
   + '<span class="cd-row"><span class="cd-k">콜시도·설치예정</span> 같은 날짜의 <b>실적로그 K열(총계)·D열(설치예정)</b>. 배송 코호트와 <b>모수가 다릅니다</b>(콜은 그날 배송분만 거는 게 아님) — 비율이 아니라 <b>그날의 콜 투입량 대비 성과</b>로 읽으세요. 자가설치 담당자는 통화를 하지 않아 제외됩니다.</span>'
@@ -2493,11 +2503,12 @@ function renderAccelDevTable(rows, avgDelivered){
     + '<th>콜시도<br><small class="th-tgt">실적로그 K</small></th>'
     + '<th>설치예정<br><small class="th-tgt">실적로그 D</small></th>'
     + '<th>콜시도 대비<br><small class="th-tgt">설치예정율</small></th>'
+    + '<th title="하루 전 출고건수(H열). 배송소요일이 약 1일이라 그날 배송전환의 모집단으로 봅니다.">전일 출고<br><small class="th-tgt">H열 D−1</small></th>'
     + '<th>배송업데이트<br><small class="th-tgt">T열 각인</small></th>'
     + '<th>설치완료</th><th>당일설치<br><small class="th-tgt">S−T=0</small></th><th>설치완료율</th>'
     + '<th>배송소요일<br><small class="th-tgt">T−H</small></th><th>평균설치소요일<br><small class="th-tgt">S−T</small></th>'
     + '</tr></thead>';
-  if(!rows.length){ document.getElementById("accelDevTable").innerHTML = head+'<tbody><tr><td colspan="10" style="text-align:center;color:var(--muted)">데이터 없음</td></tr></tbody>'; return; }
+  if(!rows.length){ document.getElementById("accelDevTable").innerHTML = head+'<tbody><tr><td colspan="11" style="text-align:center;color:var(--muted)">데이터 없음</td></tr></tbody>'; return; }
   var recent=rows.slice(-ACCEL_TABLE_DAYS), lastIdx=recent.length-1;
   var body=recent.map(function(w,i){
     var prev=i>0?recent[i-1]:null;
@@ -2510,6 +2521,7 @@ function renderAccelDevTable(rows, avgDelivered){
       + wowCell(w.calls, prev&&prev.calls)
       + wowCell(w.planned, prev&&prev.planned)
       + wowCell(w.plannedRate, prev?prev.plannedRate:null, {valFn:shipPct, unit:"%"})
+      + wowCell(w.prevShipped, prev?prev.prevShipped:null)
       + wowCell(w.delivered, prev&&prev.delivered)
       + wowCell(w.installed, prev&&prev.installed, {share: w.delivered>0?Math.round(w.installed/w.delivered*100):null})
       + wowCell(w.sameDay, prev&&prev.sameDay, {share: w.delivered>0?Math.round(w.sameDay/w.delivered*100):null})
