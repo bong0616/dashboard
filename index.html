@@ -109,6 +109,10 @@
   .tile .t-help .t-tip { visibility:hidden; opacity:0; transition:opacity .12s; position:absolute; top:22px; right:0; width:250px; background:var(--surface-1); color:var(--text-primary); border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow); padding:11px 13px; font-size:11.5px; font-weight:400; line-height:1.55; text-align:left; letter-spacing:0; z-index:20; white-space:normal; }
   .tile .t-help:hover .t-tip { visibility:visible; opacity:1; }
   .tile .t-help .t-tip b { color:var(--s-blue); font-weight:700; }
+  .tile-combo { grid-column: span 2; display:grid; grid-template-columns: 1fr 1fr; gap: 14px; align-content:start; }
+  .tile-combo-cap { grid-column: 1/-1; font-size:12.5px; font-weight:600; color:var(--text-secondary); background: color-mix(in srgb, var(--s-blue) 8%, transparent); border:1px solid var(--border); border-radius:10px; padding:8px 12px; text-align:center; }
+  .tile-combo-cap b { color:var(--s-blue-d); font-size:14px; }
+  .tile-combo-cap .tc-sub { color:var(--muted); font-weight:400; }
 
   /* Cards grid */
   /* align-items:start — 카드가 같은 행의 제일 큰 카드 높이로 늘어나지 않게. 늘어나면 내용 짧은 카드
@@ -2287,6 +2291,22 @@ function avgTile(label, ic, sum, valKey, opts){
   return tile(label, ic, valOut, unit, sub, opts.accent, opts.tip);
 }
 
+// 당일설치(D+0) + D+1일 설치 두 타일의 합산 일평균 캡션 — 두 타일 위에 한 줄로 얹는다(사용자 요청 2026-07-29).
+// installsPerDay/installsD1PerDay는 이미 payload에 있는 값을 그대로 더할 뿐 별도 집계를 새로 하지 않는다
+// (같은 sum(sdSum)·같은 날짜창을 쓰므로 분모가 어긋날 일이 없다).
+function comboCapTile(sum) {
+  var days = (sum && sum.days) || 0;
+  var d0 = sum ? sum.installsPerDay : null, d1 = sum ? sum.installsD1PerDay : null;
+  var t0 = sum ? sum.installs : null, t1 = sum ? sum.installsD1 : null;
+  if (!days || d0 == null || d1 == null) {
+    return '<div class="tile-combo-cap">🧮 당일+D+1일 합산 평균 <span style="color:var(--muted)">표시할 날짜 없음</span></div>';
+  }
+  var avg = d0 + d1;
+  var total = (t0 != null && t1 != null) ? (t0 + t1) : null;
+  return '<div class="tile-combo-cap">🧮 당일+D+1일 합산 평균 <b>' + round1(avg) + '건</b>/일'
+    + (total != null ? ' <span class="tc-sub">(최근 ' + days + '일 합계 ' + fmt(total) + '건)</span>' : '') + '</div>';
+}
+
 // 사용자 요청 표기: "21일 배송업데이트 54건 / 설치완료건 21건 / …" — 일(日) + 요일만 붙인다.
 function aclDay(s){ var p=s.split("-"); var d=new Date(+p[0],+p[1]-1,+p[2]); return (+p[2])+"일("+DY_WD[d.getDay()]+")"; }
 function aclSeg(label, val, unit, hi){
@@ -2389,8 +2409,10 @@ function renderAccel(a){
     avgTile("일평균 콜시도","☎️", sdSum, "callsPerDay", {accent:true, totalKey:"calls", tip:"실적로그 <b>K열(총계)</b> — <b>상담원 담당자만</b>(현재 김규리·김봉수). 자가설치·문자발송 행은 통화가 아니라 제외합니다.<br><br>당일 행은 다음날 오전 9시 30분에 채워지므로 '오늘값' 대신 일평균을 봅니다."}) +
     avgTile("일평균 통화성공","🗓️", sdSum, "plannedPerDay", {totalKey:"planned", tip:"실적로그 <b>D열(설치예정)</b> — 고객과 통화가 되어 <b>설치 일정을 잡은 건</b>."}) +
     avgTile("일평균 부재·기타","📵", sdSum, "othersPerDay", {totalKey:"others", tip:"실적로그 <b>E~J열 합</b> — 통화성공(설치예정)을 뺀 나머지 전부입니다.<br><br>부재 · 명의변경 · 미설치/보류 · 반품/폐업 · 설치거부/장기지연 · 위약금청구.<br><br>이렇게 합쳐야 <b>총 콜시도 = 통화성공 + 이 칸</b> 이 성립합니다."}) +
-    avgTile("일평균 당일설치","⚡", sdSum, "installsPerDay", {totalKey:"installs", tip:"로우데이터 <b>U열='설치예정'</b> 이면서 <b>마지막통화일(R) = 설치일(S)</b> 인 건.<br><br>U열은 2026-07-21 신설이라 그 이전은 집계 불가입니다."}) +
-    avgTile("일평균 D+1일 설치","📆", sdSum, "installsD1PerDay", {totalKey:"installsD1", tip:"로우데이터 <b>U열='설치예정'</b> 이면서 <b>설치일(S) − 마지막통화일(R) = 1일</b> 인 건(통화한 <b>다음날</b> 설치).<br><br>당일설치(S=R)와는 겹치지 않는 별개 집계입니다. U열은 2026-07-21 신설이라 그 이전은 집계 불가입니다."}) +
+    '<div class="tile-combo">' + comboCapTile(sdSum) +
+      avgTile("일평균 당일설치","⚡", sdSum, "installsPerDay", {totalKey:"installs", tip:"로우데이터 <b>U열='설치예정'</b> 이면서 <b>마지막통화일(R) = 설치일(S)</b> 인 건.<br><br>U열은 2026-07-21 신설이라 그 이전은 집계 불가입니다."}) +
+      avgTile("일평균 D+1일 설치","📆", sdSum, "installsD1PerDay", {totalKey:"installsD1", tip:"로우데이터 <b>U열='설치예정'</b> 이면서 <b>설치일(S) − 마지막통화일(R) = 1일</b> 인 건(통화한 <b>다음날</b> 설치).<br><br>당일설치(S=R)와는 겹치지 않는 별개 집계입니다. U열은 2026-07-21 신설이라 그 이전은 집계 불가입니다."}) +
+    '</div>' +
     avgTile("일평균 원격접수","💻", sdSum, "logRemotePerDay", {totalKey:"logRemote", tip:"실적로그 <b>M열(원격설치 접수)</b> — 원격 접수량의 <b>정본</b>입니다.<br><br>로우데이터 N열은 진행이 안 되면 상담원이 <b>콜리스트에서 지워버려</b> 나중에 값이 사라집니다(미러링 반영)."}) +
     avgTile("일평균 원격완료","✅", sdSum, "remotePerDay", {totalKey:"remote", tip:"접수한 원격 중 <b>그날 설치까지 끝난 건</b>(로우데이터 N열 기준). 시간이 지나면 줄어드니 <b>최근치만 신뢰</b>하세요."}) +
     avgTile("통화성공률","📊", sdSum, "plannedRate", {valFn:shipPct, unit:"%", basis:"합계 기준", tip:"구간 <b>합계 기준</b> — 실적로그 D열(설치예정) ÷ K열(콜시도)."}) +
