@@ -384,6 +384,9 @@
   #wbDelayTable { min-width: 0; }
   #wbDelayTable tr.total-row td, #wbDelayTable tr.total-row th { font-weight: 700; background: color-mix(in srgb, var(--s-blue) 7%, transparent); }
   #wbDelayTable td.avgcol { color: var(--s-blue-d); font-weight: 700; }
+  /* 야간원격접수 — 6주(넓은 표) → 일자별 축소 카드(col-4)로 전환. 열이 3개뿐이라 전역 min-width가 불필요. */
+  #wbNightTable { min-width: 0; }
+  #wbNightTable th, #wbNightTable td { padding-left: 8px; padding-right: 8px; }
   /* 상세 팝업(모달) */
   .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.55); backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
   .modal-overlay.open { display: flex; }
@@ -651,7 +654,7 @@
   <div class="page-head">
     <div>
       <h1 id="page-title">위클리 현황판</h1>
-      <p id="page-desc">출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수 6주 · 콜리스트 현재 지연사유 스냅샷</p>
+      <p id="page-desc">출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷</p>
     </div>
     <div class="head-right">
       <div class="filters">
@@ -934,7 +937,7 @@
         <div style="margin:8px 0 4px">배송 후 <input type="number" id="wbSnapDays" value="7" min="1" max="60" style="width:56px"> 일 이상 지난 건 <button class="fbtn fbtn-go" id="wbSnapBtn" style="margin-left:4px">지금 조회</button></div>
         <div class="tbl-wrap"><table class="dtable" id="wbSnapTable"></table></div>
       </div>
-      <div class="card col-12" data-cid="wbNight"><h3>🌙 야간원격접수 6주</h3><div class="sub" id="wbNightSub">2026-07-23부터 적재 시작 · 그 이전 주는 "집계 전"으로 표시됩니다</div><div class="tbl-wrap"><table class="dtable" id="wbNightTable"></table></div></div>
+      <div class="card col-4" data-cid="wbNight"><h3>🌙 야간원격접수 (일자별)</h3><div class="sub" id="wbNightSub">2026-07-23부터 적재 시작 · 그 이전 날은 "집계 전"으로 표시됩니다</div><div class="tbl-wrap"><table class="dtable" id="wbNightTable"></table></div></div>
     </div>
   </section>
 
@@ -2362,32 +2365,19 @@ function wbRenderDelayTable(){
   });
 }
 
+// 일자별(2026-07-31 주차별→일자별 전환, 카드도 축소) — "YYYY-MM-DD" 문자열끼리는 그대로 사전순 비교가
+// 날짜 비교와 같아서 별도 파싱 헬퍼 없이 firstDate와 바로 비교한다.
 function wbNightTableHTML(ni){
-  var weekly=(ni&&ni.weekly)||[], firstDate=ni&&ni.firstDate;
-  var firstWk=firstDate?api_weekMonKeyClient_(firstDate):null;
-  var byWk={}; weekly.forEach(function(x){ byWk[x.week]=x; });
-  // 스코어보드와 동일한 최근 6주 목록을 만들되, 실제 데이터가 있는 주만 굳이 새로 계산하지 않고
-  // 반환된 weekly 배열 그대로(서버가 이미 최근 6주로 자름) 최신순으로 보여준다.
-  var head='<thead><tr><th>주(월요일)</th><th>상담원 접수</th><th>설치완료</th></tr></thead>';
-  if(!weekly.length) return head+'<tbody><tr><td colspan="3" style="color:var(--muted)">아직 집계된 주가 없습니다(2026-07-23부터 적재)</td></tr></tbody>';
-  var body=weekly.slice().reverse().map(function(w){
-    var noData = firstWk && w.week < firstWk;
-    return '<tr><td>'+w.week.slice(5).replace("-",".")+'주</td>'
-      +(noData ? '<td colspan="2" style="color:var(--muted)">집계 전</td>' : ('<td>'+fmt(w.count)+'</td><td>'+fmt(w.installed)+'</td>'))
+  var daily=(ni&&ni.daily)||[], firstDate=ni&&ni.firstDate;
+  var head='<thead><tr><th>일자</th><th>상담원 접수</th><th>설치완료</th></tr></thead>';
+  if(!daily.length) return head+'<tbody><tr><td colspan="3" style="color:var(--muted)">아직 집계된 날이 없습니다(2026-07-23부터 적재)</td></tr></tbody>';
+  var body=daily.slice().reverse().map(function(x){
+    var noData = firstDate && x.date < firstDate;
+    return '<tr><td>'+dyLabelW(x.date)+'</td>'
+      +(noData ? '<td colspan="2" style="color:var(--muted)">집계 전</td>' : ('<td>'+fmt(x.count)+'</td><td>'+fmt(x.installed)+'</td>'))
       +'</tr>';
   }).join('');
   return head+'<tbody>'+body+'</tbody>';
-}
-// 서버 api_weekMonKey_와 동일 로직(월요일 키) — firstDate가 어느 주에 속하는지만 클라에서 판단할 때 씀.
-function api_weekMonKeyClient_(ymd){
-  var d=api_toDateClient_(ymd); if(!d) return null;
-  var wd=d.getDay(); var m=new Date(d.getFullYear(),d.getMonth(),d.getDate());
-  m.setDate(m.getDate()-((wd+6)%7));
-  return m.toISOString().slice(0,10);
-}
-function api_toDateClient_(ymd){
-  var p=String(ymd||"").split("-"); if(p.length!==3) return null;
-  return new Date(+p[0], +p[1]-1, +p[2]);
 }
 
 var WB_SNAP_BOUND=false;
@@ -2457,10 +2447,10 @@ function renderWeeklyBoard(d){
   var reasons = d.reasons || {};
   WB_DELAY_LAST = { weeks: reasons.delayCldWeekly||[], cats: reasons.delayCldCats||[] };
   wbRenderDelayTable();
-  var ni = (d.weeklyBoard && d.weeklyBoard.nightIntake) || {weekly:[], firstDate:null};
+  var ni = (d.weeklyBoard && d.weeklyBoard.nightIntake) || {daily:[], firstDate:null};
   document.getElementById("wbNightTable").innerHTML = wbNightTableHTML(ni);
   document.getElementById("wbNightSub").textContent = ni.firstDate
-    ? (ni.firstDate+"부터 적재 시작 · 그 이전 주는 \"집계 전\"으로 표시됩니다")
+    ? (ni.firstDate+"부터 적재 시작 · 그 이전 날은 \"집계 전\"으로 표시됩니다")
     : "아직 적재된 데이터가 없습니다";
   wbBindSnapButton();
 }
@@ -3970,7 +3960,7 @@ function shareTabLayout(){
   if(s) s.addEventListener("click", shareTabLayout);
 })();
 
-var TABMETA={ ops:["운영 대시보드","① 현재 잔여 업무량(콜리스트 기준) + ② 주간 요약(구 현황판) · 두 섹션은 기준 시점이 다릅니다"], dept:["부서별 지연원인 · D+7 초과 지연분석","① 부서별 원인(모수=지연건, 완료 D+7 이상 + 미완료 7일 이상) + ② D+7 초과 지연분석(모수=D+7 초과 완료건, 출고주·사유·소요일 구간)"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(K) 대비 설치예정(D) 병기"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수 6주 · 콜리스트 현재 지연사유 스냅샷"] };
+var TABMETA={ ops:["운영 대시보드","① 현재 잔여 업무량(콜리스트 기준) + ② 주간 요약(구 현황판) · 두 섹션은 기준 시점이 다릅니다"], dept:["부서별 지연원인 · D+7 초과 지연분석","① 부서별 원인(모수=지연건, 완료 D+7 이상 + 미완료 7일 이상) + ② D+7 초과 지연분석(모수=D+7 초과 완료건, 출고주·사유·소요일 구간)"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(K) 대비 설치예정(D) 병기"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
