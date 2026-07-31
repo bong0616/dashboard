@@ -251,6 +251,12 @@
   .memo-body { font-size:13px; line-height:1.75; color: var(--text-secondary); white-space:pre-wrap; word-break:break-word; }
   .memo-empty { font-size:12.5px; color: var(--muted); padding:22px 0; text-align:center; }
   .memo-cnt { font-size:11.5px; font-weight:600; color: var(--muted); margin-left:auto; }
+  /* 위클리 현황판 '주차별 메모장'(누적형) — 위 memo-item/memo-h/memo-wk/memo-empty를 그대로 재사용하고,
+     한 주 안에 여러 건이 쌓이므로 항목 하나하나를 memo-entry로 추가한다(리포트 탭은 주당 1건이라 없던 것). */
+  .memo-entry { display:flex; gap:8px; padding:5px 0; border-top:1px dashed var(--border); }
+  .memo-entry:first-of-type { border-top:none; }
+  .memo-time { font-size:11px; color: var(--muted); white-space:nowrap; flex-shrink:0; padding-top:1px; }
+  .memo-text { font-size:13px; line-height:1.6; color: var(--text-secondary); white-space:pre-wrap; word-break:break-word; }
   /* ===== 🔧 카드 배치 편집 모드 =====
      운영자가 코드를 거치지 않고 카드 순서·너비·숨김을 바꾼다. 저장은 ①내 브라우저(localStorage) 즉시,
      ②'전원 적용'을 누를 때만 서버('대시보드설정' 시트 kind=layout)로 올라간다.
@@ -374,19 +380,24 @@
   table.dtable .sort-btn { cursor: pointer; font-size: 10px; margin-left: 3px; color: var(--muted); }
   table.dtable .sort-btn:hover { color: var(--text-secondary); }
   table.dtable .sort-btn.active { color: var(--s-blue-d); }
-  /* 헤더에 정렬 버튼이 붙어 폭이 늘었으므로 이 표만 좌우 여백을 살짝 줄여 카드 폭 안에 맞춘다 */
-  #wbSnapTable th, #wbSnapTable td { padding-left: 8px; padding-right: 8px; }
+  /* 위클리 현황판 3종 표(지연사유 6주 추세·콜리스트 스냅샷·야간원격접수) — 공란이 너무 넓고 글자가
+     작다는 지적(2026-08-01) — 셋 다 셀 여백을 줄이고(가로+세로) 폰트를 키워 밀도 있게 보이게 한다. */
+  #wbSnapTable, #wbDelayTable, #wbNightTable { font-size: 14px; }
+  #wbSnapTable th, #wbDelayTable th, #wbNightTable th { font-size: 12.5px; }
+  #wbSnapTable th, #wbSnapTable td,
+  #wbDelayTable th, #wbDelayTable td,
+  #wbNightTable th, #wbNightTable td { padding: 6px 7px; }
   /* 콜리스트 스냅샷이 col-4로 좁아져 옆(지연사유 6주 추세)과 나란히 앉음 — 이 표는 열이 4개뿐이라
      다른 표를 위한 전역 min-width(640px)가 필요 없다. 안 풀면 좁은 카드 안에서 가로스크롤이 생긴다. */
   #wbSnapTable { min-width: 0; }
   /* 지연사유 6주 추세 — 주차 열이 6개+평균+평균대비라 촘촘히 넣어야 한눈에 들어온다(운영자 지적 2026-07-31) */
-  #wbDelayTable th, #wbDelayTable td { padding-left: 7px; padding-right: 7px; }
   #wbDelayTable { min-width: 0; }
   #wbDelayTable tr.total-row td, #wbDelayTable tr.total-row th { font-weight: 700; background: color-mix(in srgb, var(--s-blue) 7%, transparent); }
   #wbDelayTable td.avgcol { color: var(--s-blue-d); font-weight: 700; }
-  /* 야간원격접수 — 6주(넓은 표) → 일자별 축소 카드(col-4)로 전환. 열이 3개뿐이라 전역 min-width가 불필요. */
-  #wbNightTable { min-width: 0; }
-  #wbNightTable th, #wbNightTable td { padding-left: 8px; padding-right: 8px; }
+  /* 야간원격접수 — 6주(넓은 표) → 일자별 축소 카드(col-4)로 전환. 열이 3개뿐이라 전역 min-width가 불필요.
+     width:auto로 카드 전체폭에 억지로 늘어나지 않게 해 '일자'~'상담원 접수' 사이 공백을 줄인다
+     (열이 3개뿐인데 width:100%면 짧은 값 사이 여백이 카드 폭만큼 벌어져 보였다, 운영자 지적). */
+  #wbNightTable { min-width: 0; width: auto; }
   /* 상세 팝업(모달) */
   .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.55); backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
   .modal-overlay.open { display: flex; }
@@ -938,6 +949,16 @@
         <div class="tbl-wrap"><table class="dtable" id="wbSnapTable"></table></div>
       </div>
       <div class="card col-4" data-cid="wbNight"><h3>🌙 야간원격접수 (일자별)</h3><div class="sub" id="wbNightSub">2026-07-23부터 적재 시작 · 그 이전 날은 "집계 전"으로 표시됩니다</div><div class="tbl-wrap"><table class="dtable" id="wbNightTable"></table></div></div>
+      <div class="card col-8" data-cid="wbMemo"><h3>📝 주차별 메모장</h3><div class="sub">자유롭게 메모를 남기세요 · 지우지 않는 한 계속 누적됩니다(이번 주 기준으로 쌓임)</div>
+        <div style="margin:8px 0">
+          <textarea id="wbMemoInput" rows="2" placeholder="메모를 입력하세요…" style="width:100%;box-sizing:border-box;resize:vertical;font-family:var(--font);font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--page);color:var(--text-primary)"></textarea>
+          <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:6px">
+            <span id="wbMemoMsg" style="font-size:11.5px;color:var(--muted)"></span>
+            <button class="fbtn fbtn-go" id="wbMemoAddBtn">메모 추가</button>
+          </div>
+        </div>
+        <div id="wbMemoLog" class="memo-log"></div>
+      </div>
     </div>
   </section>
 
@@ -2453,6 +2474,57 @@ function renderWeeklyBoard(d){
     ? (ni.firstDate+"부터 적재 시작 · 그 이전 날은 \"집계 전\"으로 표시됩니다")
     : "아직 적재된 데이터가 없습니다";
   wbBindSnapButton();
+  WB_MEMOS_LAST = (d.weeklyBoard && d.weeklyBoard.memos) || {};
+  wbRenderMemoLog();
+  wbBindMemoButton();
+}
+
+// 📝 주차별 메모장(누적형) — 리포트 탭 '전체 주차 메모'(주당 1건, 덮어쓰기)와는 다른 저장소다.
+// 여긴 클릭할 때마다 새 항목이 쌓인다 — memo-item(주 단위 박스) 안에 memo-entry(건별)를 여러 개 넣는다.
+var WB_MEMOS_LAST = {};
+function wbMemoLogHTML(memos){
+  var weeks = Object.keys(memos||{}).sort().reverse();
+  if(!weeks.length) return '<div class="memo-empty">아직 메모가 없습니다. 위에서 첫 메모를 남겨보세요.</div>';
+  return weeks.map(function(w){
+    var items = memos[w]||[];
+    return '<div class="memo-item">'
+      +'<div class="memo-h"><span class="memo-wk">'+rptWeekLabel(w)+' 주</span><span class="memo-cnt">'+items.length+'건</span></div>'
+      +items.map(function(it){
+        return '<div class="memo-entry"><span class="memo-time">'+esc(it.time||"")+'</span><span class="memo-text">'+esc(it.text||"")+'</span></div>';
+      }).join('')
+      +'</div>';
+  }).join('');
+}
+function wbRenderMemoLog(){
+  var box=document.getElementById("wbMemoLog"); if(!box) return;
+  box.innerHTML = wbMemoLogHTML(WB_MEMOS_LAST);
+}
+var WB_MEMO_BOUND=false;
+function wbBindMemoButton(){
+  if (WB_MEMO_BOUND) return;
+  var btn=document.getElementById("wbMemoAddBtn");
+  if(!btn) return;
+  WB_MEMO_BOUND=true;
+  btn.addEventListener("click", function(){
+    if(!LAST_PASS) return;
+    var ta=document.getElementById("wbMemoInput"), msg=document.getElementById("wbMemoMsg");
+    var text=(ta.value||"").trim();
+    if(!text){ msg.textContent="내용을 입력하세요"; msg.style.color="var(--s-red)"; return; }
+    btn.disabled=true; msg.textContent="저장 중…"; msg.style.color="var(--muted)";
+    fetchData(LAST_PASS, function(res){
+      btn.disabled=false;
+      if(res&&res.ok){
+        ta.value="";
+        msg.textContent="추가됨 ✓"; msg.style.color="var(--good)";
+        WB_MEMOS_LAST = res.memos||{};
+        if(LAST_DATA&&LAST_DATA.weeklyBoard) LAST_DATA.weeklyBoard.memos = WB_MEMOS_LAST;
+        wbRenderMemoLog();
+      } else {
+        msg.textContent=(res&&res.error)||"저장 실패"; msg.style.color="var(--s-red)";
+      }
+    }, function(){ btn.disabled=false; msg.textContent="통신 오류"; msg.style.color="var(--s-red)"; },
+    { params:{ action:"addmemo", text: text } });
+  });
 }
 
 // ---------- ACCEL (설치가속화 Action) ----------
