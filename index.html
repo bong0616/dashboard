@@ -619,10 +619,10 @@
     <div class="logo">📊</div>
     <div><b>아이샵케어</b><span>설치 운영 대시보드</span></div>
   </div>
-  <div class="navitem" data-tab="weeklyboard"><span class="ic">📅</span><div>위클리 현황판<small>출고주 6주 스코어보드</small></div></div>
-  <div class="navitem active" data-tab="accel"><span class="ic">🚀</span><div>설치가속화 Action<small>배송반영·통화 당일설치</small></div></div>
-  <div class="navitem" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량 · 주간 요약</small></div></div>
+  <div class="navitem active" data-tab="weeklyboard"><span class="ic">📅</span><div>위클리 현황판<small>출고주 6주 스코어보드</small></div></div>
   <div class="navitem" data-tab="cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div></div>
+  <div class="navitem" data-tab="accel"><span class="ic">🚀</span><div>설치가속화 Action<small>배송반영·통화 당일설치</small></div></div>
+  <div class="navitem" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량 · 주간 요약</small></div></div>
   <!-- 하위 '월·주·일 흐름'은 2026-07-28 삭제(주간/일간 비교와 완전 중복) → 성과는 이제 하위메뉴 없음(캐럿 제거) -->
   <div class="navitem" data-tab="perf" id="nav-perf"><span class="ic">⚡</span><div>성과<small>설치속도·작업량</small></div></div>
   <div class="navitem" data-tab="dept"><span class="ic">🏢</span><div>부서별 지연원인<small>부서·사유·출고주별 D+7</small></div></div>
@@ -642,8 +642,8 @@
 <main id="main" style="display:none">
   <div class="page-head">
     <div>
-      <h1 id="page-title">설치가속화 Action</h1>
-      <p id="page-desc">배송완료 당일 설치 전환 · 통화 당일 설치 전환</p>
+      <h1 id="page-title">위클리 현황판</h1>
+      <p id="page-desc">출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수 6주 · 콜리스트 현재 지연사유 스냅샷</p>
     </div>
     <div class="head-right">
       <div class="filters">
@@ -712,8 +712,8 @@
     </div>
   </section>
 
-  <!-- ACCEL (설치가속화 Action) — 첫 화면(운영자 지정 2026-07-23) -->
-  <section class="tab-content active" id="tab-accel">
+  <!-- ACCEL (설치가속화 Action) — 첫 화면이었으나 2026-07-31 운영자 지시로 위클리 현황판으로 교체 -->
+  <section class="tab-content" id="tab-accel">
     <!-- 큰 섹션 배너 ① 배송 (운영자 지시 이미지: 빨간 제목 '오후 배송완료 당일 설치건') -->
     <div class="accel-sec">🚚 오후 배송완료 당일 설치건 <small>오후 배송반영(T열)으로 배송완료 전환된 코호트가 그날 설치까지 끝난 흐름</small></div>
     <!-- 📦 배송 계열 묶음 — 타일(일평균)과 그것을 날짜별로 풀어 쓴 요약은 같은 데이터다. 한 판에 넣는다. -->
@@ -917,14 +917,14 @@
     </div>
   </section>
 
-  <!-- WEEKLY BOARD (위클리 6주 현황판, 2026-07-30 신설) -->
-  <section class="tab-content" id="tab-weeklyboard">
+  <!-- WEEKLY BOARD (위클리 6주 현황판, 2026-07-30 신설) — 2026-07-31 운영자 지시로 첫 화면 -->
+  <section class="tab-content active" id="tab-weeklyboard">
     <div class="grid">
       <div class="card col-12" data-cid="wbScore"><h3>🗓️ 출고주 6주 스코어보드</h3><div class="sub">최근 6개 출고주 · 재컨택소요일·설치율·설치속도는 출고 코호트 기준(출고주 비교 탭과 동일 집계) · 배송완료→당일설치/당일통화→당일설치는 당통비교 기준(자가설치 제외) · <span style="color:var(--muted)">회색 '진행중'</span> 주는 아직 안 굳음</div><div class="tbl-wrap"><table class="dtable" id="wbScoreTable"></table></div></div>
       <div class="card col-12" data-cid="wbDelay"><h3>🐢 지연사유 6주 추세 (로우데이터)</h3><div class="sub">완료+미완료 모두 포함(완료건 출고→설치 D+7초과 · 미완료건 출고 후 7일+) · 방문설치 접수/원격 접수는 별도 집계 · 아래 "콜리스트 현재 스냅샷"(잔여건만)과는 모집단이 달라 숫자가 다를 수 있습니다</div><div class="tbl-wrap"><table class="dtable" id="wbDelayTable"></table></div></div>
       <div class="card col-6" data-cid="wbNight"><h3>🌙 야간원격접수 6주</h3><div class="sub" id="wbNightSub">2026-07-23부터 적재 시작 · 그 이전 주는 "집계 전"으로 표시됩니다</div><div class="tbl-wrap"><table class="dtable" id="wbNightTable"></table></div></div>
       <div class="card col-6" data-cid="wbSnap"><h3>📋 콜리스트 현재 지연사유 스냅샷</h3><div class="sub">지금 이 시점 콜리스트 잔여 기준(위 6주 추세와 모집단이 다름) · 버튼을 눌러야 조회되며 캐시에 포함되지 않습니다</div>
-        <div style="margin:8px 0 4px">배송 후 <input type="number" id="wbSnapDays" value="7" min="1" max="60" style="width:56px"> 일 이상 지난 건 <button class="refresh-btn" id="wbSnapBtn" style="display:inline-block;width:auto;padding:4px 10px">지금 조회</button></div>
+        <div style="margin:8px 0 4px">배송 후 <input type="number" id="wbSnapDays" value="7" min="1" max="60" style="width:56px"> 일 이상 지난 건 <button class="fbtn fbtn-go" id="wbSnapBtn" style="margin-left:4px">지금 조회</button></div>
         <div class="tbl-wrap"><table class="dtable" id="wbSnapTable"></table></div>
       </div>
     </div>
@@ -3455,7 +3455,7 @@ function fetchData(passcode, cb, err, opts) {
 
 var LAST_PASS=null, LAST_DATA=null;
 var CUR_PERIOD={start:"",end:"",label:"전체 기간"};
-var CUR_TAB="accel"; // 현재 보고 있는 메뉴(탭). 날짜조회 시 이 탭 섹션만 서버에 요청한다. 첫 화면=설치가속화.
+var CUR_TAB="weeklyboard"; // 현재 보고 있는 메뉴(탭). 날짜조회 시 이 탭 섹션만 서버에 요청한다. 첫 화면=위클리 현황판(2026-07-31).
 
 // 탭 → 그 탭이 렌더에 실제로 쓰는 서버 섹션(ops/perf/cohort/reasons). 날짜조회를 이 섹션으로 한정 → 집계 속도개선.
 // ⚠️ perf 탭엔 '7일+ 지연 사유'(reasons)가 같이 있어 reasons도 필요.
@@ -3511,7 +3511,7 @@ function boot(passcode) {
     document.getElementById("main").style.display="block";
     populateMonthFilter(d.meta.availableMonths||[]);
     CUR_PERIOD={start:"",end:"",label:"전체 기간"};
-    CUR_TAB="accel"; markAllLoaded("");   // 초기 전체 payload → 모든 탭이 전체기간으로 최신
+    CUR_TAB="weeklyboard"; markAllLoaded("");   // 초기 전체 payload → 모든 탭이 전체기간으로 최신
     applyData(d);
     // 카드 배치는 렌더가 끝난 뒤 한 번만 얹는다(코드 기본값을 먼저 떠 놔야 '원래대로'가 가능하다)
     initLayout(d.layout);
