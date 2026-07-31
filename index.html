@@ -376,6 +376,14 @@
   table.dtable .sort-btn.active { color: var(--s-blue-d); }
   /* 헤더에 정렬 버튼이 붙어 폭이 늘었으므로 이 표만 좌우 여백을 살짝 줄여 카드 폭 안에 맞춘다 */
   #wbSnapTable th, #wbSnapTable td { padding-left: 8px; padding-right: 8px; }
+  /* 콜리스트 스냅샷이 col-4로 좁아져 옆(지연사유 6주 추세)과 나란히 앉음 — 이 표는 열이 4개뿐이라
+     다른 표를 위한 전역 min-width(640px)가 필요 없다. 안 풀면 좁은 카드 안에서 가로스크롤이 생긴다. */
+  #wbSnapTable { min-width: 0; }
+  /* 지연사유 6주 추세 — 주차 열이 6개+평균+평균대비라 촘촘히 넣어야 한눈에 들어온다(운영자 지적 2026-07-31) */
+  #wbDelayTable th, #wbDelayTable td { padding-left: 7px; padding-right: 7px; }
+  #wbDelayTable { min-width: 0; }
+  #wbDelayTable tr.total-row td, #wbDelayTable tr.total-row th { font-weight: 700; background: color-mix(in srgb, var(--s-blue) 7%, transparent); }
+  #wbDelayTable td.avgcol { color: var(--s-blue-d); font-weight: 700; }
   /* 상세 팝업(모달) */
   .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.55); backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
   .modal-overlay.open { display: flex; }
@@ -921,12 +929,12 @@
   <section class="tab-content active" id="tab-weeklyboard">
     <div class="grid">
       <div class="card col-12" data-cid="wbScore"><h3>🗓️ 출고주 6주 스코어보드</h3><div class="sub">최근 6개 출고주 · 재컨택소요일·설치율·설치속도는 출고 코호트 기준(출고주 비교 탭과 동일 집계) · 배송완료→당일설치/당일통화→당일설치는 당통비교 기준(자가설치 제외) · <span style="color:var(--muted)">회색 '진행중'</span> 주는 아직 안 굳음</div><div class="tbl-wrap"><table class="dtable" id="wbScoreTable"></table></div></div>
-      <div class="card col-12" data-cid="wbDelay"><h3>🐢 지연사유 6주 추세 (로우데이터)</h3><div class="sub">완료+미완료 모두 포함(완료건 출고→설치 D+7초과 · 미완료건 출고 후 7일+) · 방문설치 접수/원격 접수는 별도 집계 · 아래 "콜리스트 현재 스냅샷"(잔여건만)과는 모집단이 달라 숫자가 다를 수 있습니다</div><div class="tbl-wrap"><table class="dtable" id="wbDelayTable"></table></div></div>
-      <div class="card col-6" data-cid="wbNight"><h3>🌙 야간원격접수 6주</h3><div class="sub" id="wbNightSub">2026-07-23부터 적재 시작 · 그 이전 주는 "집계 전"으로 표시됩니다</div><div class="tbl-wrap"><table class="dtable" id="wbNightTable"></table></div></div>
-      <div class="card col-6" data-cid="wbSnap"><h3>📋 콜리스트 현재 지연사유 스냅샷</h3><div class="sub">지금 이 시점 콜리스트 잔여 기준(위 6주 추세와 모집단이 다름) · 버튼을 눌러야 조회되며 캐시에 포함되지 않습니다</div>
+      <div class="card col-8" data-cid="wbDelay"><h3>🐢 지연사유 6주 추세 (로우데이터)</h3><div class="sub">완료+미완료 모두 포함(완료건 출고→설치 D+7초과 · 미완료건 출고 후 7일+) · 방문설치 접수/원격 접수는 별도 집계 · <b>총 지연건</b> 행은 정렬 대상에서 제외(항상 고정) · 옆 "콜리스트 현재 스냅샷"(잔여건만)과는 모집단이 달라 숫자가 다를 수 있습니다</div><div class="tbl-wrap"><table class="dtable" id="wbDelayTable"></table></div></div>
+      <div class="card col-4" data-cid="wbSnap"><h3>📋 콜리스트 현재 지연사유 스냅샷</h3><div class="sub">지금 이 시점 콜리스트 잔여 기준(옆 6주 추세와 모집단이 다름) · 버튼을 눌러야 조회되며 캐시에 포함되지 않습니다</div>
         <div style="margin:8px 0 4px">배송 후 <input type="number" id="wbSnapDays" value="7" min="1" max="60" style="width:56px"> 일 이상 지난 건 <button class="fbtn fbtn-go" id="wbSnapBtn" style="margin-left:4px">지금 조회</button></div>
         <div class="tbl-wrap"><table class="dtable" id="wbSnapTable"></table></div>
       </div>
+      <div class="card col-12" data-cid="wbNight"><h3>🌙 야간원격접수 6주</h3><div class="sub" id="wbNightSub">2026-07-23부터 적재 시작 · 그 이전 주는 "집계 전"으로 표시됩니다</div><div class="tbl-wrap"><table class="dtable" id="wbNightTable"></table></div></div>
     </div>
   </section>
 
@@ -2280,34 +2288,78 @@ function wbScoreTableHTML(rows){
 
 // 사유를 세로(행)로, 주차를 가로(헤더)로 배치 — 사유가 12종이라 가로로 나열하면 한눈에 안 들어온다는 지적(2026-07-31).
 // weeks는 오름차순(과거→최근)으로 들어오므로 그대로 좌→우에 쓰면 시간 흐름이 자연스럽다.
-// 각 사유 행 끝에 6주평균과 "최근주 vs 6주평균" 증감률을 붙인다 — 지연은 늘어나는 쪽이 나쁘므로 증가=빨강.
-function wbDelayTrendRowHTML(label, vals){
+// '총 지연건'은 정렬 대상에서 빼고 항상 맨 위 고정(헤드처럼) — 나머지 사유 행만 주차별/6주평균 값 기준으로 재정렬한다.
+var WB_DELAY_LAST = null;                    // {weeks, cats} — 재정렬 시 재조회 없이 재사용
+var WB_DELAY_SORT = { key: null, dir: -1 };  // key: 'w0'..'w{n-1}'(주차) | 'avg'(6주평균) · dir: 1=오름차순, -1=내림차순
+function wbDelaySortIcon(key){
+  var active = WB_DELAY_SORT.key===key;
+  var icon = active ? (WB_DELAY_SORT.dir===1 ? '▲' : '▼') : '⇅';
+  return '<span class="sort-btn'+(active?' active':'')+'" data-key="'+key+'" title="클릭: 오름차순/내림차순 전환(지연 많은 사유 순으로 정렬)">'+icon+'</span>';
+}
+// 한 주차 셀 = 건수 + 직전 주 대비 증감%(전주대비). 지연은 줄어드는 쪽이 좋으므로 감소=초록(up클래스), 증가=빨강(down클래스).
+function wbDelayCellHTML(vals, i){
+  var v = vals[i];
+  var main = v ? fmt(v) : '<span style="color:var(--muted)">–</span>';
+  if (i===0) return '<td>'+main+'</td>';   // 맨 왼쪽 주는 비교할 직전 주 데이터가 표에 없음
+  var prev = vals[i-1], cur = v;
+  if (prev===0 && cur===0) return '<td>'+main+'</td>';
+  if (prev===0) return '<td>'+main+' <span class="wow down">신규</span></td>';
+  if (cur===prev) return '<td>'+main+' <span class="wow flat">–</span></td>';
+  var better = cur < prev;
+  var pct = Math.round(Math.abs(cur-prev)/prev*100);
+  return '<td>'+main+' <span class="wow '+(better?"up":"down")+'">'+(cur>prev?"▲":"▼")+pct+'%</span></td>';
+}
+function wbDelayAvgVsHTML(avg, latest){
+  if (avg<=0) return latest>0 ? '<span style="color:var(--s-red);font-weight:700">신규</span>' : '<span style="color:var(--muted)">–</span>';
+  var pct = Math.round((latest-avg)/avg*1000)/10;
+  var arrow = pct>0?"▲":pct<0?"▼":"–";
+  var color = pct>0 ? "var(--s-red)" : pct<0 ? "var(--good)" : "var(--muted)";
+  return '<span style="color:'+color+';font-weight:700">'+arrow+(pct===0?"":" "+Math.abs(pct)+"%")+'</span>';
+}
+function wbDelayRowHTML(label, vals, isTotal){
   var sum=0; for(var i=0;i<vals.length;i++) sum+=vals[i];
   var avg = vals.length ? sum/vals.length : 0;
   var latest = vals.length ? vals[vals.length-1] : 0;
-  var vsAvg;
-  if (avg<=0){
-    vsAvg = latest>0 ? '<span style="color:var(--s-red);font-weight:700">신규</span>' : '<span style="color:var(--muted)">–</span>';
-  } else {
-    var pct = Math.round((latest-avg)/avg*1000)/10;
-    var arrow = pct>0?"▲":pct<0?"▼":"–";
-    var color = pct>0 ? "var(--s-red)" : pct<0 ? "var(--good)" : "var(--muted)";
-    vsAvg = '<span style="color:'+color+';font-weight:700">'+arrow+(pct===0?"":" "+Math.abs(pct)+"%")+'</span>';
-  }
-  return '<tr><td>'+esc(label)+'</td>'
-    +vals.map(function(v){ return '<td>'+(v?fmt(v):'<span style="color:var(--muted)">–</span>')+'</td>'; }).join('')
-    +'<td>'+(Math.round(avg*10)/10)+'</td><td>'+vsAvg+'</td></tr>';
+  var cells=''; for(var j=0;j<vals.length;j++) cells+=wbDelayCellHTML(vals,j);
+  return '<tr'+(isTotal?' class="total-row"':'')+'><td>'+esc(label)+'</td>'+cells
+    +'<td class="avgcol">'+(Math.round(avg*10)/10)+'</td>'
+    +'<td>'+wbDelayAvgVsHTML(avg, latest)+'</td></tr>';
 }
-function wbDelayTableHTML(weeks, cats){
+function wbDelayTableHTML(){
+  var weeks=(WB_DELAY_LAST&&WB_DELAY_LAST.weeks)||[], cats=(WB_DELAY_LAST&&WB_DELAY_LAST.cats)||[];
   if (!weeks.length) return '<thead><tr><th>사유</th></tr></thead><tbody><tr><td style="color:var(--muted)">아직 집계된 주가 없습니다</td></tr></tbody>';
   var wkLabels = weeks.map(function(w){ return w.week.slice(5).replace("-",".")+'주'; });
-  var head='<thead><tr><th>사유</th>'+wkLabels.map(function(l){return '<th>'+l+'</th>';}).join('')
-    +'<th>6주평균</th><th>평균대비</th></tr></thead>';
-  var totalRow = wbDelayTrendRowHTML('총 지연건', weeks.map(function(w){ return w.total||0; }));
-  var catRows = cats.map(function(c){
-    return wbDelayTrendRowHTML(c, weeks.map(function(w){ return (w.cats&&w.cats[c])||0; }));
-  }).join('');
-  return head+'<tbody>'+totalRow+catRows+'</tbody>';
+  var head='<thead><tr><th>사유</th>'
+    +wkLabels.map(function(l,i){ return '<th>'+l+wbDelaySortIcon('w'+i)+'</th>'; }).join('')
+    +'<th>6주평균'+wbDelaySortIcon('avg')+'</th><th>평균대비</th></tr></thead>';
+  var totalRow = wbDelayRowHTML('총 지연건', weeks.map(function(w){ return w.total||0; }), true);
+  var rows = cats.map(function(c){
+    var vals = weeks.map(function(w){ return (w.cats&&w.cats[c])||0; });
+    var sum=0; vals.forEach(function(v){ sum+=v; });
+    return { label:c, vals:vals, avg: vals.length?sum/vals.length:0 };
+  });
+  if (WB_DELAY_SORT.key){
+    var sk=WB_DELAY_SORT.key, dir=WB_DELAY_SORT.dir;
+    rows.sort(function(a,b){
+      var av = sk==='avg' ? a.avg : a.vals[Number(sk.slice(1))];
+      var bv = sk==='avg' ? b.avg : b.vals[Number(sk.slice(1))];
+      return (av-bv)*dir;
+    });
+  }
+  var catRowsHtml = rows.map(function(r){ return wbDelayRowHTML(r.label, r.vals, false); }).join('');
+  return head+'<tbody>'+totalRow+catRowsHtml+'</tbody>';
+}
+function wbRenderDelayTable(){
+  var el=document.getElementById("wbDelayTable");
+  el.innerHTML = wbDelayTableHTML();
+  el.querySelectorAll('.sort-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var key = btn.getAttribute('data-key');
+      if (WB_DELAY_SORT.key === key) WB_DELAY_SORT.dir *= -1;
+      else WB_DELAY_SORT = { key: key, dir: -1 };
+      wbRenderDelayTable();
+    });
+  });
 }
 
 function wbNightTableHTML(ni){
@@ -2403,7 +2455,8 @@ function renderWeeklyBoard(d){
   if(!d) return;
   document.getElementById("wbScoreTable").innerHTML = wbScoreTableHTML(wbMergeScoreRows(d));
   var reasons = d.reasons || {};
-  document.getElementById("wbDelayTable").innerHTML = wbDelayTableHTML(reasons.delayCldWeekly||[], reasons.delayCldCats||[]);
+  WB_DELAY_LAST = { weeks: reasons.delayCldWeekly||[], cats: reasons.delayCldCats||[] };
+  wbRenderDelayTable();
   var ni = (d.weeklyBoard && d.weeklyBoard.nightIntake) || {weekly:[], firstDate:null};
   document.getElementById("wbNightTable").innerHTML = wbNightTableHTML(ni);
   document.getElementById("wbNightSub").textContent = ni.firstDate
