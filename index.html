@@ -370,6 +370,12 @@
   table.dtable .wow.down { color: var(--s-red); }
   table.dtable .wow.flat { color: var(--muted); }
   table.dtable .share { font-size: 10.5px; font-weight: 700; color: var(--s-blue-d); margin-left: 5px; }
+  /* 콜리스트 현재 지연사유 스냅샷 — 건수/비중/평균경과일 헤더 옆 정렬 토글 버튼(클릭할 때마다 오름↔내림 전환) */
+  table.dtable .sort-btn { cursor: pointer; font-size: 10px; margin-left: 3px; color: var(--muted); }
+  table.dtable .sort-btn:hover { color: var(--text-secondary); }
+  table.dtable .sort-btn.active { color: var(--s-blue-d); }
+  /* 헤더에 정렬 버튼이 붙어 폭이 늘었으므로 이 표만 좌우 여백을 살짝 줄여 카드 폭 안에 맞춘다 */
+  #wbSnapTable th, #wbSnapTable td { padding-left: 8px; padding-right: 8px; }
   /* 상세 팝업(모달) */
   .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.55); backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
   .modal-overlay.open { display: flex; }
@@ -865,7 +871,7 @@
       <div class="card col-7" data-cid="cohStatusTable"><h3>🗂️ 출고월별 현재 상태</h3><div class="sub">각 출고월 코호트가 지금 어떤 상태인지 · <b>건수</b>와 <b>그 달 출고 대비 %</b></div><div class="tbl-wrap"><table class="dtable no-grp" id="cohStatusTable"></table></div></div>
       <div class="card col-12" data-cid="cohCurveTable">
         <h3>📈 주차별 출고 대비 누적 설치완료율 <small class="th-tgt" style="display:inline">D+0 ~ D+30</small></h3>
-        <div class="sub">그 주 <b>출고건</b>이 출고 후 며칠 만에 몇 % 설치완료됐는지 (누적) · 최근 18주(약 4개월) · 최신 주가 위 · <b style="color:var(--s-blue-d)">–</b> 는 아직 그 날짜가 지나지 않아 관측 불가(0%가 아님) · 출고가 끝나지 않은 이번 주는 제외</div>
+        <div class="sub">그 주 <b>출고건</b>이 출고 후 며칠 만에 몇 % 설치완료됐는지 (누적) · 최근 18주(약 4개월) · 최신 주가 위 · <b style="color:var(--s-blue-d)">–</b> 는 아직 그 날짜가 지나지 않아 관측 불가(0%가 아님) · 이번 주(진행중)는 <b style="color:var(--s-orange)">집계중</b> 표기 — 출고 마감 전이라 출고건수·설치율 모두 계속 바뀝니다(금요일 출고분은 리스트 반영 지연으로 다음 주 월요일에 늘어날 수 있음)</div>
         <div class="tbl-wrap"><table class="dtable no-grp curve-tbl" id="cohCurveTable"></table></div>
       </div>
     </div>
@@ -2272,14 +2278,36 @@ function wbScoreTableHTML(rows){
   return head+'<tbody>'+body+'</tbody>';
 }
 
+// 사유를 세로(행)로, 주차를 가로(헤더)로 배치 — 사유가 12종이라 가로로 나열하면 한눈에 안 들어온다는 지적(2026-07-31).
+// weeks는 오름차순(과거→최근)으로 들어오므로 그대로 좌→우에 쓰면 시간 흐름이 자연스럽다.
+// 각 사유 행 끝에 6주평균과 "최근주 vs 6주평균" 증감률을 붙인다 — 지연은 늘어나는 쪽이 나쁘므로 증가=빨강.
+function wbDelayTrendRowHTML(label, vals){
+  var sum=0; for(var i=0;i<vals.length;i++) sum+=vals[i];
+  var avg = vals.length ? sum/vals.length : 0;
+  var latest = vals.length ? vals[vals.length-1] : 0;
+  var vsAvg;
+  if (avg<=0){
+    vsAvg = latest>0 ? '<span style="color:var(--s-red);font-weight:700">신규</span>' : '<span style="color:var(--muted)">–</span>';
+  } else {
+    var pct = Math.round((latest-avg)/avg*1000)/10;
+    var arrow = pct>0?"▲":pct<0?"▼":"–";
+    var color = pct>0 ? "var(--s-red)" : pct<0 ? "var(--good)" : "var(--muted)";
+    vsAvg = '<span style="color:'+color+';font-weight:700">'+arrow+(pct===0?"":" "+Math.abs(pct)+"%")+'</span>';
+  }
+  return '<tr><td>'+esc(label)+'</td>'
+    +vals.map(function(v){ return '<td>'+(v?fmt(v):'<span style="color:var(--muted)">–</span>')+'</td>'; }).join('')
+    +'<td>'+(Math.round(avg*10)/10)+'</td><td>'+vsAvg+'</td></tr>';
+}
 function wbDelayTableHTML(weeks, cats){
-  var head='<thead><tr><th>출고주(월요일)</th><th>총 지연건</th>'+cats.map(function(c){return '<th>'+c+'</th>';}).join('')+'</tr></thead>';
-  var body=weeks.slice().reverse().map(function(w){
-    return '<tr><td>'+w.week.slice(5).replace("-",".")+'주</td><td>'+fmt(w.total)+'</td>'
-      +cats.map(function(c){ var v=(w.cats&&w.cats[c])||0; return '<td>'+(v?fmt(v):'<span style="color:var(--muted)">–</span>')+'</td>'; }).join('')
-      +'</tr>';
+  if (!weeks.length) return '<thead><tr><th>사유</th></tr></thead><tbody><tr><td style="color:var(--muted)">아직 집계된 주가 없습니다</td></tr></tbody>';
+  var wkLabels = weeks.map(function(w){ return w.week.slice(5).replace("-",".")+'주'; });
+  var head='<thead><tr><th>사유</th>'+wkLabels.map(function(l){return '<th>'+l+'</th>';}).join('')
+    +'<th>6주평균</th><th>평균대비</th></tr></thead>';
+  var totalRow = wbDelayTrendRowHTML('총 지연건', weeks.map(function(w){ return w.total||0; }));
+  var catRows = cats.map(function(c){
+    return wbDelayTrendRowHTML(c, weeks.map(function(w){ return (w.cats&&w.cats[c])||0; }));
   }).join('');
-  return head+'<tbody>'+body+'</tbody>';
+  return head+'<tbody>'+totalRow+catRows+'</tbody>';
 }
 
 function wbNightTableHTML(ni){
@@ -2311,17 +2339,52 @@ function api_toDateClient_(ymd){
 }
 
 var WB_SNAP_BOUND=false;
+var WB_SNAP_LAST=null;                     // 마지막 조회 결과(재정렬 시 재조회 없이 재사용)
+var WB_SNAP_SORT={key:null, dir:1};        // key: count|pct|avgAge · dir: 1=오름차순, -1=내림차순
+// 정렬 버튼 — 헤더 하나당 아이콘 하나. 클릭할 때마다 오름↔내림 전환(처음 클릭은 내림차순=값이 큰 순).
+function wbSnapSortArrows(key){
+  var active = WB_SNAP_SORT.key===key;
+  var icon = active ? (WB_SNAP_SORT.dir===1 ? '▲' : '▼') : '⇅';
+  return '<span class="sort-btn'+(active?' active':'')+'" data-key="'+key+'" title="클릭: 오름차순/내림차순 전환">'+icon+'</span>';
+}
 function wbRenderSnap(r){
   var box=document.getElementById("wbSnapTable");
-  if(!r||!r.ok){ box.innerHTML='<tbody><tr><td style="color:var(--s-red)">조회 실패: '+esc((r&&r.error)||"알 수 없음")+'</td></tr></tbody>'; return; }
-  var cats=r.memoCats||[];
+  if(!r||!r.ok){ WB_SNAP_LAST=null; box.innerHTML='<tbody><tr><td style="color:var(--s-red)">조회 실패: '+esc((r&&r.error)||"알 수 없음")+'</td></tr></tbody>'; return; }
+  WB_SNAP_LAST=r;
+  WB_SNAP_SORT={key:null, dir:1};
+  wbRenderSnapTable();
+}
+function wbRenderSnapTable(){
+  var box=document.getElementById("wbSnapTable");
+  var r=WB_SNAP_LAST;
+  if(!r){ return; }
+  var cats=(r.memoCats||[]).slice();
   var total=cats.reduce(function(s,c){return s+c.count;},0);
-  var head='<thead><tr><th>분류</th><th>건수</th><th>비중</th><th>평균경과일</th></tr></thead>';
-  var body=cats.map(function(c){
-    var pct = total? Math.round(c.count/total*1000)/10 : 0;
-    return '<tr><td>'+esc(c.cat)+'</td><td>'+fmt(c.count)+'</td><td>'+pct+'%</td><td>'+(c.count?c.avgAge:'–')+'</td></tr>';
+  var rows=cats.map(function(c){
+    return { cat:c.cat, count:c.count, pct: total? Math.round(c.count/total*1000)/10 : 0, avgAge: c.count? c.avgAge : null };
+  });
+  if (WB_SNAP_SORT.key){
+    var k=WB_SNAP_SORT.key, dir=WB_SNAP_SORT.dir;
+    rows.sort(function(a,b){
+      var av=a[k], bv=b[k];
+      av = (av==null) ? -Infinity : av;
+      bv = (bv==null) ? -Infinity : bv;
+      return (av-bv)*dir;
+    });
+  }
+  var head='<thead><tr><th>분류</th><th>건수'+wbSnapSortArrows('count')+'</th><th>비중'+wbSnapSortArrows('pct')+'</th><th>평균경과일'+wbSnapSortArrows('avgAge')+'</th></tr></thead>';
+  var body=rows.map(function(c){
+    return '<tr><td>'+esc(c.cat)+'</td><td>'+fmt(c.count)+'</td><td>'+c.pct+'%</td><td>'+(c.avgAge!=null?c.avgAge:'–')+'</td></tr>';
   }).join('');
   box.innerHTML = head+'<tbody>'+body+'</tbody>';
+  box.querySelectorAll('.sort-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var key = btn.getAttribute('data-key');
+      if (WB_SNAP_SORT.key === key) WB_SNAP_SORT.dir *= -1;
+      else WB_SNAP_SORT = { key: key, dir: -1 };
+      wbRenderSnapTable();
+    });
+  });
 }
 function wbBindSnapButton(){
   if (WB_SNAP_BOUND) return;
@@ -2808,7 +2871,11 @@ function renderCohortCurve(c){
       return '<td class="cv" style="'+curveHeat(p)+'">'+p.toFixed(1)+'</td>';
     }).join("");
     var imm = r.maxD < maxD;   // 아직 D+30이 안 지난 진행중 코호트
-    return '<tr'+(imm?' class="imm"':'')+'><td>'+rptWeekLabel(r.week)+(imm?' <span class="share">진행중</span>':'')+'</td>'
+    // 이번 주(출고 마감 전)는 '집계중'으로 별도 표기 — 그냥 '진행중'과 달리 출고건수 자체가 아직 확정이 아니라서 구분한다.
+    var tag = r.partial ? '<span class="share" style="color:var(--s-orange)">진행중·집계중</span>' : (imm?'<span class="share">진행중</span>':'');
+    return '<tr'+(imm?' class="imm"':'')+'><td>'+rptWeekLabel(r.week)
+      +' <span style="color:var(--muted);font-weight:500">(총 '+fmt(r.shipped)+'건)</span>'
+      +(tag?' '+tag:'')+'</td>'
       + '<td><span class="cell-main">'+fmt(r.shipped)+'</span></td>' + cells + '</tr>';
   }).reverse().join("");   // 최신 주가 위
   el.innerHTML = head + '<tbody>' + body + '</tbody>';
