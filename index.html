@@ -976,12 +976,12 @@
       <div class="card col-12 fill" data-cid="waD7">
         <h3>📦 출고주차별 D+7 누적 설치완료율</h3>
         <div class="sub">출고 후 7일 이내 설치완료 비율 · 우클리핑 영향이 없는(관측 성숙) 유일한 비교 지표 · 최근 몇 주는 "집계중"으로 표시됩니다</div>
-        <div class="chart-wrap ch-m"><canvas id="waD7Chart"></canvas></div>
+        <div class="chart-wrap ch-l"><canvas id="waD7Chart"></canvas></div>
       </div>
 
       <div class="card col-6 fill" data-cid="waDangtong">
         <h3>🚚 당일배송 업데이트 (오후 배송반영, 7/22~)</h3>
-        <div class="sub">배송완료 전환 후 1차컨택 당일설치율(당통비교 기준, 자가설치 제외) · 최근 주는 컨택이 덜 끝나 출고 대비 %가 낮게 보일 수 있습니다</div>
+        <div class="sub">배송완료 전환 후 1차컨택 당일설치율(당통비교 기준, 자가설치 제외) · 2026-05-04주부터 표시(그 이전은 채널분류 시작 전 데이터라 제외) · 최근 주는 컨택이 덜 끝나 출고 대비 %가 낮게 보일 수 있습니다</div>
         <div class="chart-wrap ch-m"><canvas id="waDangtongChart"></canvas></div>
       </div>
 
@@ -3409,7 +3409,10 @@ function paintWeeklyAction(d){
   if(rangeEl) rangeEl.textContent = rptWeekLabel(w)+" 주";
 
   var d7rows = waD7Rows((d.cohort&&d.cohort.shipCurve)||[]);
-  var dtRows = (d.weeklyBoard&&d.weeklyBoard.dangtong)||[];
+  // 2026-05-04주 이전은 표시하지 않는다(운영자 요청 08/03) — 채널분류 시작일(5/6) 이전 데이터라
+  // fcRate/lcRate가 이 시기 특유의 이상치를 보였다. 타일·차트·표 전부 이 필터를 공유해 일관되게 자른다.
+  var WA_DANGTONG_FLOOR = "2026-05-04";
+  var dtRows = ((d.weeklyBoard&&d.weeklyBoard.dangtong)||[]).filter(function(r){ return r.week >= WA_DANGTONG_FLOOR; });
   var dailyNight = (d.weeklyBoard&&d.weeklyBoard.nightIntake&&d.weeklyBoard.nightIntake.daily)||[];
   var niRows = waNightWeekly(dailyNight);
   var cdRows = (d.accel&&d.accel.samedayWeekly)||[];
@@ -3436,13 +3439,16 @@ function paintWeeklyAction(d){
 function paintWaD7(rows, selWeek){
   var labels = rows.map(function(r){return waShortLabel(r.week);});
   var data = rows.map(function(r){ return r.d7==null? null : Math.round(r.d7*1000)/10; });
-  var pts = rows.map(function(r){ return r.week===selWeek ? 6 : 3; });
-  mk("waD7Chart", { type:"line",
+  var bg = rows.map(function(r){ return r.week===selWeek ? C["--s-blue-d"] : C["--s-aqua"]; });
+  // 운영자 요청(08/03) — 선 그래프는 값이 85~95%대에 몰려 있어 주차 간 차이가 잘 안 보였다.
+  // 막대 + 막대 위 %라벨로 바꾸고, 어차피 100%를 안 넘는 지표라 5%단위 그리드를 준다.
+  mk("waD7Chart", { type:"bar",
     data:{ labels:labels, datasets:[
-      { label:"D+7 누적 설치완료율(%)", data:data, borderColor:C["--s-aqua"], backgroundColor:C["--s-aqua"]+"33",
-        fill:true, tension:.25, spanGaps:true, pointRadius:pts, pointBackgroundColor:C["--s-aqua"] }
+      { label:"D+7 누적 설치완료율(%)", data:data, backgroundColor:bg, borderRadius:3,
+        datalabels: dlBarTop({ formatter:function(v){ return v==null?"":v+"%"; } }) }
     ]},
-    options:{ scales:{ x:{grid:{display:false}}, y:{beginAtZero:true, suggestedMax:100, ticks:{callback:function(v){return v+"%";}}} },
+    options:{ scales:{ x:{grid:{display:false}},
+        y:{beginAtZero:true, max:100, ticks:{stepSize:5, callback:function(v){return v+"%";}}} },
       plugins:{ legend:{display:false},
         tooltip:{callbacks:{label:function(ctx){ var v=ctx.parsed.y; return v==null?"집계중":v+"%"; }}} } } });
 }
@@ -3454,14 +3460,16 @@ function paintWaDangtong(rows, selWeek){
   var bg = rows.map(function(r){ return r.week===selWeek ? C["--s-blue-d"] : C["--s-blue-l"]; });
   mk("waDangtongChart", { type:"bar",
     data:{ labels:labels, datasets:[
-      { type:"bar", label:"1차컨택 당일설치율(%)", data:fc, backgroundColor:bg, borderRadius:3, yAxisID:"y" },
+      { type:"bar", label:"1차컨택 당일설치율(%)", data:fc, backgroundColor:bg, borderRadius:3, yAxisID:"y",
+        datalabels: dlBarTop({ formatter:function(v){ return v==null?"":v+"%"; } }) },
       { type:"line", label:"마지막통화 당일설치율(%, 참고)", data:lc, borderColor:C["--muted"], backgroundColor:"transparent",
-        borderDash:[4,3], tension:.25, pointRadius:2, yAxisID:"y" }
+        borderDash:[4,3], tension:.25, pointRadius:2, yAxisID:"y", datalabels:{display:false} }
     ]},
-    // ⚠️ max:100 고정 — 과거 일부 주(4월대)의 lcRate가 100%를 넘는 이상치가 있어(원인 미조사,
-    // buildDangtongWeekly_ 기존 로직) suggestedMax로 두면 그 한 주 때문에 축이 250%까지 늘어나
-    // 나머지 정상 주의 fcRate 막대가 전부 눌려 보인다. 참고용 선이라 100%에서 잘라 보여준다.
-    options:{ scales:{ x:{grid:{display:false}}, y:{beginAtZero:true, max:100, ticks:{callback:function(v){return v+"%";}}} },
+    // 운영자 요청(08/03) — 표시 구간을 2026-05-04주 이후로 좁혀서(그 이전엔 채널분류 시작 전이라
+    // lcRate 이상치가 섞여 있었다, [[dashboard-project]] 5/6 컷오버 참고) 상한도 80%로 낮췄다.
+    // fcRate/lcRate 정상 범위(30~55%)가 화면을 더 채워 주차 간 차이가 잘 보인다. 5%단위 그리드.
+    options:{ scales:{ x:{grid:{display:false}},
+        y:{beginAtZero:true, max:80, ticks:{stepSize:5, callback:function(v){return v+"%";}}} },
       plugins:{ legend:{display:true, labels:{color:C["--text-secondary"]}} } } });
 }
 
