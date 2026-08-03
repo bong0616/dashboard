@@ -1011,6 +1011,11 @@
       <div class="card col-12" data-cid="waNoteCard">
         <h3>✍️ 운영자 코멘트 (이 주차)</h3>
         <div class="sub">계산값과 별개로 해석·판단을 직접 남깁니다 · 저장 시 모든 사용자에게 공유됩니다(주차별 리포트 코멘트와는 별개 저장소)</div>
+        <div id="waAiDraftBox" style="display:none;margin-bottom:10px;padding:10px 12px;border-radius:8px;border:1px dashed var(--border);background:var(--card-alt,rgba(128,128,128,.08))">
+          <div style="font-size:11.5px;color:var(--muted);margin-bottom:6px">🤖 AI 초안(Gemini) — 그대로 저장되지 않습니다. 확인 후 아래로 가져와 고쳐서 저장하세요.</div>
+          <div id="waAiDraftText" style="font-size:13px;line-height:1.5;white-space:pre-wrap"></div>
+          <div style="margin-top:8px"><button class="fbtn" id="waAiDraftUse">✍️ 이 초안 가져오기</button></div>
+        </div>
         <textarea id="waNote" maxlength="1000" rows="3" style="width:100%;box-sizing:border-box;resize:vertical;font-family:var(--font);font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--page);color:var(--text-primary)" placeholder="예: 당일배송 업데이트 이후 fcRate 상승은 확인되나 성수기 지연 증가와 겹쳐 순수효과 판단은 보류."></textarea>
         <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:6px">
           <span id="waNoteCnt" style="font-size:11.5px;color:var(--muted)"></span>
@@ -3328,7 +3333,7 @@ function saveReportNote(notes){
 
 // ===== 🎯 액션 효과 리포트 (1만원 이벤트·야간원격접수·당일배송 업데이트, 2026-08-03 신설) =====
 // 계산값은 항상 자동 재계산(수치 수기수정 없음) — 해석·판단은 waNote 코멘트(별도 저장소)에만 남긴다.
-var WA = { week:null, eventCache:null, eventLoadedAt:null };
+var WA = { week:null, eventCache:null, eventLoadedAt:null, aiDraftText:"" };
 var WA_BOUND = false;
 
 function waYmd(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
@@ -3434,6 +3439,7 @@ function paintWeeklyAction(d){
   paintWaCallD1(cdRows, w);
   renderWaEvent();
   paintWaNote((d.weeklyBoard&&d.weeklyBoard.actionNotes)||{});
+  paintWaAiDraft((d.weeklyBoard&&d.weeklyBoard.aiDrafts)||{});
 }
 
 function paintWaD7(rows, selWeek){
@@ -3564,6 +3570,15 @@ function waEventRefresh(){
   { params:{ action:"eventbonusaudit" } });
 }
 
+function paintWaAiDraft(drafts){
+  var box = document.getElementById("waAiDraftBox");
+  if(!box) return;
+  var text = drafts[WA.week] || "";
+  WA.aiDraftText = text;
+  box.style.display = text ? "" : "none";
+  var t = document.getElementById("waAiDraftText");
+  if(t) t.textContent = text;
+}
 function paintWaNote(notes){
   var ta = document.getElementById("waNote");
   if(!ta) return;
@@ -3592,6 +3607,11 @@ function waBindButtons(){
   var sb=document.getElementById("waNoteSave"); if(sb) sb.addEventListener("click", saveWaNote);
   var ta=document.getElementById("waNote");
   if(ta) ta.addEventListener("input", function(){ document.getElementById("waNoteCnt").textContent=ta.value.length+"/1000"; });
+  var ub=document.getElementById("waAiDraftUse");
+  if(ub) ub.addEventListener("click", function(){
+    var box=document.getElementById("waNote");
+    if(box){ box.value = WA.aiDraftText||""; document.getElementById("waNoteCnt").textContent=box.value.length+"/1000"; box.focus(); }
+  });
 }
 
 // ===== 🎯 KPI 목표(조정형) 설정 UI =====
