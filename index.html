@@ -264,6 +264,17 @@
   .wa-summary-row:first-child { border-top:none; }
   .wa-summary-row b { color: var(--text-primary); font-weight:700; }
   .wa-summary-tag { font-size:11.5px; color: var(--muted); font-style:italic; }
+  /* 액션 효과 리포트 차트 카드 — 범례·표·캘아웃(정적 리포트 스타일 차용, 2026-08-03). 해석 문구는
+     여기에도 안 넣는다 — 전부 데이터 사실(성숙도·표본 크기 등)만, 판단은 코멘트/AI초안에만 남긴다. */
+  .wa-legend { display:flex; gap:16px; flex-wrap:wrap; margin:10px 2px 2px; font-size:12px; color: var(--muted); }
+  .wa-legend span { display:inline-flex; align-items:center; gap:6px; }
+  .wa-legend i { width:10px; height:10px; border-radius:2px; display:inline-block; flex-shrink:0; }
+  .wa-callout { margin-top:14px; padding:12px 14px; border-radius:8px; border:1px solid var(--border); background: color-mix(in srgb, var(--text-primary) 4%, transparent); font-size:12.5px; color: var(--text-secondary); line-height:1.65; }
+  .wa-callout b { color: var(--text-primary); }
+  /* .dtable의 전역 min-width:640px는 col-12 표 기준 — col-6 카드 안의 짧은 표(3~4열)는 그 폭에
+     맞춰 강제로 넓어져 오른쪽 열이 카드 밖으로 밀려난다(2026-08-03 발견). ID가 클래스보다 우선하므로
+     이 표들만 내용 크기에 맞게 좁아지게 한다. */
+  #waDangtongTable, #waNightTable, #waCallD1Table { min-width: 0; }
   .memo-text { font-size:13px; line-height:1.6; color: var(--text-secondary); white-space:pre-wrap; word-break:break-word; flex:1; }
   /* 기존 메모 편집(2026-08-03) — 클릭 시 memo-entry 내부를 textarea+저장/취소로 바꿔치기한다(전체 재렌더 없이). */
   .memo-edit-btn { flex-shrink:0; border:none; background:transparent; cursor:pointer; font-size:12px; padding:0 2px; opacity:.5; border-radius:6px; line-height:1.6; }
@@ -998,24 +1009,30 @@
         <h3>📦 출고주차별 D+7 누적 설치완료율</h3>
         <div class="sub">출고 후 7일 이내 설치완료 비율 · 우클리핑 영향이 없는(관측 성숙) 유일한 비교 지표 · 최근 몇 주는 "집계중"으로 표시됩니다</div>
         <div class="chart-wrap ch-l"><canvas id="waD7Chart"></canvas></div>
+        <div class="tbl-wrap"><table class="dtable no-grp" id="waD7Table"></table></div>
+        <div class="wa-callout" id="waD7Callout"></div>
       </div>
 
       <div class="card col-6 fill" data-cid="waDangtong">
         <h3>🚚 당일배송 업데이트 (오후 배송반영, 7/22~)</h3>
         <div class="sub">배송완료 전환 후 1차컨택 당일설치율(당통비교 기준, 자가설치 제외) · 2026-05-04주부터 표시(그 이전은 채널분류 시작 전 데이터라 제외) · 최근 주는 컨택이 덜 끝나 출고 대비 %가 낮게 보일 수 있습니다</div>
         <div class="chart-wrap ch-m"><canvas id="waDangtongChart"></canvas></div>
+        <div class="tbl-wrap"><table class="dtable no-grp" id="waDangtongTable"></table></div>
+        <div class="wa-callout" id="waDangtongCallout"></div>
       </div>
 
       <div class="card col-6 fill" data-cid="waNight">
         <h3>🌙 야간원격접수 (선택 주 일자별)</h3>
         <div class="sub" id="waNightNote">18~24시 원격AS 채널 접수 · 설치완료는 사업자번호 매칭(누적형, 최근 며칠은 낮게 보일 수 있음)</div>
         <div class="chart-wrap ch-m"><canvas id="waNightChart"></canvas></div>
+        <div class="tbl-wrap"><table class="dtable no-grp" id="waNightTable"></table></div>
       </div>
 
       <div class="card col-6 fill" data-cid="waCallD1">
         <h3>📞 콜 기준 D+1 설치완료율</h3>
         <div class="sub">그날 설치예정으로 확정된 콜 전체 기준(주말 제외) · U열 신설일(2026-07-21) 이전은 집계 불가</div>
         <div class="chart-wrap ch-m"><canvas id="waCallD1Chart"></canvas></div>
+        <div class="tbl-wrap"><table class="dtable no-grp" id="waCallD1Table"></table></div>
       </div>
 
       <div class="card col-6 fill" data-cid="waEvent">
@@ -1027,6 +1044,8 @@
           <span id="waEventMeta" style="font-size:11.5px;color:var(--muted);margin-left:auto"></span>
         </div>
         <div id="waEventBox"></div>
+        <div class="tbl-wrap" id="waEventTblWrap" style="display:none"><table class="dtable no-grp" id="waEventTable"></table></div>
+        <div class="wa-callout" id="waEventCallout" style="display:none"></div>
       </div>
 
       <div class="card col-12" data-cid="waNoteCard">
@@ -3592,6 +3611,7 @@ function paintWeeklyAction(d){
   var dailyNight = (d.weeklyBoard&&d.weeklyBoard.nightIntake&&d.weeklyBoard.nightIntake.daily)||[];
   var niRows = waNightWeekly(dailyNight);
   var cdRows = (d.accel&&d.accel.samedayWeekly)||[];
+  var absRows = (d.accel&&d.accel.absentSamedayWeekly)||[];
 
   function at(rows,key){ var i=waFind(rows,w); if(i<0) return {cur:null,prev:null}; return {cur:rows[i][key], prev:i>0?rows[i-1][key]:null}; }
   var pctFn = function(v){ return v==null?"–":pct(v,1); };
@@ -3608,7 +3628,7 @@ function paintWeeklyAction(d){
   paintWaD7(d7rows, w);
   paintWaDangtong(dtRows, w);
   paintWaNight(dailyNight, w);
-  paintWaCallD1(cdRows, w);
+  paintWaCallD1(cdRows, w, absRows);
   renderWaEvent();
   paintWaNote((d.weeklyBoard&&d.weeklyBoard.actionNotes)||{});
   paintWaAiDraft((d.weeklyBoard&&d.weeklyBoard.aiDrafts)||{});
@@ -3629,6 +3649,23 @@ function paintWaD7(rows, selWeek){
         y:{beginAtZero:true, max:100, ticks:{stepSize:5, callback:function(v){return v+"%";}}} },
       plugins:{ legend:{display:false},
         tooltip:{callbacks:{label:function(ctx){ var v=ctx.parsed.y; return v==null?"집계중":v+"%"; }}} } } });
+
+  var tbl = document.getElementById("waD7Table");
+  if(tbl){
+    var head = '<thead><tr><th>출고주</th><th>출고건수</th><th>D+7 누적 설치완료율</th></tr></thead>';
+    var body = rows.slice().reverse().map(function(r){
+      return '<tr'+(r.week===selWeek?' class="cur"':'')+'><td>'+rptWeekLabel(r.week)+'</td><td>'+fmt(r.shipped)+'</td><td>'
+        +(r.d7==null?'<span style="color:var(--muted)">집계중</span>':pct(r.d7,1))+'</td></tr>';
+    }).join('');
+    tbl.innerHTML = head+'<tbody>'+body+'</tbody>';
+  }
+  var co = document.getElementById("waD7Callout");
+  if(co){
+    var sel = rows.filter(function(r){return r.week===selWeek;})[0];
+    if(!sel) co.innerHTML = '';
+    else if(sel.d7==null) co.innerHTML = '선택한 주는 출고 마지막 날짜로부터 <b>'+sel.maxD+'일</b>만 지나 D+7(7일 이내 설치완료) 판정이 아직 안 됩니다 — 최소 7일이 더 지나야 이 주의 값이 채워집니다.';
+    else co.innerHTML = '이 지표는 출고 후 7일이 다 지난 뒤의 최종값이라, 코호트가 아직 진행 중인 최근 주에도 값이 바뀌지 않습니다(우클리핑 영향 없음).';
+  }
 }
 
 function paintWaDangtong(rows, selWeek){
@@ -3649,6 +3686,23 @@ function paintWaDangtong(rows, selWeek){
     options:{ scales:{ x:{grid:{display:false}},
         y:{beginAtZero:true, max:80, ticks:{stepSize:5, callback:function(v){return v+"%";}}} },
       plugins:{ legend:{display:true, labels:{color:C["--text-secondary"]}} } } });
+
+  var tbl = document.getElementById("waDangtongTable");
+  if(tbl){
+    var head = '<thead><tr><th>출고주</th><th>컨택</th><th>1차당일설치</th><th>fcRate</th></tr></thead>';
+    var body = rows.slice().reverse().map(function(r){
+      return '<tr'+(r.week===selWeek?' class="cur"':'')+' title="출고 '+fmt(r.shipped)+'건 · lcRate(참고) '+pct(r.lcRate,1)+'"><td>'+rptWeekLabel(r.week)+'</td><td>'+fmt(r.contacted)
+        +'</td><td>'+fmt(r.fcInstall)+'</td><td>'+pct(r.fcRate,1)+'</td></tr>';
+    }).join('');
+    tbl.innerHTML = head+'<tbody>'+body+'</tbody>';
+  }
+  var co = document.getElementById("waDangtongCallout");
+  if(co){
+    var sel = rows.filter(function(r){return r.week===selWeek;})[0];
+    co.innerHTML = (sel && sel.immature)
+      ? '선택한 주는 아직 마감 전이라 컨택이 다 끝나지 않았습니다 — <b>출고 대비 컨택 비율</b>은 낮게 보일 수 있지만, <b>fcRate(이미 컨택된 건 안에서의 당일설치율)</b>는 성숙도와 무관해 주차 비교에 그대로 쓸 수 있습니다.'
+      : '이 주는 마감 후 10일이 지나 컨택·설치 흐름이 안정됐습니다.';
+  }
 }
 
 function paintWaNight(dailyAll, selWeek){
@@ -3671,9 +3725,21 @@ function paintWaNight(dailyAll, selWeek){
       ? "18~24시 원격AS 채널 접수 · 설치완료는 사업자번호 매칭(누적형, 최근 며칠은 낮게 보일 수 있음)"
       : "이 시트는 2026-07-23부터 적재되어 이 주는 데이터가 없습니다.";
   }
+  var tbl = document.getElementById("waNightTable");
+  if(tbl){
+    var head = '<thead><tr><th>날짜</th><th>접수</th><th>설치완료</th><th>전환율</th></tr></thead>';
+    var body = dates.map(function(dt){
+      var o = byDate[dt];
+      var lbl = (function(){ var s=dt.split("-"); return (+s[1])+"/"+(+s[2]); })();
+      if(!o) return '<tr><td>'+lbl+'</td><td colspan="3" style="color:var(--muted)">집계 전</td></tr>';
+      var rate = o.count ? o.installed/o.count : null;
+      return '<tr><td>'+lbl+'</td><td>'+fmt(o.count)+'</td><td>'+fmt(o.installed)+'</td><td>'+pct(rate,1)+'</td></tr>';
+    }).join('');
+    tbl.innerHTML = head+'<tbody>'+body+'</tbody>';
+  }
 }
 
-function paintWaCallD1(rows, selWeek){
+function paintWaCallD1(rows, selWeek, absRows){
   var labels = rows.map(function(r){return waShortLabel(r.week);});
   var rate = rows.map(function(r){ return r.rate==null?null:Math.round(r.rate*1000)/10; });
   var bg = rows.map(function(r){ return r.week===selWeek ? C["--s-violet"] : C["--s-blue-l"]; });
@@ -3688,6 +3754,18 @@ function paintWaCallD1(rows, selWeek){
         y1:{beginAtZero:true, position:"right", grid:{drawOnChartArea:false}, ticks:{callback:function(v){return v+"%";}}}
       },
       plugins:{ legend:{display:true, labels:{color:C["--text-secondary"]}} } } });
+
+  var tbl = document.getElementById("waCallD1Table");
+  if(tbl){
+    absRows = absRows||[];
+    var head = '<thead><tr><th>주</th><th>설치예정 콜</th><th>D+1(통화성공)</th><th>D+1(부재,참고)</th></tr></thead>';
+    var body = rows.slice().reverse().map(function(r){
+      var ab = absRows.filter(function(x){return x.week===r.week;})[0];
+      return '<tr'+(r.week===selWeek?' class="cur"':'')+'><td>'+rptWeekLabel(r.week)+'</td><td>'+fmt(r.contacted)+'</td><td>'
+        +pct(r.rate,1)+'</td><td'+(ab?' title="부재건 '+fmt(ab.contacted)+'건"':'')+'>'+(ab?pct(ab.rate,1):'<span style="color:var(--muted)">–</span>')+'</td></tr>';
+    }).join('');
+    tbl.innerHTML = head+'<tbody>'+body+'</tbody>';
+  }
 }
 
 // 1만원탭(eventbonusaudit)은 로우데이터를 재계산하며 시트에도 쓰는 부작용이 있어 자동 로드하지 않는다
@@ -3709,14 +3787,19 @@ function renderWaEvent(){
   var data = WA.eventCache;
   var meta = document.getElementById("waEventMeta");
   if(meta) meta.textContent = WA.eventLoadedAt ? ("마지막 조회: "+WA.eventLoadedAt) : "";
+  var tblWrap = document.getElementById("waEventTblWrap"), tbl = document.getElementById("waEventTable"), co = document.getElementById("waEventCallout");
   if(!data){
     box.innerHTML = '<div class="rt-l" style="color:var(--muted)">아직 조회하지 않았습니다. 위 새로고침을 눌러주세요.</div>';
+    if(tblWrap) tblWrap.style.display="none";
+    if(co) co.style.display="none";
     return;
   }
   var byWeek = waEventBucketByWeek(data.summary);
   var row = byWeek[WA.week];
   if(!row){
     box.innerHTML = '<div class="rt-l" style="color:var(--muted)">이 주는 이벤트 안내 대상 기간이 아니거나 데이터가 없습니다(2026-07-28부터 집계).</div>';
+    if(tblWrap) tblWrap.style.display="none";
+    if(co) co.style.display="none";
     return;
   }
   var rate = row.notice ? Math.round(row.hit/row.notice*1000)/10 : 0;
@@ -3725,6 +3808,25 @@ function renderWaEvent(){
     + tile("D+1내 설치","✅", fmt(row.hit), "", "")
     + tile("전환율","📈", rate, "%", "")
     + '</div>';
+
+  var dates = waWeekDates(WA.week);
+  var byDate = {}; (data.summary||[]).forEach(function(r){ if(r[0]!=="합계") byDate[r[0]] = r; });
+  if(tbl){
+    var head = '<thead><tr><th>안내일</th><th>안내건수</th><th>D+1내 설치</th><th>전환율</th></tr></thead>';
+    var body = dates.map(function(dt){
+      var r = byDate[dt];
+      var lbl = (function(){ var s=dt.split("-"); return (+s[1])+"/"+(+s[2]); })();
+      if(!r) return '<tr><td>'+lbl+'</td><td colspan="3" style="color:var(--muted)">–</td></tr>';
+      var notice=r[1]||0, hit=r[2]||0, rt = notice? hit/notice : null;
+      return '<tr><td>'+lbl+'</td><td>'+fmt(notice)+'</td><td>'+fmt(hit)+'</td><td>'+pct(rt,1)+'</td></tr>';
+    }).join('');
+    tbl.innerHTML = head+'<tbody>'+body+'</tbody>';
+  }
+  if(tblWrap) tblWrap.style.display="";
+  if(co){
+    co.style.display="";
+    co.innerHTML = '이 표의 각 안내일 값은 <b>안내 후 최소 1일이 지나야 최종값</b>입니다. 가장 최근 안내일(들)은 아직 D+1이 다 지나지 않아 지금보다 나중에 다시 조회하면 전환율이 더 올라갈 수 있습니다(우클리핑).';
+  }
 }
 function waEventRefresh(){
   if(!LAST_PASS) return;
