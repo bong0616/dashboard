@@ -275,6 +275,22 @@
      맞춰 강제로 넓어져 오른쪽 열이 카드 밖으로 밀려난다(2026-08-03 발견). ID가 클래스보다 우선하므로
      이 표들만 내용 크기에 맞게 좁아지게 한다. */
   #waDangtongTable, #waNightTable, #waCallD1Table { min-width: 0; }
+  /* "한눈에 보는 결론" — AI(Gemini)가 매주 다시 쓰는 액션별 태그+한줄평. 사람이 그 주 코멘트를
+     저장하기 전까지는 반드시 "AI 추정 · 검토 전" 배지를 붙인다(2026-08-03, 운영자 요청 + 확인) —
+     검토 안 된 AI 판단이 확정 결론처럼 보이면 안 된다는 게 이 기능 전체의 전제. */
+  .wa-ai-badge { display:inline-block; font-size:10.5px; font-weight:700; color: var(--s-yellow);
+    background: color-mix(in srgb, var(--s-yellow) 16%, transparent); border-radius:99px; padding:2px 9px;
+    margin-left:8px; vertical-align:middle; letter-spacing:.01em; }
+  .wa-verdict-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-top:10px; }
+  .wa-vcard { border:1px solid var(--border); border-radius:10px; padding:16px 16px 14px; background: var(--page);
+    display:flex; flex-direction:column; gap:8px; }
+  .wa-vtag { align-self:flex-start; font-size:11px; font-weight:700; padding:3px 9px; border-radius:99px; letter-spacing:.01em; }
+  .wa-vtag.good { background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good); }
+  .wa-vtag.bad { background: color-mix(in srgb, var(--s-red) 16%, transparent); color: var(--s-red); }
+  .wa-vtag.warn { background: color-mix(in srgb, var(--s-yellow) 16%, transparent); color: var(--s-yellow); }
+  .wa-vtitle { font-weight:700; font-size:14px; color: var(--text-primary); }
+  .wa-vbody { font-size:13px; line-height:1.6; color: var(--text-secondary); }
+  .wa-callout-ai { margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); }
   .memo-text { font-size:13px; line-height:1.6; color: var(--text-secondary); white-space:pre-wrap; word-break:break-word; flex:1; }
   /* 기존 메모 편집(2026-08-03) — 클릭 시 memo-entry 내부를 textarea+저장/취소로 바꿔치기한다(전체 재렌더 없이). */
   .memo-edit-btn { flex-shrink:0; border:none; background:transparent; cursor:pointer; font-size:12px; padding:0 2px; opacity:.5; border-radius:6px; line-height:1.6; }
@@ -1005,6 +1021,12 @@
         <div id="waSummaryList" class="wa-summary-list"></div>
       </div>
 
+      <div class="card col-12" data-cid="waVerdict" style="display:none">
+        <h3>🔎 한눈에 보는 결론 <span id="waVerdictBadge"></span></h3>
+        <div class="sub">Gemini가 매주 자동으로 쓰는 요약입니다 · 운영자가 이 주차 코멘트를 저장하면 "검토완료"로 바뀝니다</div>
+        <div id="waVerdictGrid" class="wa-verdict-grid"></div>
+      </div>
+
       <div class="card col-12 fill" data-cid="waD7">
         <h3>📦 출고주차별 D+7 누적 설치완료율</h3>
         <div class="sub">출고 후 7일 이내 설치완료 비율 · 우클리핑 영향이 없는(관측 성숙) 유일한 비교 지표 · 최근 몇 주는 "집계중"으로 표시됩니다</div>
@@ -1026,6 +1048,7 @@
         <div class="sub" id="waNightNote">18~24시 원격AS 채널 접수 · 설치완료는 사업자번호 매칭(누적형, 최근 며칠은 낮게 보일 수 있음)</div>
         <div class="chart-wrap ch-m"><canvas id="waNightChart"></canvas></div>
         <div class="tbl-wrap"><table class="dtable no-grp" id="waNightTable"></table></div>
+        <div class="wa-callout" id="waNightCallout" style="display:none"></div>
       </div>
 
       <div class="card col-6 fill" data-cid="waCallD1">
@@ -1033,6 +1056,7 @@
         <div class="sub">그날 설치예정으로 확정된 콜 전체 기준(주말 제외) · U열 신설일(2026-07-21) 이전은 집계 불가</div>
         <div class="chart-wrap ch-m"><canvas id="waCallD1Chart"></canvas></div>
         <div class="tbl-wrap"><table class="dtable no-grp" id="waCallD1Table"></table></div>
+        <div class="wa-callout" id="waCallD1Callout" style="display:none"></div>
       </div>
 
       <div class="card col-6 fill" data-cid="waEvent">
@@ -3598,6 +3622,59 @@ function renderWeeklyAction(d){
   paintWeeklyAction(d);
 }
 
+// 저장된 AI 초안은 JSON 문자열이다(narrative+verdicts+callouts, 2026-08-03 구조화). 구버전(순수
+// 텍스트) 데이터가 남아있을 가능성에도 대비해 파싱 실패 시 narrative로만 감싸 되돌린다.
+function waParseAiDraft(raw){
+  if(!raw) return null;
+  try {
+    var obj = JSON.parse(raw);
+    if(obj && typeof obj==="object") return { narrative: obj.narrative||"", verdicts: obj.verdicts||[], callouts: obj.callouts||{} };
+  } catch(e){}
+  return { narrative: String(raw), verdicts: [], callouts: {} };
+}
+function waVerdictTagClass(tag){
+  if(tag==="효과 확인") return "good";
+  if(tag==="효과 확인 안 됨") return "bad";
+  return "warn"; // 효과는 소폭 / 판단 보류 / 그 외
+}
+// AI가 검토(=그 주 사람 코멘트 저장)되기 전까지 붙는 배지. actionNotes[week]가 있으면 사람이 이미
+// 이 주를 확인했다고 본다(운영자 확정 2026-08-03 — 별도 "승인" 버튼 없이 기존 코멘트 저장을 재사용).
+function waAiBadgeHTML(week, actionNotes){
+  var reviewed = actionNotes && actionNotes[week] && String(actionNotes[week]).trim();
+  return reviewed ? "" : '<span class="wa-ai-badge">🤖 AI 추정 · 검토 전</span>';
+}
+function paintWaVerdict(draft, aiWeek, actionNotes){
+  var card = document.querySelector('[data-cid="waVerdict"]');
+  var box = document.getElementById("waVerdictGrid");
+  var badgeEl = document.getElementById("waVerdictBadge");
+  if(!card || !box) return;
+  if(!draft || !draft.verdicts || !draft.verdicts.length){ card.style.display="none"; return; }
+  card.style.display = "";
+  if(badgeEl) badgeEl.innerHTML = waAiBadgeHTML(aiWeek, actionNotes);
+  box.innerHTML = draft.verdicts.map(function(v){
+    var cls = waVerdictTagClass(v.tag);
+    return '<div class="wa-vcard"><span class="wa-vtag '+cls+'">'+esc(v.tag||"")+'</span>'
+      +'<div class="wa-vtitle">'+esc(v.action||"")+'</div>'
+      +'<div class="wa-vbody">'+esc(v.summary||"")+'</div></div>';
+  }).join('');
+}
+// 차트 카드 캘아웃에 AI 문장을 덧붙인다 — 단, **선택주(selWeek)가 AI가 실제로 쓴 주(aiWeek)와 같을
+// 때만** 붙인다. 다른 주를 보고 있는데 aiWeek 얘기를 섞으면 어느 주 설명인지 헷갈린다.
+function waAppendAiCallout(elId, calloutKey, draft, aiWeek, selWeek, actionNotes){
+  var el = document.getElementById(elId); if(!el) return;
+  var old = el.querySelector(".wa-callout-ai"); if(old) old.remove();
+  var text = (draft && selWeek===aiWeek && draft.callouts) ? draft.callouts[calloutKey] : null;
+  if(text){
+    el.style.display = "";
+    var div = document.createElement("div");
+    div.className = "wa-callout-ai";
+    div.innerHTML = waAiBadgeHTML(aiWeek, actionNotes) + ' <span>'+esc(text)+'</span>';
+    el.appendChild(div);
+  } else if(!el.textContent.trim()){
+    el.style.display = "none";
+  }
+}
+
 function paintWeeklyAction(d){
   var w = WA.week;
   var rangeEl = document.getElementById("waWeekRange");
@@ -3624,14 +3701,26 @@ function paintWeeklyAction(d){
     waTile("야간원격접수","🌙", ni.cur, ni.prev, {valFn:fmt, unit:"건", neutral:true}) +
     waTile("콜 기준 D+1 전환율","📞", cd.cur, cd.prev, {valFn:pctFn});
 
+  var actionNotes = (d.weeklyBoard&&d.weeklyBoard.actionNotes)||{};
+  var aiDraftsRaw = (d.weeklyBoard&&d.weeklyBoard.aiDrafts)||{};
+  var aiWeek = waLastClosedWeek(d7rows);          // AI초안은 항상 이 주(마지막 마감주)에 대해서만 존재
+  var aiDraft = waParseAiDraft(aiDraftsRaw[aiWeek]);
+  WA.aiDraft = aiDraft; WA.aiWeek = aiWeek; WA.actionNotes = actionNotes; // waEventRefresh 콜백에서 재사용
+
   paintWaSummary(d, w);
+  paintWaVerdict(aiDraft, aiWeek, actionNotes);
   paintWaD7(d7rows, w);
+  waAppendAiCallout("waD7Callout", "d7", aiDraft, aiWeek, w, actionNotes);
   paintWaDangtong(dtRows, w);
+  waAppendAiCallout("waDangtongCallout", "dangtong", aiDraft, aiWeek, w, actionNotes);
   paintWaNight(dailyNight, w);
+  waAppendAiCallout("waNightCallout", "night", aiDraft, aiWeek, w, actionNotes);
   paintWaCallD1(cdRows, w, absRows);
+  waAppendAiCallout("waCallD1Callout", "callD1", aiDraft, aiWeek, w, actionNotes);
   renderWaEvent();
-  paintWaNote((d.weeklyBoard&&d.weeklyBoard.actionNotes)||{});
-  paintWaAiDraft((d.weeklyBoard&&d.weeklyBoard.aiDrafts)||{});
+  waAppendAiCallout("waEventCallout", "event", aiDraft, aiWeek, w, actionNotes);
+  paintWaNote(actionNotes);
+  paintWaAiDraft(aiDraft);
 }
 
 function paintWaD7(rows, selWeek){
@@ -3839,15 +3928,16 @@ function waEventRefresh(){
       WA.eventLoadedAt = new Date().toLocaleString("ko-KR");
       msg.textContent = "조회 완료 ✓";
       renderWaEvent();
+      waAppendAiCallout("waEventCallout", "event", WA.aiDraft, WA.aiWeek, WA.week, WA.actionNotes||{});
     } else { msg.textContent = (res&&res.error)||"조회 실패"; }
   }, function(){ btn.disabled=false; msg.textContent="통신 오류"; },
   { params:{ action:"eventbonusaudit" } });
 }
 
-function paintWaAiDraft(drafts){
+function paintWaAiDraft(draft){
   var box = document.getElementById("waAiDraftBox");
   if(!box) return;
-  var text = drafts[WA.week] || "";
+  var text = (draft && draft.narrative) || "";
   WA.aiDraftText = text;
   box.style.display = text ? "" : "none";
   var t = document.getElementById("waAiDraftText");
