@@ -258,6 +258,12 @@
   .memo-time-col { display:flex; flex-direction:column; gap:1px; flex-shrink:0; }
   .memo-time { font-size:11px; color: var(--muted); white-space:nowrap; padding-top:1px; }
   .memo-edited { font-size:10px; color: var(--muted); white-space:nowrap; font-style:italic; opacity:.85; }
+  /* 액션 효과 리포트 '주차별 요약'(2026-08-03) — 차트와 같은 계산값을 문장으로. 색상 코딩 없음(중립 표기 원칙). */
+  .wa-summary-list { display:flex; flex-direction:column; margin-top:4px; }
+  .wa-summary-row { padding:9px 2px; border-top:1px dashed var(--border); font-size:13.5px; line-height:1.6; color: var(--text-secondary); }
+  .wa-summary-row:first-child { border-top:none; }
+  .wa-summary-row b { color: var(--text-primary); font-weight:700; }
+  .wa-summary-tag { font-size:11.5px; color: var(--muted); font-style:italic; }
   .memo-text { font-size:13px; line-height:1.6; color: var(--text-secondary); white-space:pre-wrap; word-break:break-word; flex:1; }
   /* 기존 메모 편집(2026-08-03) — 클릭 시 memo-entry 내부를 textarea+저장/취소로 바꿔치기한다(전체 재렌더 없이). */
   .memo-edit-btn { flex-shrink:0; border:none; background:transparent; cursor:pointer; font-size:12px; padding:0 2px; opacity:.5; border-radius:6px; line-height:1.6; }
@@ -980,6 +986,12 @@
         <div class="sub">1만원 이벤트(7/28~)·야간원격접수·당일배송 업데이트(오후 배송반영, 7/22~)의 주차별 실측 지표입니다. <b>수치는 항상 자동 재계산</b>되고, 해석·판단은 아래 코멘트에 직접 남겨 주세요.</div>
         <div id="waWeekBox" style="margin:10px 0 14px"></div>
         <div class="tiles" id="waTiles"></div>
+      </div>
+
+      <div class="card col-12" data-cid="waSummary">
+        <h3>📋 주차별 요약</h3>
+        <div class="sub">항상 가장 최근 마감된 주 기준(아래 주차 선택과 무관) · 🤖 AI 초안이 근거로 쓰는 수치와 동일 · 해석은 없음</div>
+        <div id="waSummaryList" class="wa-summary-list"></div>
       </div>
 
       <div class="card col-12 fill" data-cid="waD7">
@@ -3436,12 +3448,101 @@ function waTile(label, ic, cur, prev, opts){
   return tile(label, ic, val, unit, sub, opts.accent);
 }
 
-// cohort.shipCurve(D+0~D+30 누적표) → {week, d7} 평면 배열로 변환. maxD<7이면 D+7 자체가 관측 불가.
+// cohort.shipCurve(D+0~D+30 누적표) → {week, d7, d0} 평면 배열로 변환. maxD<7이면 D+7 자체가 관측 불가.
+// d0(출고 당일 설치)은 그 주 마지막 출고일만 지나면 이미 확정값이라, D+7이 안 된 최신 주의 조기지표로 쓴다(waSummaryHTML).
 function waD7Rows(shipCurve){
   return (shipCurve||[]).map(function(r){
     var cum=r.cum||[];
-    return { week:r.week, shipped:r.shipped, d7:(r.maxD>=7 && cum[7]!=null)?cum[7]:null };
+    return {
+      week:r.week, shipped:r.shipped, maxD:r.maxD, partial:!!r.partial,
+      d7:(r.maxD>=7 && cum[7]!=null)?cum[7]:null,
+      d0:(r.maxD>=0 && cum[0]!=null)?cum[0]:null
+    };
   });
+}
+// shipCurve의 마지막 항목은 '진행중인 이번 주'(partial:true)일 수 있다 — 아직 출고가 안 끝난
+// 주라 다주차 트렌드의 기준으로 쓰면 다음 주만 지나도 값이 깨진다. waSummaryHTML은 항상 이
+// "마감된 마지막 주"를 T로 잡는다(대시보드API.js aiDraftTargetWeek_과 같은 대상 — AI 초안과
+// 같은 주를 설명해야 "같이 기재"한 의미가 있다), 위 차트/타일의 드롭다운 선택과는 무관하다.
+function waLastClosedWeek(d7rows){
+  for(var i=d7rows.length-1;i>=0;i--){ if(!d7rows[i].partial) return d7rows[i].week; }
+  return d7rows.length ? d7rows[d7rows.length-1].week : null;
+}
+// 선택주(week)로부터 n주 전 월요일 키. gatherWeeklyAiMetrics_(대시보드API.js)의 weekOffset_ 클라이언트 복제.
+function waWeekOffsetKey(week, n){
+  var s=week.split("-"); var d=new Date(+s[0],+s[1]-1,+s[2]);
+  d.setDate(d.getDate() - 7*n);
+  return waYmd(d);
+}
+function waRowAt(rows, week, key){
+  var i = waFind(rows, week);
+  return i<0 ? null : rows[i][key];
+}
+function waPctDeltaWord(cur, prev){
+  if(cur==null||prev==null) return "비교 불가";
+  var dv = Math.round((cur-prev)*1000)/10;
+  if(dv===0) return "변화 없음";
+  return Math.abs(dv)+"%p "+(dv>0?"상승":"하락");
+}
+function waCountDeltaWord(cur, prev){
+  if(cur==null||prev==null) return "비교 불가";
+  var dv = Math.round(cur-prev);
+  if(dv===0) return "변화 없음";
+  return Math.abs(dv)+"건 "+(dv>0?"증가":"감소");
+}
+// "주차별 요약" 카드 — AI 초안(gatherWeeklyAiMetrics_)이 근거로 쓰는 것과 같은 계산을 문장으로
+// 정리한 것(2026-08-03, 운영자 요청 "AI 초안만 봐서는 어디서 나온 수치인지 모르겠다, 리포트
+// 형식으로 주차별로 보고 싶다"). 해석 없이 계산값만 — 색상 코딩도 안 한다(이 탭 전체 원칙).
+function waSummaryHTML(d, w){
+  var d7rows = waD7Rows((d.cohort&&d.cohort.shipCurve)||[]);
+  var wT = waLastClosedWeek(d7rows) || w;   // 드롭다운 선택(w)과 무관 — 항상 최신 마감주(AI 초안과 동일 대상)
+  var wT1=waWeekOffsetKey(wT,1), wT2=waWeekOffsetKey(wT,2);
+  var lbl = waShortLabel;
+
+  var WA_DANGTONG_FLOOR = "2026-05-04";
+  var dtRows = ((d.weeklyBoard&&d.weeklyBoard.dangtong)||[]).filter(function(r){ return r.week >= WA_DANGTONG_FLOOR; });
+  var dailyNight = (d.weeklyBoard&&d.weeklyBoard.nightIntake&&d.weeklyBoard.nightIntake.daily)||[];
+  var niRows = waNightWeekly(dailyNight);
+  var cdRows = (d.accel&&d.accel.samedayWeekly)||[];
+  var absRows = (d.accel&&d.accel.absentSamedayWeekly)||[];
+
+  var d7T=waRowAt(d7rows,wT,"d7"), d7T1=waRowAt(d7rows,wT1,"d7"), d7T2=waRowAt(d7rows,wT2,"d7");
+  var d0T=waRowAt(d7rows,wT,"d0"), d0T1=waRowAt(d7rows,wT1,"d0");
+  var fcT=waRowAt(dtRows,wT,"fcRate"), fcT1=waRowAt(dtRows,wT1,"fcRate"), fcImmatureT=waRowAt(dtRows,wT,"immature");
+  var niT=waRowAt(niRows,wT,"count"), niT1=waRowAt(niRows,wT1,"count");
+  var cdT=waRowAt(cdRows,wT,"rate"), cdT1=waRowAt(cdRows,wT1,"rate");
+  var abT=waRowAt(absRows,wT,"rate"), abT1=waRowAt(absRows,wT1,"rate");
+
+  var lines = [];
+  if(d7T!=null){
+    lines.push({label:"D+7 누적 설치완료율",
+      body: lbl(wT1)+"주 대비 "+lbl(wT)+"주 "+waPctDeltaWord(d7T,d7T1)+" ("+pct(d7T1,1)+" → "+pct(d7T,1)+")"});
+  } else {
+    lines.push({label:"D+7 누적 설치완료율",
+      body: lbl(wT2)+"주 대비 "+lbl(wT1)+"주 "+waPctDeltaWord(d7T1,d7T2)+" ("+pct(d7T2,1)+" → "+pct(d7T1,1)+")",
+      tag: lbl(wT)+"주 집계 중"});
+    lines.push({label:"D+0 설치완료율(조기지표)",
+      body: lbl(wT1)+"주 대비 "+lbl(wT)+"주 "+waPctDeltaWord(d0T,d0T1)+" ("+pct(d0T1,1)+" → "+pct(d0T,1)+")",
+      tag: lbl(wT)+"주 집계 중 · 최종 D+7 결과를 예단할 수 없음"});
+  }
+  lines.push({label:"1차 컨택 당일 설치율",
+    body: lbl(wT1)+"주 대비 "+lbl(wT)+"주 "+waPctDeltaWord(fcT,fcT1)+" ("+pct(fcT1,1)+" → "+pct(fcT,1)+")",
+    tag: fcImmatureT ? (lbl(wT)+"주 집계 중") : null});
+  lines.push({label:"콜 기준 D+1 이내 설치완료율 (통화성공)",
+    body: lbl(wT1)+"주 대비 "+lbl(wT)+"주 "+waPctDeltaWord(cdT,cdT1)+" ("+pct(cdT1,1)+" → "+pct(cdT,1)+")"});
+  lines.push({label:"콜 기준 D+1 이내 설치완료율 (부재건, 참고용)",
+    body: lbl(wT1)+"주 대비 "+lbl(wT)+"주 "+waPctDeltaWord(abT,abT1)+" ("+pct(abT1,1)+" → "+pct(abT,1)+")"});
+  lines.push({label:"야간원격접수 건수",
+    body: lbl(wT1)+"주 대비 "+lbl(wT)+"주 "+waCountDeltaWord(niT,niT1)+" ("+(niT1==null?"–":niT1+"건")+" → "+(niT==null?"–":niT+"건")+")"});
+
+  return lines.map(function(ln){
+    return '<div class="wa-summary-row"><b>'+esc(ln.label)+'</b>: '+esc(ln.body)
+      +(ln.tag?' <span class="wa-summary-tag">('+esc(ln.tag)+')</span>':'')+'</div>';
+  }).join('');
+}
+function paintWaSummary(d, w){
+  var box=document.getElementById("waSummaryList"); if(!box) return;
+  box.innerHTML = waSummaryHTML(d, w);
 }
 // 야간원격접수 일자별 배열 → 주(월요일) 단위 합계. count/installed 둘 다 그냥 합산(주말 제외 없음 — 접수는 매일 발생).
 function waNightWeekly(daily){
@@ -3503,6 +3604,7 @@ function paintWeeklyAction(d){
     waTile("야간원격접수","🌙", ni.cur, ni.prev, {valFn:fmt, unit:"건", neutral:true}) +
     waTile("콜 기준 D+1 전환율","📞", cd.cur, cd.prev, {valFn:pctFn});
 
+  paintWaSummary(d, w);
   paintWaD7(d7rows, w);
   paintWaDangtong(dtRows, w);
   paintWaNight(dailyNight, w);
