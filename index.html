@@ -313,6 +313,12 @@
   .wa-note-toolbar { display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap; }
   .wa-fmt-btn { font-family: var(--font); font-size:12px; font-weight:600; color: var(--text-secondary); background: var(--page); border:1px solid var(--border); border-radius:6px; padding:5px 10px; cursor:pointer; }
   .wa-fmt-btn:hover { border-color: var(--s-blue); color: var(--s-blue); }
+  /* 실시간 미리보기(2026-08-04) — 저장 텍스트는 순수 문자열이라, 입력 중 실제로 어떻게 보일지
+     바로 확인할 수 있게 텍스트영역 밑에 렌더링 결과를 보여준다. */
+  .note-preview-label { font-size:11px; color: var(--muted); font-weight:600; margin:6px 0 3px; }
+  .note-preview { font-size:13px; line-height:1.65; color: var(--text-primary); background: var(--page); border:1px dashed var(--border); border-radius:8px; padding:8px 11px; min-height:22px; }
+  .note-preview ul, .note-preview ol { margin:4px 0 4px 20px; padding:0; }
+  .note-preview li { margin-bottom:2px; }
   .memo-text { font-size:13px; line-height:1.6; color: var(--text-secondary); white-space:pre-wrap; word-break:break-word; flex:1; }
   /* 기존 메모 편집(2026-08-03) — 클릭 시 memo-entry 내부를 textarea+저장/취소로 바꿔치기한다(전체 재렌더 없이). */
   .memo-edit-btn { flex-shrink:0; border:none; background:transparent; cursor:pointer; font-size:12px; padding:0 2px; opacity:.5; border-radius:6px; line-height:1.6; }
@@ -1016,7 +1022,9 @@
       <div class="card col-4" data-cid="wbNight"><h3>🌙 야간원격접수 (일자별)</h3><div class="sub" id="wbNightSub">2026-07-23부터 적재 시작 · 그 이전 날은 "집계 전"으로 표시됩니다</div><div class="tbl-wrap"><table class="dtable" id="wbNightTable"></table></div></div>
       <div class="card col-8" data-cid="wbMemo"><h3>📝 주차별 메모장</h3><div class="sub">자유롭게 메모를 남기세요 · 지우지 않는 한 계속 누적됩니다(이번 주 기준으로 쌓임)</div>
         <div style="margin:8px 0">
+          <div class="wa-note-toolbar"><button type="button" class="wa-fmt-btn" data-fmt="bold" title="굵게"><b>B</b> 굵게</button><button type="button" class="wa-fmt-btn" data-fmt="bullet" title="글머리 기호">• 글머리기호</button><button type="button" class="wa-fmt-btn" data-fmt="number" title="번호 매기기">1. 번호매기기</button></div>
           <textarea id="wbMemoInput" rows="2" placeholder="메모를 입력하세요…" style="width:100%;box-sizing:border-box;resize:vertical;font-family:var(--font);font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--page);color:var(--text-primary)"></textarea>
+          <div class="note-preview-label">미리보기</div><div class="note-preview" id="wbMemoPreview"></div>
           <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:6px">
             <span id="wbMemoMsg" style="font-size:11.5px;color:var(--muted)"></span>
             <button class="fbtn fbtn-go" id="wbMemoAddBtn">메모 추가</button>
@@ -2664,7 +2672,7 @@ function wbMemoLogHTML(memos){
         return '<div class="memo-entry" data-row="'+(it.row!=null?it.row:"")+'">'
           +'<div class="memo-time-col"><span class="memo-time">'+esc(it.time||"")+'</span>'
           +(it.editTime?'<span class="memo-edited">수정 '+esc(it.editTime)+'</span>':"")+'</div>'
-          +'<span class="memo-text">'+esc(it.text||"")+'</span>'
+          +'<div class="memo-text">'+mdRender_(it.text||"")+'</div>'
           +(it.row!=null ? '<button type="button" class="memo-edit-btn" data-row="'+it.row+'" title="수정">✏️</button>' : '')
           +'</div>';
       }).join('')
@@ -2682,14 +2690,25 @@ function wbMemoEnterEdit(row){
   var data = WB_MEMO_ROWS[row];
   if(!el || !data) return;
   el.classList.add("memo-entry-editing");
-  el.innerHTML = '<textarea class="memo-edit-ta" rows="2">'+esc(data.text)+'</textarea>'
+  el.innerHTML = '<div class="wa-note-toolbar"><button type="button" class="wa-fmt-btn" data-fmt="bold" title="굵게"><b>B</b> 굵게</button><button type="button" class="wa-fmt-btn" data-fmt="bullet" title="글머리 기호">• 글머리기호</button><button type="button" class="wa-fmt-btn" data-fmt="number" title="번호 매기기">1. 번호매기기</button></div>'
+    +'<textarea class="memo-edit-ta" rows="2">'+esc(data.text)+'</textarea>'
+    +'<div class="note-preview-label">미리보기</div><div class="note-preview memo-edit-preview"></div>'
     +'<div class="memo-edit-row">'
     +'<span class="memo-edit-msg"></span>'
     +'<button type="button" class="fbtn memo-edit-cancel" data-row="'+row+'">취소</button>'
     +'<button type="button" class="fbtn fbtn-go memo-edit-save" data-row="'+row+'">저장</button>'
     +'</div>';
   var ta = el.querySelector(".memo-edit-ta");
-  if(ta) ta.focus();
+  var prev = el.querySelector(".memo-edit-preview");
+  if(ta){
+    ta.addEventListener("input", function(){ if(prev) prev.innerHTML = mdRender_(ta.value); });
+    var toolbar = el.querySelector(".wa-note-toolbar");
+    if(toolbar) toolbar.querySelectorAll(".wa-fmt-btn").forEach(function(btn){
+      btn.addEventListener("click", function(){ waApplyFormat_(ta, btn.dataset.fmt); });
+    });
+    if(prev) prev.innerHTML = mdRender_(ta.value);
+    ta.focus();
+  }
 }
 function wbMemoSaveEdit(row){
   if(!LAST_PASS) return;
@@ -2733,6 +2752,7 @@ function wbBindMemoButton(){
   var btn=document.getElementById("wbMemoAddBtn");
   if(!btn) return;
   WB_MEMO_BOUND=true;
+  bindNoteEditor_(document.getElementById("wbMemoInput"), {previewId:"wbMemoPreview"});
   btn.addEventListener("click", function(){
     if(!LAST_PASS) return;
     var ta=document.getElementById("wbMemoInput"), msg=document.getElementById("wbMemoMsg");
@@ -2742,7 +2762,7 @@ function wbBindMemoButton(){
     fetchData(LAST_PASS, function(res){
       btn.disabled=false;
       if(res&&res.ok){
-        ta.value="";
+        ta.value=""; ta.dispatchEvent(new Event("input", {bubbles:true}));
         msg.textContent="추가됨 ✓"; msg.style.color="var(--good)";
         WB_MEMOS_LAST = res.memos||{};
         if(LAST_DATA&&LAST_DATA.weeklyBoard) LAST_DATA.weeklyBoard.memos = WB_MEMOS_LAST;
@@ -3375,15 +3395,16 @@ function renderReport(perf, notesIn){
     '<div class="rpt-top">'
     +  '<div class="rpt-head"><select class="rpt-week" id="rptWeek">'+opts+'</select><span class="rpt-range" id="rptRange"></span></div>'
     +  '<div class="rpt-note"><label for="rptNote">✍️ 코멘트 (이 주차 메모 · 저장 시 공유)</label>'
+    +    '<div class="wa-note-toolbar"><button type="button" class="wa-fmt-btn" data-fmt="bold" title="굵게"><b>B</b> 굵게</button><button type="button" class="wa-fmt-btn" data-fmt="bullet" title="글머리 기호">• 글머리기호</button><button type="button" class="wa-fmt-btn" data-fmt="number" title="번호 매기기">1. 번호매기기</button></div>'
     +    '<textarea id="rptNote" maxlength="1000" placeholder="예: 이번 주 자가설치 비중 늘어 상담원 부하 감소. 다음 주 설치예정 급증 예상."></textarea>'
+    +    '<div class="note-preview-label">미리보기</div><div class="note-preview" id="rptNotePreview"></div>'
     +    '<div class="rpt-note-foot"><button class="rpt-save" id="rptSave">코멘트 저장</button><span class="rpt-cnt" id="rptCnt"></span><span class="rpt-msg" id="rptMsg"></span></div></div>'
     +'</div>'
     +'<div class="rpt-tiles" id="rptTiles"></div>'
     +'<div class="rpt-summary"><div class="rs-head">📌 전주 대비 요약</div><ul id="rptSummary"></ul></div>';
   document.getElementById("rptWeek").addEventListener("change", function(){ RPT.week=this.value; paintReport(rows, notes); });
   document.getElementById("rptSave").addEventListener("click", function(){ saveReportNote(notes); });
-  var ta=document.getElementById("rptNote");
-  ta.addEventListener("input", function(){ document.getElementById("rptCnt").textContent=ta.value.length+"/1000"; });
+  bindNoteEditor_(document.getElementById("rptNote"), {cntId:"rptCnt", previewId:"rptNotePreview"});
   paintReport(rows, notes);
   renderMemoLog(rows, notes);
 }
@@ -3418,7 +3439,7 @@ function renderMemoLog(rows, notes){
       +(w===latest?'<span class="memo-badge">이번주</span>':'')
       +(kpi?'<span class="memo-kpi">'+kpi+'</span>':'')
       +'</div>'
-      +'<div class="memo-body">'+esc(notes[w])+'</div></div>';
+      +'<div class="memo-body">'+mdRender_(notes[w])+'</div></div>';
   }).join("");
 }
 function paintReport(rows, notes){
@@ -3463,7 +3484,7 @@ function paintReport(rows, notes){
   if(prev===null) lines.unshift('<li class="flat">가장 오래된 주라 전주 비교가 없습니다.</li>');
   document.getElementById("rptSummary").innerHTML=lines.join("")||'<li class="flat">표시할 지표가 없습니다.</li>';
   var ta=document.getElementById("rptNote"); ta.value=notes[RPT.week]||"";
-  document.getElementById("rptCnt").textContent=ta.value.length+"/1000";
+  ta.dispatchEvent(new Event("input", {bubbles:true}));
   var msg=document.getElementById("rptMsg"); msg.textContent=""; msg.className="rpt-msg";
 }
 function saveReportNote(notes){
@@ -4001,8 +4022,7 @@ function paintWaNote(notes){
   var ta = document.getElementById("waNote");
   if(!ta) return;
   ta.value = notes[WA.week] || "";
-  var cnt = document.getElementById("waNoteCnt");
-  if(cnt) cnt.textContent = ta.value.length+"/1000";
+  ta.dispatchEvent(new Event("input", {bubbles:true}));   // 글자수·미리보기 갱신
   var msg = document.getElementById("waNoteMsg");
   if(msg){ msg.textContent=""; msg.className="rpt-msg"; }
 }
@@ -4019,11 +4039,12 @@ function saveWaNote(){
   }, function(){ btn.disabled=false; msg.textContent="통신 오류"; msg.className="rpt-msg err"; },
   { params:{ action:"setaccelnote", week:w, note:ta.value } });
 }
-// 운영자 코멘트 서식 버튼(2026-08-04) — 슬랙 툴바처럼 선택 영역을 감싸거나(굵게) 줄마다
-// 접두어를 붙인다(글머리기호·번호매기기). 저장은 여전히 순수 텍스트라 표시는 "**텍스트**"/
-// "- 항목" 그대로 남는다 — 이 코멘트가 이 텍스트영역 밖에 렌더링되는 화면이 아직 없기 때문.
-function waApplyFormat_(kind){
-  var ta = document.getElementById("waNote"); if(!ta) return;
+// 모든 메모/코멘트 입력란 공용 서식 버튼(2026-08-04, 운영자 요청으로 waNote 전용에서 전체로 확장)
+// — 슬랙 툴바처럼 선택 영역을 감싸거나(굵게) 줄마다 접두어를 붙인다(글머리기호·번호매기기).
+// 저장은 여전히 순수 텍스트("**텍스트**"/"• 항목" 그대로) — 실제로 굵게·목록 모양으로 보이는 건
+// mdRender_()를 거치는 화면(미리보기·저장된 메모 목록)에서다.
+function waApplyFormat_(ta, kind){
+  if(!ta) return;
   var start = ta.selectionStart, end = ta.selectionEnd, val = ta.value;
   var before = val.slice(0, start), sel = val.slice(start, end), after = val.slice(end);
   var out, newStart, newEnd;
@@ -4040,21 +4061,40 @@ function waApplyFormat_(kind){
   } else { return; }
   ta.value = out;
   ta.focus(); ta.setSelectionRange(newStart, newEnd);
-  document.getElementById("waNoteCnt").textContent = ta.value.length + "/1000";
+  ta.dispatchEvent(new Event("input", {bubbles:true}));
+}
+// 서식 툴바 하나를 텍스트영역 하나에 연결한다 — 툴바(.wa-note-toolbar)의 부모 안에서 textarea를
+// 찾으므로, 툴바 바로 옆에 textarea가 있는 구조라면 어디서든 재사용 가능하다(고유 id 불필요).
+// cntId/previewId는 있으면 입력할 때마다 갱신하고, 없으면 조용히 건너뛴다.
+function bindNoteEditor_(taEl, opts){
+  if(!taEl || taEl.dataset.mdBound) return;
+  taEl.dataset.mdBound = "1";
+  opts = opts || {};
+  var cntEl = opts.cntId ? document.getElementById(opts.cntId) : null;
+  var prevEl = opts.previewId ? document.getElementById(opts.previewId) : null;
+  var maxLen = taEl.getAttribute("maxlength") || "1000";
+  function refresh(){
+    if(cntEl) cntEl.textContent = taEl.value.length + "/" + maxLen;
+    if(prevEl) prevEl.innerHTML = mdRender_(taEl.value);
+  }
+  taEl.addEventListener("input", refresh);
+  var toolbar = taEl.parentElement ? taEl.parentElement.querySelector(".wa-note-toolbar") : null;
+  if(toolbar){
+    toolbar.querySelectorAll(".wa-fmt-btn").forEach(function(btn){
+      btn.addEventListener("click", function(){ waApplyFormat_(taEl, btn.dataset.fmt); });
+    });
+  }
+  refresh();
 }
 function waBindButtons(){
   if(WA_BOUND) return; WA_BOUND=true;
   var eb=document.getElementById("waEventBtn"); if(eb) eb.addEventListener("click", waEventRefresh);
   var sb=document.getElementById("waNoteSave"); if(sb) sb.addEventListener("click", saveWaNote);
-  var ta=document.getElementById("waNote");
-  if(ta) ta.addEventListener("input", function(){ document.getElementById("waNoteCnt").textContent=ta.value.length+"/1000"; });
+  bindNoteEditor_(document.getElementById("waNote"), {cntId:"waNoteCnt", previewId:"waNotePreview"});
   var ub=document.getElementById("waAiDraftUse");
   if(ub) ub.addEventListener("click", function(){
     var box=document.getElementById("waNote");
-    if(box){ box.value = WA.aiDraftText||""; document.getElementById("waNoteCnt").textContent=box.value.length+"/1000"; box.focus(); }
-  });
-  document.querySelectorAll(".wa-fmt-btn").forEach(function(btn){
-    btn.addEventListener("click", function(){ waApplyFormat_(btn.dataset.fmt); });
+    if(box){ box.value = WA.aiDraftText||""; box.dispatchEvent(new Event("input", {bubbles:true})); box.focus(); }
   });
 }
 
@@ -4167,11 +4207,12 @@ function populateBoardWeekSel(rows){
 // (renderBoardDelay 삭제 2026-07-24 — D+7 지연사유 4주표가 '부서별 지연원인' 탭 12주표와 중복이라 제거)
 function renderBoardNote(week, notes){
   var box=document.getElementById("boardNote"); if(!box) return;
-  box.innerHTML='<textarea id="boardNoteTa" maxlength="1000" placeholder="이번 주 회의 메모 · 예: 김규리님 미설치 투입, 하루 40건 처리중"></textarea>'
+  box.innerHTML='<div class="wa-note-toolbar"><button type="button" class="wa-fmt-btn" data-fmt="bold" title="굵게"><b>B</b> 굵게</button><button type="button" class="wa-fmt-btn" data-fmt="bullet" title="글머리 기호">• 글머리기호</button><button type="button" class="wa-fmt-btn" data-fmt="number" title="번호 매기기">1. 번호매기기</button></div>'
+    +'<textarea id="boardNoteTa" maxlength="1000" placeholder="이번 주 회의 메모 · 예: 김규리님 미설치 투입, 하루 40건 처리중"></textarea>'
+    +'<div class="note-preview-label">미리보기</div><div class="note-preview" id="boardNotePreview"></div>'
     +'<div class="rpt-note-foot"><button class="rpt-save" id="boardNoteSave">코멘트 저장</button><span class="rpt-cnt" id="boardNoteCnt"></span><span class="rpt-msg" id="boardNoteMsg"></span></div>';
   var ta=document.getElementById("boardNoteTa"); ta.value=notes[week]||"";
-  document.getElementById("boardNoteCnt").textContent=ta.value.length+"/1000";
-  ta.addEventListener("input", function(){ document.getElementById("boardNoteCnt").textContent=ta.value.length+"/1000"; });
+  bindNoteEditor_(ta, {cntId:"boardNoteCnt", previewId:"boardNotePreview"});
   document.getElementById("boardNoteSave").addEventListener("click", function(){ saveBoardNote(week, notes); });
 }
 function saveBoardNote(week, notes){
@@ -4233,6 +4274,29 @@ function closeModal(){ document.getElementById("modal").classList.remove("open")
 // ---- 마지막 통화일 경과: 막대 클릭 → 해당 구간의 주문번호·메모 원문 ----
 // 메모는 payload에 없다(캐시에 PII를 남기지 않으려고). 클릭 시 action=calldetail 로 그때만 조회한다.
 function esc(s){ var d=document.createElement("span"); d.textContent=String(s==null?"":s); return d.innerHTML; }
+
+// 메모/코멘트 안전 렌더러(2026-08-04, 운영자 요청 "모든 메모란에 마크다운과 렌더링") — 저장은
+// 여전히 순수 텍스트다(**굵게**, • 글머리, "1. " 번호가 글자 그대로 저장됨). 화면에 보여줄 때만
+// 이 함수를 거쳐 실제 굵게·목록 모양으로 바꾼다. esc()로 먼저 이스케이프하므로 사용자가 <script>
+// 등을 적어도 안전하다 — esc() 이후 문자열만 다루고 원본 텍스트를 직접 innerHTML에 꽂지 않는다.
+function mdRender_(text){
+  var lines = esc(text).split("\n");
+  var html = "", listBuf = [], listTag = null;
+  function flushList(){
+    if(listBuf.length) html += "<"+listTag+">"+listBuf.map(function(x){return "<li>"+x+"</li>";}).join("")+"</"+listTag+">";
+    listBuf = []; listTag = null;
+  }
+  lines.forEach(function(line){
+    var mBul = line.match(/^(?:•|-)\s+(.*)$/);
+    var mNum = line.match(/^\d+\.\s+(.*)$/);
+    if(mBul){ if(listTag && listTag!=="ul") flushList(); listTag="ul"; listBuf.push(mBul[1]); }
+    else if(mNum){ if(listTag && listTag!=="ol") flushList(); listTag="ol"; listBuf.push(mNum[1]); }
+    else { flushList(); html += (line===""?"<br>":("<div>"+line+"</div>")); }
+  });
+  flushList();
+  html = html.replace(/\*\*([^\n*][^*]*?)\*\*/g, "<b>$1</b>");
+  return html || '<span style="color:var(--muted)">(내용 없음)</span>';
+}
 
 // 상세 팝업의 '설치' 칸 — 설치일 + 출고→설치 소요일(D+N), 미완료면 빨강.
 // 세 팝업(원인별·세분류·지연성격)이 같은 표시를 쓰므로 여기 하나만 고치면 전부 반영된다.
