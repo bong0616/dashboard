@@ -293,20 +293,19 @@
   .wa-callout-ai { margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); }
   /* '보고서' 탭(2026-08-04, 옛 라벨 '액션 효과 리포트') — 운영자가 예전에 세션 안에서 봤던 정적
      Artifact 리포트의 "위아래로 읽는 문서" 느낌을 재현. 데이터·JS(WA.*)는 전혀 안 건드리고
-     이 탭 안에서만(#tab-weeklyaction 스코프) 카드 그리드를 단일 컬럼으로 덮어쓴다 — 다른 탭의
+     이 탭 안에서만(#tab-weeklyaction 스코프) 카드 그리드 폭을 덮어쓴다 — 다른 탭의
      .grid/.card/.col-*는 이 규칙의 영향을 받지 않는다(선택자가 이 탭 안으로 한정됨).
-     주차 선택 후 재조회는 기존 WA.week 메커니즘 그대로라 별도 저장소 없이도 "다시 불러오기"가 된다. */
-  #tab-weeklyaction .grid { grid-template-columns: 1fr; max-width: 880px; margin: 0 auto; gap: 26px; }
-  #tab-weeklyaction .grid > .card { grid-column: 1 / -1; }
+     주차 선택 후 재조회는 기존 WA.week 메커니즘 그대로라 별도 저장소 없이도 "다시 불러오기"가 된다.
+     ⚠️ 2026-08-04 2차 수정: 처음엔 전 카드를 강제로 1열(880px)로 만들었는데, 운영자가 "화면
+     여백이 넓어 한 줄에 카드 두 개는 들어갈 공간이 있다"고 지적 — `.grid > .card{grid-column:1/-1}`
+     전체 강제 규칙을 없애고 폭만 넓혀서, HTML에 이미 있던 col-12/col-6 배치(당일배송·야간원격·
+     콜D1·1만원이벤트 4장만 원래부터 col-6 짝)가 자연스럽게 살아나게 했다. */
+  #tab-weeklyaction .grid { max-width: 1240px; margin: 0 auto; gap: 22px; }
   #tab-weeklyaction .card { padding: 24px 28px 22px; }
   #tab-weeklyaction [data-cid="waHead"] { padding-bottom: 22px; border-bottom: 1px solid var(--border); }
   #tab-weeklyaction [data-cid="waHead"] h3 { font-size: 20px; letter-spacing: -.4px; }
   #tab-weeklyaction [data-cid="waVerdict"] { background: color-mix(in srgb, var(--s-blue) 5%, var(--surface-1)); border-color: color-mix(in srgb, var(--s-blue) 22%, var(--border)); }
   #tab-weeklyaction .wa-verdict-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-  /* col-6로 짝지어 있던 5개 지표 카드가 이제 전부 전체 폭이라, 좁은 폭에 맞춰졌던 차트가 밋밋해
-     보이지 않도록 이 탭만 조금 더 키운다(다른 탭의 ch-m/ch-l 기본값은 그대로 둔다). */
-  #tab-weeklyaction .chart-wrap.ch-m { height: 260px; }
-  #tab-weeklyaction .chart-wrap.ch-l { height: 300px; }
   #tab-weeklyaction #waDangtongTable, #tab-weeklyaction #waNightTable, #tab-weeklyaction #waCallD1Table { min-width: 0; width: 100%; }
   /* 운영자 코멘트 서식 툴바(2026-08-04) — 저장은 여전히 일반 텍스트라, 굵게/글머리기호는 슬랙처럼
      "**텍스트**"·"- 항목" 표기를 텍스트에 직접 끼워 넣는 방식이다(별도 렌더링 화면은 아직 없음). */
@@ -3607,6 +3606,7 @@ function waSummaryHTML(d, w){
   var d0T=waRowAt(d7rows,wT,"d0"), d0T1=waRowAt(d7rows,wT1,"d0");
   var fcT=waRowAt(dtRows,wT,"fcRate"), fcT1=waRowAt(dtRows,wT1,"fcRate"), fcImmatureT=waRowAt(dtRows,wT,"immature");
   var niT=waRowAt(niRows,wT,"count"), niT1=waRowAt(niRows,wT1,"count");
+  var niInstT=waRowAt(niRows,wT,"installed"), niInstT1=waRowAt(niRows,wT1,"installed");
   var cdT=waRowAt(cdRows,wT,"rate"), cdT1=waRowAt(cdRows,wT1,"rate");
   var abT=waRowAt(absRows,wT,"rate"), abT1=waRowAt(absRows,wT1,"rate");
 
@@ -3630,7 +3630,8 @@ function waSummaryHTML(d, w){
   lines.push({label:"콜 기준 D+1 이내 설치완료율 (부재건, 참고용)",
     body: lbl(wT1)+"주 대비 "+lbl(wT)+"주 "+waPctDeltaWord(abT,abT1)+" ("+pct(abT1,1)+" → "+pct(abT,1)+")"});
   lines.push({label:"야간원격접수 건수",
-    body: lbl(wT1)+"주 대비 "+lbl(wT)+"주 "+waCountDeltaWord(niT,niT1)+" ("+(niT1==null?"–":niT1+"건")+" → "+(niT==null?"–":niT+"건")+")"});
+    body: lbl(wT1)+"주 대비 "+lbl(wT)+"주 "+waCountDeltaWord(niT,niT1)+" ("+(niT1==null?"–":niT1+"건")+" → "+(niT==null?"–":niT+"건")+")"
+      +" · 설치완료 "+(niInstT1==null?"–":niInstT1+"건")+" → "+(niInstT==null?"–":niInstT+"건")});
 
   return lines.map(function(ln){
     // ln.body는 우리 코드가 만든 신뢰 가능한 HTML(색상 span 포함)이라 esc()로 감싸지 않는다 —
