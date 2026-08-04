@@ -1075,7 +1075,7 @@
 
       <div class="card col-6 fill" data-cid="waCallD1">
         <h3>📞 콜 기준 D+1 설치완료율</h3>
-        <div class="sub">그날 설치예정으로 확정된 콜 전체 기준(주말 제외) · U열 신설일(2026-07-21) 이전은 집계 불가</div>
+        <div class="sub">분모="그 주 <b>통화가 연결돼</b> 설치예정으로 확정된 매장(주문) 수" — 실적로그 콜시도 총량이나 전체 컨택 업체 수가 아닙니다(주말 제외) · U열 신설일(2026-07-21) 이전은 집계 불가 · <b>D+1(통화성공)과 D+1(부재,참고)은 서로 다른 그룹(분모가 다름)</b>입니다 — 통화성공군의 설치완료율과 부재군의 설치완료율을 나란히 보여줄 뿐, 같은 모집단을 비교하는 게 아닙니다.</div>
         <div class="chart-wrap ch-m"><canvas id="waCallD1Chart"></canvas></div>
         <div class="tbl-wrap"><table class="dtable no-grp" id="waCallD1Table"></table></div>
         <div class="wa-callout" id="waCallD1Callout" style="display:none"></div>
@@ -3886,7 +3886,7 @@ function paintWaCallD1(rows, selWeek, absRows){
   var bg = rows.map(function(r){ return r.week===selWeek ? C["--s-violet"] : C["--s-blue-l"]; });
   mk("waCallD1Chart", { type:"bar",
     data:{ labels:labels, datasets:[
-      { type:"bar", label:"설치예정 콜(건, 주말제외)", data:rows.map(function(r){return r.contacted;}), backgroundColor:bg, borderRadius:3, yAxisID:"y",
+      { type:"bar", label:"통화 후 설치예정 확정(건, 주말제외)", data:rows.map(function(r){return r.contacted;}), backgroundColor:bg, borderRadius:3, yAxisID:"y",
         datalabels: dlBarTop({ formatter:function(v){ return (v==null||v===0)?"":fmt(v); } }) },
       { type:"line", label:"D+1 전환율(%)", data:rate, borderColor:C["--s-red"], backgroundColor:"transparent", tension:.25, pointRadius:3, yAxisID:"y1",
         datalabels: dl({ align:"top", color:C["--s-red"], font:{weight:"600",size:10}, formatter:function(v){ return v==null?"":v+"%"; } }) }
@@ -3901,7 +3901,7 @@ function paintWaCallD1(rows, selWeek, absRows){
   var tbl = document.getElementById("waCallD1Table");
   if(tbl){
     absRows = absRows||[];
-    var head = '<thead><tr><th>주</th><th>설치예정 콜</th><th>D+1(통화성공)</th><th>D+1(부재,참고)</th></tr></thead>';
+    var head = '<thead><tr><th>주</th><th>통화 후 설치예정 확정건</th><th>D+1(설치예정 확정건 기준)</th><th>D+1(부재건 기준, 참고)</th></tr></thead>';
     var body = rows.slice().reverse().map(function(r){
       var ab = absRows.filter(function(x){return x.week===r.week;})[0];
       return '<tr'+(r.week===selWeek?' class="cur"':'')+'><td>'+rptWeekLabel(r.week)+'</td><td>'+fmt(r.contacted)+'</td><td>'
