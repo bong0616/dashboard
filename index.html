@@ -308,6 +308,11 @@
   #tab-weeklyaction .chart-wrap.ch-m { height: 260px; }
   #tab-weeklyaction .chart-wrap.ch-l { height: 300px; }
   #tab-weeklyaction #waDangtongTable, #tab-weeklyaction #waNightTable, #tab-weeklyaction #waCallD1Table { min-width: 0; width: 100%; }
+  /* 운영자 코멘트 서식 툴바(2026-08-04) — 저장은 여전히 일반 텍스트라, 굵게/글머리기호는 슬랙처럼
+     "**텍스트**"·"- 항목" 표기를 텍스트에 직접 끼워 넣는 방식이다(별도 렌더링 화면은 아직 없음). */
+  .wa-note-toolbar { display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap; }
+  .wa-fmt-btn { font-family: var(--font); font-size:12px; font-weight:600; color: var(--text-secondary); background: var(--page); border:1px solid var(--border); border-radius:6px; padding:5px 10px; cursor:pointer; }
+  .wa-fmt-btn:hover { border-color: var(--s-blue); color: var(--s-blue); }
   .memo-text { font-size:13px; line-height:1.6; color: var(--text-secondary); white-space:pre-wrap; word-break:break-word; flex:1; }
   /* 기존 메모 편집(2026-08-03) — 클릭 시 memo-entry 내부를 textarea+저장/취소로 바꿔치기한다(전체 재렌더 없이). */
   .memo-edit-btn { flex-shrink:0; border:none; background:transparent; cursor:pointer; font-size:12px; padding:0 2px; opacity:.5; border-radius:6px; line-height:1.6; }
@@ -1061,7 +1066,7 @@
       </div>
 
       <div class="card col-6 fill" data-cid="waNight">
-        <h3>🌙 야간원격접수 (선택 주 일자별)</h3>
+        <h3>🌙 야간원격접수 (선택 주 + 이전 3주 일자별)</h3>
         <div class="sub" id="waNightNote">18~24시 원격AS 채널 접수 · 설치완료는 사업자번호 매칭(누적형, 최근 며칠은 낮게 보일 수 있음)</div>
         <div class="chart-wrap ch-m"><canvas id="waNightChart"></canvas></div>
         <div class="tbl-wrap"><table class="dtable no-grp" id="waNightTable"></table></div>
@@ -1097,7 +1102,12 @@
           <div id="waAiDraftText" style="font-size:13px;line-height:1.5;white-space:pre-wrap"></div>
           <div style="margin-top:8px"><button class="fbtn" id="waAiDraftUse">✍️ 이 초안 가져오기</button></div>
         </div>
-        <textarea id="waNote" maxlength="1000" rows="3" style="width:100%;box-sizing:border-box;resize:vertical;font-family:var(--font);font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--page);color:var(--text-primary)" placeholder="예: 당일배송 업데이트 이후 fcRate 상승은 확인되나 성수기 지연 증가와 겹쳐 순수효과 판단은 보류."></textarea>
+        <div class="wa-note-toolbar" id="waNoteToolbar">
+          <button type="button" class="wa-fmt-btn" data-fmt="bold" title="굵게 표시(**텍스트**로 감쌉니다)"><b>B</b> 굵게</button>
+          <button type="button" class="wa-fmt-btn" data-fmt="bullet" title="선택한 줄마다 글머리 기호(- )를 붙입니다">• 글머리기호</button>
+          <button type="button" class="wa-fmt-btn" data-fmt="number" title="선택한 줄마다 번호(1. 2. 3. …)를 붙입니다">1. 번호매기기</button>
+        </div>
+        <textarea id="waNote" maxlength="1000" rows="12" style="width:100%;box-sizing:border-box;resize:vertical;font-family:var(--font);font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--page);color:var(--text-primary)" placeholder="예: 당일배송 업데이트 이후 fcRate 상승은 확인되나 성수기 지연 증가와 겹쳐 순수효과 판단은 보류."></textarea>
         <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:6px">
           <span id="waNoteCnt" style="font-size:11.5px;color:var(--muted)"></span>
           <span id="waNoteMsg" class="rpt-msg"></span>
@@ -3538,17 +3548,23 @@ function waRowAt(rows, week, key){
   var i = waFind(rows, week);
   return i<0 ? null : rows[i][key];
 }
+// 상승=빨강·하락=파랑(국내 증감 표기 관행) — 좋다/나쁘다 판단이 아니라 방향만 표시한다
+// (운영자 요청 2026-08-04). 이 탭의 "판단은 코멘트에만" 원칙과 안 부딪힌다 — 방향 표시일 뿐
+// 그 방향이 좋은지 나쁜지는 여전히 아무 말도 안 한다.
+function waDeltaColor_(dv){ return dv>0?C["--s-red"]:(dv<0?C["--s-blue"]:"var(--muted)"); }
 function waPctDeltaWord(cur, prev){
   if(cur==null||prev==null) return "비교 불가";
   var dv = Math.round((cur-prev)*1000)/10;
   if(dv===0) return "변화 없음";
-  return Math.abs(dv)+"%p "+(dv>0?"상승":"하락");
+  var word = Math.abs(dv)+"%p "+(dv>0?"상승":"하락");
+  return '<b style="color:'+waDeltaColor_(dv)+'">'+word+'</b>';
 }
 function waCountDeltaWord(cur, prev){
   if(cur==null||prev==null) return "비교 불가";
   var dv = Math.round(cur-prev);
   if(dv===0) return "변화 없음";
-  return Math.abs(dv)+"건 "+(dv>0?"증가":"감소");
+  var word = Math.abs(dv)+"건 "+(dv>0?"증가":"감소");
+  return '<b style="color:'+waDeltaColor_(dv)+'">'+word+'</b>';
 }
 // "주차별 요약" 카드 — AI 초안(gatherWeeklyAiMetrics_)이 근거로 쓰는 것과 같은 계산을 문장으로
 // 정리한 것(2026-08-03, 운영자 요청 "AI 초안만 봐서는 어디서 나온 수치인지 모르겠다, 리포트
@@ -3596,7 +3612,9 @@ function waSummaryHTML(d, w){
     body: lbl(wT1)+"주 대비 "+lbl(wT)+"주 "+waCountDeltaWord(niT,niT1)+" ("+(niT1==null?"–":niT1+"건")+" → "+(niT==null?"–":niT+"건")+")"});
 
   return lines.map(function(ln){
-    return '<div class="wa-summary-row"><b>'+esc(ln.label)+'</b>: '+esc(ln.body)
+    // ln.body는 우리 코드가 만든 신뢰 가능한 HTML(색상 span 포함)이라 esc()로 감싸지 않는다 —
+    // 사용자 자유입력이 섞이는 문자열이 아니다(라벨·태그는 그대로 esc 유지).
+    return '<div class="wa-summary-row"><b>'+esc(ln.label)+'</b>: '+ln.body
       +(ln.tag?' <span class="wa-summary-tag">('+esc(ln.tag)+')</span>':'')+'</div>';
   }).join('');
 }
@@ -3619,6 +3637,15 @@ function waWeekDates(monWeek){
   var s=monWeek.split("-"); var mon=new Date(+s[0],+s[1]-1,+s[2]);
   var out=[];
   for(var i=0;i<7;i++){ var dd=new Date(mon); dd.setDate(mon.getDate()+i); out.push(waYmd(dd)); }
+  return out;
+}
+// 선택 주부터 이전 weeksBack주까지 포함한 날짜 문자열 배열(오래된 날짜가 먼저, 오름차순).
+// 운영자 요청(2026-08-04) — 야간원격접수는 선택 주 하나만이 아니라 최근 흐름(이전 3주)도 같이 보고 싶다.
+function waWeekDatesBack(monWeek, weeksBack){
+  var s=monWeek.split("-"); var mon=new Date(+s[0],+s[1]-1,+s[2]);
+  var start=new Date(mon); start.setDate(start.getDate() - 7*weeksBack);
+  var out=[];
+  for(var i=0;i<7*(weeksBack+1);i++){ var dd=new Date(start); dd.setDate(start.getDate()+i); out.push(waYmd(dd)); }
   return out;
 }
 
@@ -3781,10 +3808,14 @@ function paintWaDangtong(rows, selWeek){
   var bg = rows.map(function(r){ return r.week===selWeek ? C["--s-blue-d"] : C["--s-blue-l"]; });
   mk("waDangtongChart", { type:"bar",
     data:{ labels:labels, datasets:[
-      { type:"bar", label:"1차컨택 당일설치율(%)", data:fc, backgroundColor:bg, borderRadius:3, yAxisID:"y",
+      { type:"bar", label:"1차컨택후당일설치건(%)", data:fc, backgroundColor:bg, borderRadius:3, yAxisID:"y",
         datalabels: dlBarTop({ formatter:function(v){ return v==null?"":v+"%"; } }) },
       { type:"line", label:"마지막통화 당일설치율(%, 참고)", data:lc, borderColor:C["--muted"], backgroundColor:"transparent",
-        borderDash:[4,3], tension:.25, pointRadius:2, yAxisID:"y", datalabels:{display:false} }
+        borderDash:[4,3], tension:.25, pointRadius:2, yAxisID:"y",
+        // 운영자 요청(2026-08-04) — 참고선(lcRate)에도 %를 표시. fcRate 막대 라벨과 겹쳐 보이지
+        // 않도록 더 작은 회색 폰트로 구분한다.
+        datalabels: dl({ align:"top", color:C["--muted"], font:{weight:"600",size:9},
+          formatter:function(v){ return v==null?"":v+"%"; } }) }
     ]},
     // 운영자 요청(08/03) — 표시 구간을 2026-05-04주 이후로 좁혀서(그 이전엔 채널분류 시작 전이라
     // lcRate 이상치가 섞여 있었다, [[dashboard-project]] 5/6 컷오버 참고) 상한도 80%로 낮췄다.
@@ -3795,10 +3826,14 @@ function paintWaDangtong(rows, selWeek){
 
   var tbl = document.getElementById("waDangtongTable");
   if(tbl){
-    var head = '<thead><tr><th>출고주</th><th>컨택</th><th>1차당일설치</th><th>fcRate</th></tr></thead>';
+    // 운영자 요청(2026-08-04) — 건수 따로/퍼센트 따로 보던 걸 "건수 (퍼센트)" 한 칸으로 합치고,
+    // 참고용으로만 hover title에 있던 lcRate(마지막통화 당일설치)를 별도 열로 꺼내 항상 보이게 함.
+    var head = '<thead><tr><th>출고주</th><th>컨택</th><th>1차컨택후당일설치건</th><th>마지막통화당일설치</th></tr></thead>';
     var body = rows.slice().reverse().map(function(r){
-      return '<tr'+(r.week===selWeek?' class="cur"':'')+' title="출고 '+fmt(r.shipped)+'건 · lcRate(참고) '+pct(r.lcRate,1)+'"><td>'+rptWeekLabel(r.week)+'</td><td>'+fmt(r.contacted)
-        +'</td><td>'+fmt(r.fcInstall)+'</td><td>'+pct(r.fcRate,1)+'</td></tr>';
+      var fcCell = fmt(r.fcInstall)+'건 ('+pct(r.fcRate,1)+')';
+      var lcCell = r.lcInstall==null ? '<span style="color:var(--muted)">–</span>' : fmt(r.lcInstall)+'건 ('+pct(r.lcRate,1)+')';
+      return '<tr'+(r.week===selWeek?' class="cur"':'')+' title="출고 '+fmt(r.shipped)+'건"><td>'+rptWeekLabel(r.week)+'</td><td>'+fmt(r.contacted)
+        +'</td><td>'+fcCell+'</td><td>'+lcCell+'</td></tr>';
     }).join('');
     tbl.innerHTML = head+'<tbody>'+body+'</tbody>';
   }
@@ -3812,7 +3847,7 @@ function paintWaDangtong(rows, selWeek){
 }
 
 function paintWaNight(dailyAll, selWeek){
-  var dates = waWeekDates(selWeek);
+  var dates = waWeekDatesBack(selWeek, 3);   // 선택 주 + 이전 3주(총 4주, 오래된 순)
   var byDate={}; (dailyAll||[]).forEach(function(r){ byDate[r.date]=r; });
   var labels = dates.map(function(dt){ var s=dt.split("-"); return (+s[1])+"/"+(+s[2]); });
   var counts = dates.map(function(dt){ return byDate[dt]?byDate[dt].count:0; });
@@ -3851,8 +3886,10 @@ function paintWaCallD1(rows, selWeek, absRows){
   var bg = rows.map(function(r){ return r.week===selWeek ? C["--s-violet"] : C["--s-blue-l"]; });
   mk("waCallD1Chart", { type:"bar",
     data:{ labels:labels, datasets:[
-      { type:"bar", label:"설치예정 콜(건, 주말제외)", data:rows.map(function(r){return r.contacted;}), backgroundColor:bg, borderRadius:3, yAxisID:"y" },
-      { type:"line", label:"D+1 전환율(%)", data:rate, borderColor:C["--s-red"], backgroundColor:"transparent", tension:.25, pointRadius:3, yAxisID:"y1" }
+      { type:"bar", label:"설치예정 콜(건, 주말제외)", data:rows.map(function(r){return r.contacted;}), backgroundColor:bg, borderRadius:3, yAxisID:"y",
+        datalabels: dlBarTop({ formatter:function(v){ return (v==null||v===0)?"":fmt(v); } }) },
+      { type:"line", label:"D+1 전환율(%)", data:rate, borderColor:C["--s-red"], backgroundColor:"transparent", tension:.25, pointRadius:3, yAxisID:"y1",
+        datalabels: dl({ align:"top", color:C["--s-red"], font:{weight:"600",size:10}, formatter:function(v){ return v==null?"":v+"%"; } }) }
     ]},
     options:{ scales:{
         x:{grid:{display:false}},
@@ -3982,6 +4019,29 @@ function saveWaNote(){
   }, function(){ btn.disabled=false; msg.textContent="통신 오류"; msg.className="rpt-msg err"; },
   { params:{ action:"setaccelnote", week:w, note:ta.value } });
 }
+// 운영자 코멘트 서식 버튼(2026-08-04) — 슬랙 툴바처럼 선택 영역을 감싸거나(굵게) 줄마다
+// 접두어를 붙인다(글머리기호·번호매기기). 저장은 여전히 순수 텍스트라 표시는 "**텍스트**"/
+// "- 항목" 그대로 남는다 — 이 코멘트가 이 텍스트영역 밖에 렌더링되는 화면이 아직 없기 때문.
+function waApplyFormat_(kind){
+  var ta = document.getElementById("waNote"); if(!ta) return;
+  var start = ta.selectionStart, end = ta.selectionEnd, val = ta.value;
+  var before = val.slice(0, start), sel = val.slice(start, end), after = val.slice(end);
+  var out, newStart, newEnd;
+  if(kind === "bold"){
+    var text = sel || "굵은 텍스트";
+    out = before + "**" + text + "**" + after;
+    newStart = before.length + 2; newEnd = newStart + text.length;
+  } else if(kind === "bullet" || kind === "number"){
+    var lines = (sel || "항목").split("\n");
+    var n = 1;
+    var prefixed = lines.map(function(line){ return (kind === "bullet" ? "- " : (n++) + ". ") + line; }).join("\n");
+    out = before + prefixed + after;
+    newStart = before.length; newEnd = newStart + prefixed.length;
+  } else { return; }
+  ta.value = out;
+  ta.focus(); ta.setSelectionRange(newStart, newEnd);
+  document.getElementById("waNoteCnt").textContent = ta.value.length + "/1000";
+}
 function waBindButtons(){
   if(WA_BOUND) return; WA_BOUND=true;
   var eb=document.getElementById("waEventBtn"); if(eb) eb.addEventListener("click", waEventRefresh);
@@ -3992,6 +4052,9 @@ function waBindButtons(){
   if(ub) ub.addEventListener("click", function(){
     var box=document.getElementById("waNote");
     if(box){ box.value = WA.aiDraftText||""; document.getElementById("waNoteCnt").textContent=box.value.length+"/1000"; box.focus(); }
+  });
+  document.querySelectorAll(".wa-fmt-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){ waApplyFormat_(btn.dataset.fmt); });
   });
 }
 
