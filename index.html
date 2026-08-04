@@ -291,6 +291,23 @@
   .wa-vtitle { font-weight:700; font-size:14px; color: var(--text-primary); }
   .wa-vbody { font-size:13px; line-height:1.6; color: var(--text-secondary); }
   .wa-callout-ai { margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); }
+  /* '보고서' 탭(2026-08-04, 옛 라벨 '액션 효과 리포트') — 운영자가 예전에 세션 안에서 봤던 정적
+     Artifact 리포트의 "위아래로 읽는 문서" 느낌을 재현. 데이터·JS(WA.*)는 전혀 안 건드리고
+     이 탭 안에서만(#tab-weeklyaction 스코프) 카드 그리드를 단일 컬럼으로 덮어쓴다 — 다른 탭의
+     .grid/.card/.col-*는 이 규칙의 영향을 받지 않는다(선택자가 이 탭 안으로 한정됨).
+     주차 선택 후 재조회는 기존 WA.week 메커니즘 그대로라 별도 저장소 없이도 "다시 불러오기"가 된다. */
+  #tab-weeklyaction .grid { grid-template-columns: 1fr; max-width: 880px; margin: 0 auto; gap: 26px; }
+  #tab-weeklyaction .grid > .card { grid-column: 1 / -1; }
+  #tab-weeklyaction .card { padding: 24px 28px 22px; }
+  #tab-weeklyaction [data-cid="waHead"] { padding-bottom: 22px; border-bottom: 1px solid var(--border); }
+  #tab-weeklyaction [data-cid="waHead"] h3 { font-size: 20px; letter-spacing: -.4px; }
+  #tab-weeklyaction [data-cid="waVerdict"] { background: color-mix(in srgb, var(--s-blue) 5%, var(--surface-1)); border-color: color-mix(in srgb, var(--s-blue) 22%, var(--border)); }
+  #tab-weeklyaction .wa-verdict-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  /* col-6로 짝지어 있던 5개 지표 카드가 이제 전부 전체 폭이라, 좁은 폭에 맞춰졌던 차트가 밋밋해
+     보이지 않도록 이 탭만 조금 더 키운다(다른 탭의 ch-m/ch-l 기본값은 그대로 둔다). */
+  #tab-weeklyaction .chart-wrap.ch-m { height: 260px; }
+  #tab-weeklyaction .chart-wrap.ch-l { height: 300px; }
+  #tab-weeklyaction #waDangtongTable, #tab-weeklyaction #waNightTable, #tab-weeklyaction #waCallD1Table { min-width: 0; width: 100%; }
   .memo-text { font-size:13px; line-height:1.6; color: var(--text-secondary); white-space:pre-wrap; word-break:break-word; flex:1; }
   /* 기존 메모 편집(2026-08-03) — 클릭 시 memo-entry 내부를 textarea+저장/취소로 바꿔치기한다(전체 재렌더 없이). */
   .memo-edit-btn { flex-shrink:0; border:none; background:transparent; cursor:pointer; font-size:12px; padding:0 2px; opacity:.5; border-radius:6px; line-height:1.6; }
@@ -684,7 +701,7 @@
     <div><b>아이샵케어</b><span>설치 운영 대시보드</span></div>
   </div>
   <div class="navitem active" data-tab="weeklyboard" id="nav-weeklyboard"><span class="ic">📅</span><div>위클리 현황판<small>출고주 6주 스코어보드</small></div><span class="navcaret" id="weeklyboard-caret">▸</span></div>
-  <div class="navitem navchild" data-tab="weeklyaction" id="nav-weeklyaction" style="display:none"><span class="ic">🎯</span><div>액션 효과 리포트<small>1만원·야간원격·당일배송 주차별 검토</small></div></div>
+  <div class="navitem navchild" data-tab="weeklyaction" id="nav-weeklyaction" style="display:none"><span class="ic">📄</span><div>보고서<small>1만원·야간원격·당일배송 주차별 검토</small></div></div>
   <div class="navitem" data-tab="cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div></div>
   <div class="navitem" data-tab="accel"><span class="ic">🚀</span><div>설치가속화 Action<small>배송반영·통화 당일설치</small></div></div>
   <div class="navitem" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량 · 주간 요약</small></div></div>
@@ -1009,7 +1026,7 @@
   <section class="tab-content" id="tab-weeklyaction">
     <div class="grid">
       <div class="card col-12" data-cid="waHead">
-        <h3>🎯 액션 효과 리포트</h3>
+        <h3>📄 보고서</h3>
         <div class="sub">1만원 이벤트(7/28~)·야간원격접수·당일배송 업데이트(오후 배송반영, 7/22~)의 주차별 실측 지표입니다. <b>수치는 항상 자동 재계산</b>되고, 해석·판단은 아래 코멘트에 직접 남겨 주세요.</div>
         <div id="waWeekBox" style="margin:10px 0 14px"></div>
         <div class="tiles" id="waTiles"></div>
@@ -4757,7 +4774,7 @@ function shareTabLayout(){
   if(s) s.addEventListener("click", shareTabLayout);
 })();
 
-var TABMETA={ ops:["운영 대시보드","① 현재 잔여 업무량(콜리스트 기준) + ② 주간 요약(구 현황판) · 두 섹션은 기준 시점이 다릅니다"], dept:["부서별 지연원인 · D+7 초과 지연분석","① 부서별 원인(모수=지연건, 완료 D+7 이상 + 미완료 7일 이상) + ② D+7 초과 지연분석(모수=D+7 초과 완료건, 출고주·사유·소요일 구간)"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(K) 대비 설치예정(D) 병기"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["액션 효과 리포트","주(월요일) 선택 · 1만원 이벤트·야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"] };
+var TABMETA={ ops:["운영 대시보드","① 현재 잔여 업무량(콜리스트 기준) + ② 주간 요약(구 현황판) · 두 섹션은 기준 시점이 다릅니다"], dept:["부서별 지연원인 · D+7 초과 지연분석","① 부서별 원인(모수=지연건, 완료 D+7 이상 + 미완료 7일 이상) + ② D+7 초과 지연분석(모수=D+7 초과 완료건, 출고주·사유·소요일 구간)"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(K) 대비 설치예정(D) 병기"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 1만원 이벤트·야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
