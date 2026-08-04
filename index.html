@@ -4034,7 +4034,7 @@ function waApplyFormat_(kind){
   } else if(kind === "bullet" || kind === "number"){
     var lines = (sel || "항목").split("\n");
     var n = 1;
-    var prefixed = lines.map(function(line){ return (kind === "bullet" ? "- " : (n++) + ". ") + line; }).join("\n");
+    var prefixed = lines.map(function(line){ return (kind === "bullet" ? "• " : (n++) + ". ") + line; }).join("\n");
     out = before + prefixed + after;
     newStart = before.length; newEnd = newStart + prefixed.length;
   } else { return; }
