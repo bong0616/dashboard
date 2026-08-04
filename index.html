@@ -1066,7 +1066,7 @@
       </div>
 
       <div class="card col-6 fill" data-cid="waNight">
-        <h3>🌙 야간원격접수 (선택 주 + 이전 3주 일자별)</h3>
+        <h3>🌙 야간원격접수 (선택 주 + 전주 일자별)</h3>
         <div class="sub" id="waNightNote">18~24시 원격AS 채널 접수 · 설치완료는 사업자번호 매칭(누적형, 최근 며칠은 낮게 보일 수 있음)</div>
         <div class="chart-wrap ch-m"><canvas id="waNightChart"></canvas></div>
         <div class="tbl-wrap"><table class="dtable no-grp" id="waNightTable"></table></div>
@@ -3847,7 +3847,7 @@ function paintWaDangtong(rows, selWeek){
 }
 
 function paintWaNight(dailyAll, selWeek){
-  var dates = waWeekDatesBack(selWeek, 3);   // 선택 주 + 이전 3주(총 4주, 오래된 순)
+  var dates = waWeekDatesBack(selWeek, 1);   // 선택 주 + 이전 1주(총 2주, 오래된 순) — 4주는 너무 길어 보여 축소(2026-08-04)
   var byDate={}; (dailyAll||[]).forEach(function(r){ byDate[r.date]=r; });
   var labels = dates.map(function(dt){ var s=dt.split("-"); return (+s[1])+"/"+(+s[2]); });
   var counts = dates.map(function(dt){ return byDate[dt]?byDate[dt].count:0; });
