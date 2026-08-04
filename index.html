@@ -718,8 +718,6 @@
   <!-- 하위 '월·주·일 흐름'은 2026-07-28 삭제(주간/일간 비교와 완전 중복) → 성과는 이제 하위메뉴 없음(캐럿 제거) -->
   <div class="navitem" data-tab="perf" id="nav-perf"><span class="ic">⚡</span><div>성과<small>설치속도·작업량</small></div></div>
   <div class="navitem" data-tab="dept"><span class="ic">🏢</span><div>부서별 지연원인<small>부서·사유·출고주별 D+7</small></div></div>
-  <div class="navitem" data-tab="weekly" id="nav-weekly"><span class="ic">🗓️</span><div>주간 비교<small>주차별 처리속도현황</small></div><span class="navcaret" id="weekly-caret">▸</span></div>
-  <div class="navitem navchild" data-tab="daily" id="nav-daily" style="display:none"><span class="ic">📆</span><div>일간 비교<small>일자별 처리속도현황</small></div></div>
   <div class="navitem" data-tab="shipweekly" id="nav-shipweekly"><span class="ic">🚚</span><div>출고주 비교<small>출고 물량 처리현황</small></div><span class="navcaret" id="shipweekly-caret">▸</span></div>
   <div class="navitem navchild" data-tab="shipdaily" id="nav-shipdaily" style="display:none"><span class="ic">📬</span><div>출고일 비교<small>출고 물량 처리현황</small></div></div>
   <div class="navitem" data-tab="report"><span class="ic">📝</span><div>주차별 리포트<small>전주 대비 요약·코멘트</small></div></div>
@@ -778,14 +776,6 @@
       <!-- 구 현황판 '미설치 잔여 경과일' — 선택 주와 무관한 현재시점 지표라 ①현재 잔여 섹션에 둔다(2026-07-23 이관) -->
       <div class="card col-6 fill" data-cid="boardAging"><h3>⏳ 미설치 잔여 경과일 <small class="th-tgt" style="display:inline">배송완료 기준</small></h3><div class="sub">설치예정·보류·부재(1~4회)만 · 배송완료 기준(배송중 제외) · 출고 후 경과일 · 장기미설치·위약금·반품/폐업 제외 · <b style="color:var(--s-blue-d)">막대 클릭 시 주문번호·경과일·메모</b></div><div class="chart-wrap ch-m"><canvas id="boardAging"></canvas></div></div>
       <div class="card col-12 fill" data-cid="opsReason"><h3>🧾 미설치 사유 (현재 잔여)</h3><div class="sub">로우데이터 K열 코드화 사유 · 반품/폐업 및 <b>배송중 전체 제외</b>(배송완료·구매확정만) · '(사유미기재) 배송완료'=설치 가능한데 사유 미입력</div><div class="chart-wrap ch-m"><canvas id="opsReason"></canvas></div></div>
-      <div class="card col-12" data-cid="opsLastCall"><h3>📞 마지막 통화일 경과 현황</h3>
-        <div class="sub">콜리스트 <b>T열(마지막통화일)</b>에 날짜가 있는 잔여 <b id="lca-total">–</b>건 기준 · 경과일 = 오늘 − 마지막통화일 · 표의 <b>누적</b>은 그 구간 <b>이상</b> 통화가 끊긴 건수 · <b>오래 방치된 건일수록 재컨택 우선순위</b></div>
-        <div class="lca-split">
-          <div class="chart-wrap ch-m"><canvas id="opsLastCall"></canvas></div>
-          <div><table class="dtable" id="opsLastCallTbl"></table></div>
-        </div>
-        <div class="insight" id="lca-insight"></div>
-      </div>
       <div class="card col-12" data-cid="opsReasonKw"><h3>🔑 미설치 사유 (메모 키워드 분류)</h3><div class="sub">현재 미설치 잔여건(반품·폐업 제외)의 <b>메모를 키워드 자동분류</b> · 설치일 무관 · 7일+ 지연 사유와 동일 로직(부재·문자안내/미룸/방문설치 접수/원격접수/전산·결제단말 등) · <b>기타 막대 클릭 시 세부내역</b> · <span id="ops-kw-skip"></span></div><div class="chart-wrap ch-xl"><canvas id="opsReasonKw"></canvas></div></div>
     </div>
 
@@ -801,6 +791,19 @@
     <div class="grid">
       <div class="card col-12" data-cid="boardNote"><h3>📝 회의 코멘트 <span id="board-week" class="board-wk"></span></h3><div class="sub">이번 주 회의 메모 · 저장 시 공유 · <b>지난 주차 메모는 '주차별 리포트' 탭 하단 📚 전체 주차 메모</b>에서 한 번에 볼 수 있습니다</div><div id="boardNote" class="rpt-note"></div></div>
       <div class="card col-12 fill" data-cid="boardLead"><h3>📐 설치소요일 분포 <small class="th-tgt" style="display:inline">최초컨택 주 기준</small></h3><div class="sub"><b>그 주에 최초컨택한 건들</b>이 출고→설치까지 며칠 걸렸는지 분포 · 전주 vs 금주 · 막대 위 %는 그 주 총건 대비 비중 (빠를수록 왼쪽)</div><div class="chart-wrap ch-m"><canvas id="boardLead"></canvas></div></div>
+    </div>
+
+    <!-- ③ 주간·일간 처리속도 상세 — 구 '주간 비교'/'일간 비교' 탭 흡수(2026-08-04, 운영자 요청).
+         종합 콤보차트(wkVolume/dyVolume)는 "그래프가 오히려 가독성이 떨어진다"는 지적으로 삭제,
+         채널구성 차트 + 상세비교표만 남긴다. renderWeekly/renderDaily(대시보드API 무변경, JS만 축소)가
+         그대로 이 id들에 씀 — 물리적으로 이 탭으로 옮겼을 뿐 데이터 흐름은 그대로다. -->
+    <div class="sec-head">🗓️ 주간·일간 처리속도 상세 <small>구 '주간 비교'/'일간 비교' 탭 · 표 위주로 재구성</small></div>
+    <div class="tiles" id="weekly-tiles"></div>
+    <div class="grid">
+      <div class="card col-12" data-cid="wkChannel"><h3>🔧 주별 설치 채널 구성</h3><div class="sub">자가설치 · 상담원 완료 건수(설치일 기준) · 막대 안 %는 그 주 설치완료 대비 비중</div><div class="chart-wrap ch-m"><canvas id="wkChannel"></canvas></div></div>
+      <div class="card col-12" data-cid="weeklyTable"><h3>🗓️ 주차별 상세 비교표</h3><div class="sub">최근 12주 · 최신 주가 위 · <b>▲▼</b>는 직전 주 대비 증감(속도·재컨택주기는 낮을수록 개선)</div><div class="tbl-wrap"><table class="dtable" id="weeklyTable"></table></div></div>
+      <div class="card col-12" data-cid="dyChannel"><h3>🔧 일별 설치 채널 구성</h3><div class="sub">자가설치 · 상담원 완료 건수(설치일 기준) · 막대 안 %는 그 날 설치완료 대비 비중</div><div class="chart-wrap ch-m"><canvas id="dyChannel"></canvas></div></div>
+      <div class="card col-12" data-cid="dailyTable"><h3>📆 일자별 상세 비교표</h3><div class="sub">최근 30일 · 최신 일이 위 · <b>▲▼</b>는 직전 일 대비 증감(속도·재컨택주기는 낮을수록 개선)</div><div class="tbl-wrap"><table class="dtable" id="dailyTable"></table></div></div>
     </div>
   </section>
 
@@ -966,26 +969,6 @@
         <div class="sub">그 주 <b>출고건</b>이 출고 후 며칠 만에 몇 % 설치완료됐는지 (누적) · 최근 18주(약 4개월) · 최신 주가 위 · <b style="color:var(--s-blue-d)">–</b> 는 아직 그 날짜가 지나지 않아 관측 불가(0%가 아님) · 이번 주(진행중)는 <b style="color:var(--s-orange)">집계중</b> 표기 — 출고 마감 전이라 출고건수·설치율 모두 계속 바뀝니다(금요일 출고분은 리스트 반영 지연으로 다음 주 월요일에 늘어날 수 있음)</div>
         <div class="tbl-wrap"><table class="dtable no-grp curve-tbl" id="cohCurveTable"></table></div>
       </div>
-    </div>
-  </section>
-
-  <!-- WEEKLY (주간 비교 스코어보드) -->
-  <section class="tab-content" id="tab-weekly">
-    <div class="tiles" id="weekly-tiles"></div>
-    <div class="grid">
-      <div class="card col-12" data-cid="wkVolume"><h3>📊 주별 업무량 · 속도 종합 비교</h3><div class="sub">막대=출고·통화건수, 실선=설치완료·최초컨택 <b>(왼쪽축 건수)</b> · 점선=평균 설치속도·재컨택주기 <b>(오른쪽축 일, 낮을수록 빠름)</b>. 최근 16주 · 맨 오른쪽이 이번 주(진행중)</div><div class="chart-wrap ch-xl"><canvas id="wkVolume"></canvas></div></div>
-      <div class="card col-12" data-cid="wkChannel"><h3>🔧 주별 설치 채널 구성</h3><div class="sub">자가설치 · 상담원 완료 건수(설치일 기준) · 막대 안 %는 그 주 설치완료 대비 비중</div><div class="chart-wrap ch-m"><canvas id="wkChannel"></canvas></div></div>
-      <div class="card col-12" data-cid="weeklyTable"><h3>🗓️ 주차별 상세 비교표</h3><div class="sub">최근 12주 · 최신 주가 위 · <b>▲▼</b>는 직전 주 대비 증감(속도·재컨택주기는 낮을수록 개선)</div><div class="tbl-wrap"><table class="dtable" id="weeklyTable"></table></div></div>
-    </div>
-  </section>
-
-  <!-- DAILY (일간 비교 스코어보드) -->
-  <section class="tab-content" id="tab-daily">
-    <div class="tiles" id="daily-tiles"></div>
-    <div class="grid">
-      <div class="card col-12" data-cid="dyVolume"><h3>📊 일별 업무량 · 속도 종합 비교</h3><div class="sub">막대=출고·통화건수, 실선=설치완료·최초컨택 <b>(왼쪽축 건수)</b> · 점선=평균 설치속도·재컨택주기 <b>(오른쪽축 일, 낮을수록 빠름)</b>. 최근 45일 · 맨 오른쪽이 오늘</div><div class="chart-wrap ch-xl"><canvas id="dyVolume"></canvas></div></div>
-      <div class="card col-12" data-cid="dyChannel"><h3>🔧 일별 설치 채널 구성</h3><div class="sub">자가설치 · 상담원 완료 건수(설치일 기준) · 막대 안 %는 그 날 설치완료 대비 비중</div><div class="chart-wrap ch-m"><canvas id="dyChannel"></canvas></div></div>
-      <div class="card col-12" data-cid="dailyTable"><h3>📆 일자별 상세 비교표</h3><div class="sub">최근 30일 · 최신 일이 위 · <b>▲▼</b>는 직전 일 대비 증감(속도·재컨택주기는 낮을수록 개선)</div><div class="tbl-wrap"><table class="dtable" id="dailyTable"></table></div></div>
     </div>
   </section>
 
@@ -1269,17 +1252,6 @@ function tile(label, ic, val, unit, sub, accent, tip) {
 }
 
 // ---------- OPS ----------
-// 마지막 통화일 경과 구간 정의 [백엔드키, 라벨, 색]. 백엔드 api_lastCallBucket_ 키와 1:1로 맞출 것.
-// 차트 막대 index → 이 배열 index → bucket 키 순으로 모달이 상세를 조회하므로 순서가 계약이다.
-var LCA_DEFS = [
-  ["d0",  "오늘 통화",  "--s-aqua"],
-  ["d1",  "1일 경과",   "--s-blue-l"],
-  ["d2",  "2일 경과",   "--s-blue"],
-  ["d3",  "3일 경과",   "--s-yellow"],
-  ["d46", "4~6일 경과", "--s-orange"],
-  ["d7",  "7일 이상",   "--s-red"]
-];
-
 function renderOps(o, reasons) {
   var absentTotal = o.status.부재;
   document.getElementById("ops-tiles").innerHTML =
@@ -1327,48 +1299,6 @@ function renderOps(o, reasons) {
       datasets:[{ data:[o.absent["1차부재"],o.absent["2차부재"],o.absent["3차부재"],o.absent["4회이상부재"]],
         backgroundColor:[C["--s-blue-l"],C["--s-blue"],C["--s-orange"],C["--s-red"]], borderRadius:6 }] },
     options:{ scales:axes(), plugins:{ datalabels: dl({anchor:"end",align:"end"}) } } });
-
-  // ---- 마지막 통화일 경과 현황 (콜리스트 T열) ----
-  // 구간 색 = 방치 정도(초록:오늘 통화 → 빨강:7일+). 표의 '누적'은 해당 구간 이상 경과한 건의 합.
-  var lca = o.lastCallAging || { total:0, d0:0, d1:0, d2:0, d3:0, d46:0, d7:0 };
-  var lcaRows = LCA_DEFS.map(function(d){ return [d[1], lca[d[0]]||0, C[d[2]]]; });
-  var lcaPct = function(n){ return lca.total ? (n*100/lca.total) : 0; };
-  var lcaP1 = function(n){ return lcaPct(n).toFixed(1)+"%"; };
-  // 누적(이 구간 이상 경과) — 뒤에서부터 합산
-  var lcaCum = [], run = 0;
-  for (var li = lcaRows.length-1; li >= 0; li--) { run += lcaRows[li][1]; lcaCum[li] = run; }
-
-  document.getElementById("lca-total").textContent = fmt(lca.total);
-
-  mk("opsLastCall", { type:"bar",
-    data:{ labels: lcaRows.map(function(r){return r[0];}),
-      datasets:[{ data: lcaRows.map(function(r){return r[1];}),
-        backgroundColor: lcaRows.map(function(r){return r[2];}), borderRadius:6,
-        categoryPercentage:.72, barPercentage:.86 }] },
-    options:{ scales:axes(),
-      onClick:function(evt, els){ if(els && els.length) openLastCallDetail(els[0].index); },
-      onHover:function(evt, els){ if(evt.native && evt.native.target) evt.native.target.style.cursor = els.length?"pointer":"default"; },
-      plugins:{
-        tooltip:{ callbacks:{
-          label:function(ctx){ return fmt(ctx.parsed.y)+"건 · 전체의 "+lcaP1(ctx.parsed.y); },
-          afterLabel:function(ctx){ return ctx.parsed.y>0 ? "▶ 클릭 시 주문번호·메모" : undefined; } } },
-        datalabels: dlBarTop() } } });
-
-  document.getElementById("opsLastCallTbl").innerHTML =
-    "<thead><tr><th>구분</th><th>건수</th><th>비율</th><th>누적</th></tr></thead><tbody>" +
-    lcaRows.map(function(r, i){
-      return "<tr><td><span class='lca-dot' style='background:"+r[2]+"'></span>"+r[0]+"</td>" +
-        "<td class='cell-main'>"+fmt(r[1])+"</td><td>"+lcaP1(r[1])+"</td>" +
-        "<td class='lca-cum'>"+fmt(lcaCum[i])+"</td></tr>";
-    }).join("") +
-    "<tr class='cur'><td>합계 (T열 기재건)</td><td class='cell-main'>"+fmt(lca.total)+"</td>" +
-    "<td>"+(lca.total?"100.0%":"–")+"</td><td class='lca-cum'>–</td></tr></tbody>";
-
-  var lcaStale = lca.d46 + lca.d7;
-  document.getElementById("lca-insight").innerHTML = !lca.total
-    ? "콜리스트 T열(마지막통화일)에 날짜가 기재된 잔여건이 없습니다."
-    : "<b>4일 이상</b> 통화가 끊긴 건이 <b>"+fmt(lcaStale)+"건</b>(전체의 "+lcaP1(lcaStale)+") · 그중 <b>7일 이상</b>이 <b>"+fmt(lca.d7)+"건</b> → 재컨택 최우선 대상입니다. " +
-      "오늘 통화한 <b>"+fmt(lca.d0)+"건</b>은 이미 접촉이 끝난 건입니다.";
 
   var rz = reasons.uninstallReason.slice(0,8);
   mk("opsReason", { type:"bar",
@@ -2098,41 +2028,13 @@ function wowCell(cur, prev, opts){
 
 function renderWeekly(p){
   var rows = (p && p.weekly) || [];
+  // 2026-08-04(운영자 요청): 종합 콤보차트는 삭제하고 이 탭(→ 운영탭으로 이관)엔 평균 설치속도·
+  // 재컨택주기 타일만 남긴다 — 출고/통화/설치완료/자가설치는 이미 다른 탭에도 나오는 값이라 중복.
   document.getElementById("weekly-tiles").innerHTML =
-    weekTile("이번주 출고","📦", rows, "shipped", {accent:true}) +
-    weekTile("이번주 통화","📞", rows, "calls") +
-    weekTile("이번주 설치완료","✅", rows, "installs") +
-    weekTile("이번주 자가설치","🔧", rows, "self") +
     weekTile("평균 설치속도","⏱️", rows, "avgSpeed", {valFn:round1, unit:"일", lowerBetter:true, target:SPD_TGT}) +
     weekTile("평균 재컨택주기","🔁", rows, "avgRetouch", {valFn:round1, unit:"일", lowerBetter:true, target:RTC_TGT});
 
   var labels = rows.map(function(x){ return wkLabel(x.week); });
-  var r1 = function(v){ return v==null?null:Math.round(v*10)/10; };
-
-  // 종합 콤보: 출고·통화 막대 + 설치완료 선(왼쪽축 건수) + 설치속도·재컨택주기 점선(오른쪽축 일)
-  mk("wkVolume", { type:"bar",
-    data:{ labels:labels,
-      datasets:[
-        { type:"bar", label:"출고건수", data:rows.map(function(x){return x.shipped;}), backgroundColor:C["--s-blue-l"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:5, datalabels: dlBarTop({font:{weight:"600",size:9}}) },
-        { type:"bar", label:"통화건수", data:rows.map(function(x){return x.calls;}), backgroundColor:C["--s-yellow"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:5, datalabels: dlBarTop({font:{weight:"600",size:9}}) },
-        { type:"line", label:"설치완료", data:rows.map(function(x){return x.installs;}), borderColor:C["--s-aqua"], backgroundColor:"transparent", yAxisID:"y", borderWidth:2.6, tension:.3, pointRadius:2, pointBackgroundColor:C["--s-aqua"], order:3 },
-        // 최초컨택 — 구 '주별 흐름' 카드가 갖고 있던 계열(2026-07-28 흡수). 값은 payload에 원래 있었고 안 그리고 있었을 뿐이다.
-        // 왼쪽축(건수)이라 실선으로 둔다 — 이 차트는 '실선=건수 / 점선=일수' 규칙으로 읽는다.
-        { type:"line", label:"최초컨택", data:rows.map(function(x){return x.firstContacts;}), borderColor:C["--s-violet"], backgroundColor:"transparent", yAxisID:"y", borderWidth:2, tension:.3, pointRadius:2, pointBackgroundColor:C["--s-violet"], order:2 },
-        { type:"line", label:"설치속도(일)", data:rows.map(function(x){return r1(x.avgSpeed);}), borderColor:C["--s-blue-d"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--s-blue-d"], spanGaps:true, order:1 },
-        { type:"line", label:"재컨택주기(일)", data:rows.map(function(x){return r1(x.avgRetouch);}), borderColor:C["--s-orange"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--s-orange"], spanGaps:true, order:1 }
-      ] },
-    options:{ scales:{
-        x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:16}},
-        y:{position:"left",beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]},title:{display:true,text:"건수",color:C["--muted"],font:{size:11}}},
-        y1:{position:"right",beginAtZero:true,grid:{drawOnChartArea:false},ticks:{color:C["--muted"],callback:function(v){return v+"일";}},title:{display:true,text:"소요일",color:C["--muted"],font:{size:11}}}
-      },
-      plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false},
-        tooltip:{ callbacks:{ label:function(ct){
-          var v=ct.parsed.y; if(v==null) return ct.dataset.label+": –";
-          return ct.dataset.label+": "+(ct.dataset.yAxisID==="y1" ? v+"일" : fmt(v)+"건");
-        } } } },
-      interaction:{mode:"index",intersect:false} } });
 
   // 주별 설치 채널 구성(누적 막대) — 각 세그먼트에 그 주 설치완료 대비 비중(%) 표기
   var chTotal = rows.map(function(x){ return (x.self||0)+(x.sms||0)+(x.agent||0); });
@@ -2224,40 +2126,9 @@ function dayTile(label, ic, rows, key, opts){
 
 function renderDaily(p){
   var rows = (p && p.dailyScore) || [];
-  document.getElementById("daily-tiles").innerHTML =
-    dayTile("오늘 출고","📦", rows, "shipped", {accent:true}) +
-    dayTile("오늘 통화","📞", rows, "calls") +
-    dayTile("오늘 설치완료","✅", rows, "installs") +
-    dayTile("오늘 자가설치","🔧", rows, "self") +
-    dayTile("평균 설치속도","⏱️", rows, "avgSpeed", {valFn:round1, unit:"일", lowerBetter:true, target:SPD_TGT}) +
-    dayTile("평균 재컨택주기","🔁", rows, "avgRetouch", {valFn:round1, unit:"일", lowerBetter:true, target:RTC_TGT});
-
+  // 2026-08-04(운영자 요청): daily-tiles 자체를 없앴다(운영탭으로 이관하며 타일 없이 표만 유지) —
+  // 종합 콤보차트(dyVolume)도 "그래프가 가독성이 떨어진다"는 지적으로 삭제.
   var labels = rows.map(function(x){ return dyLabel(x.date); });
-  var r1 = function(v){ return v==null?null:Math.round(v*10)/10; };
-
-  // 종합 콤보: 출고·통화 막대 + 설치완료 선(왼쪽축 건수) + 설치속도·재컨택주기 점선(오른쪽축 일)
-  mk("dyVolume", { type:"bar",
-    data:{ labels:labels,
-      datasets:[
-        { type:"bar", label:"출고건수", data:rows.map(function(x){return x.shipped;}), backgroundColor:C["--s-blue-l"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:5, datalabels: dlBarTop({font:{weight:"600",size:9}}) },
-        { type:"bar", label:"통화건수", data:rows.map(function(x){return x.calls;}), backgroundColor:C["--s-yellow"], yAxisID:"y", borderRadius:3, categoryPercentage:.72, barPercentage:.92, order:5, datalabels: dlBarTop({font:{weight:"600",size:9}}) },
-        { type:"line", label:"설치완료", data:rows.map(function(x){return x.installs;}), borderColor:C["--s-aqua"], backgroundColor:"transparent", yAxisID:"y", borderWidth:2.6, tension:.3, pointRadius:2, pointBackgroundColor:C["--s-aqua"], order:3 },
-        // 최초컨택 — 구 '일별 흐름' 카드가 갖고 있던 계열(2026-07-28 흡수). 주간 비교와 같은 색·같은 규칙.
-        { type:"line", label:"최초컨택", data:rows.map(function(x){return x.firstContacts;}), borderColor:C["--s-violet"], backgroundColor:"transparent", yAxisID:"y", borderWidth:2, tension:.3, pointRadius:2, pointBackgroundColor:C["--s-violet"], order:2 },
-        { type:"line", label:"설치속도(일)", data:rows.map(function(x){return r1(x.avgSpeed);}), borderColor:C["--s-blue-d"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--s-blue-d"], spanGaps:true, order:1 },
-        { type:"line", label:"재컨택주기(일)", data:rows.map(function(x){return r1(x.avgRetouch);}), borderColor:C["--s-orange"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--s-orange"], spanGaps:true, order:1 }
-      ] },
-    options:{ scales:{
-        x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:21}},
-        y:{position:"left",beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]},title:{display:true,text:"건수",color:C["--muted"],font:{size:11}}},
-        y1:{position:"right",beginAtZero:true,grid:{drawOnChartArea:false},ticks:{color:C["--muted"],callback:function(v){return v+"일";}},title:{display:true,text:"소요일",color:C["--muted"],font:{size:11}}}
-      },
-      plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false},
-        tooltip:{ callbacks:{ label:function(ct){
-          var v=ct.parsed.y; if(v==null) return ct.dataset.label+": –";
-          return ct.dataset.label+": "+(ct.dataset.yAxisID==="y1" ? v+"일" : fmt(v)+"건");
-        } } } },
-      interaction:{mode:"index",intersect:false} } });
 
   // 일별 설치 채널 구성(누적 막대) — 각 세그먼트에 그 날 설치완료 대비 비중(%) 표기
   var chTotal = rows.map(function(x){ return (x.self||0)+(x.sms||0)+(x.agent||0); });
@@ -4312,43 +4183,6 @@ function leadCell(x){
   return esc(x.installed)+(x.lead!=null?' <span class="lcd-lead">D+'+x.lead+'</span>':'');
 }
 
-function openLastCallDetail(idx){
-  var def=LCA_DEFS[idx];
-  if(!def || !LAST_PASS) return;
-  var box=document.getElementById("modal-box");
-  box.classList.add("wide");
-  document.getElementById("modal-title").textContent="마지막 통화일 · "+def[1];
-  document.getElementById("modal-sub").textContent="불러오는 중…";
-  document.getElementById("modal-body").innerHTML='<div class="modal-empty">불러오는 중…</div>';
-  document.getElementById("modal").classList.add("open");
-
-  fetchData(LAST_PASS, function(d){
-    if(!d || !d.ok){ failLastCallDetail((d && d.error) || "조회 실패"); return; }
-    paintLastCallDetail(def, d);
-  }, failLastCallDetail, { params:{ action:"calldetail", bucket:def[0] } });
-}
-function failLastCallDetail(msg){
-  document.getElementById("modal-sub").textContent="";
-  document.getElementById("modal-body").innerHTML='<div class="modal-empty">'+esc(msg)+'</div>';
-}
-function paintLastCallDetail(def, d){
-  var rows=d.rows||[];
-  document.getElementById("modal-title").textContent="마지막 통화일 · "+def[1]+" ("+fmt(d.count||0)+"건)";
-  document.getElementById("modal-sub").textContent="콜리스트 A열 주문번호 · J열 메모 원문 · 오래 방치된 건 순";
-  if(!rows.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">해당 구간에 건이 없습니다.</div>'; return; }
-  // 메모는 시트 자유입력 → esc() 필수(HTML 주입 방지)
-  document.getElementById("modal-body").innerHTML=
-    '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
-    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>마지막통화</th><th>상태</th><th>메모 (J열)</th></tr></thead><tbody>'+
-    rows.map(function(r){
-      var memo=String(r.memo||"").trim();
-      return '<tr><td class="lcd-ord">'+esc(r.order)+'</td>'+
-        '<td class="lcd-date">'+esc(r.lastCall)+'</td>'+
-        '<td class="lcd-st">'+esc(r.status)+'</td>'+
-        '<td class="lcd-memo'+(memo?'':' empty')+'">'+(memo?esc(memo):"(메모 없음)")+'</td></tr>';
-    }).join('')+'</tbody></table>';
-}
-
 // ===== 현황판 드릴다운 — 잔여 경과일 막대 / D+7 지연사유 표 클릭 시 대상 목록 =====
 // 둘 다 캐시 payload가 아니라 클릭 시 on-demand 조회다(대시보드API.js 상단 '메모 원문 예외' 규칙 참고).
 // 구간·주 판정은 서버가 차트와 같은 공유 헬퍼를 쓰므로 막대/셀 숫자 = 팝업 건수.
@@ -4912,7 +4746,7 @@ document.querySelectorAll(".navitem").forEach(function(n){
     // (D+7 지연분석은 2026-07-23 부서별 지연원인 탭으로 통합돼 하위 메뉴에서 빠졌다)
     // perf 는 2026-07-28 하위메뉴(월·주·일 흐름)가 사라져 TOGGLE 에서 뺐다.
     // ⚠️ 여기 남겨두면 getElementById("nav-flow") 가 null 이라 성과 탭 클릭이 통째로 죽는다.
-    var TOGGLE = { weekly:{children:["nav-daily"], caret:"weekly-caret"}, shipweekly:{children:["nav-shipdaily"], caret:"shipweekly-caret"}, weeklyboard:{children:["nav-weeklyaction"], caret:"weeklyboard-caret"} };
+    var TOGGLE = { shipweekly:{children:["nav-shipdaily"], caret:"shipweekly-caret"}, weeklyboard:{children:["nav-weeklyaction"], caret:"weeklyboard-caret"} };
     if (TOGGLE[t]) {
       var first = document.getElementById(TOGGLE[t].children[0]);
       var open = (first.style.display === "none");
