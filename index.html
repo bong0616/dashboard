@@ -3460,7 +3460,7 @@ function renderBoard(d){
 // (renderBoardTarget·renderBoardChannel 삭제 2026-07-24 — 월 목표·설치 채널 비율 카드가 각각 출고 코호트·주간 비교 탭과 중복이라 제거)
 var BOARD_SEL_WEEK=""; // 현황판 기준 주(주 키 "YYYY-MM-DD", 빈값=최신주). 드롭다운으로 저번주 등 선택
 // 주별 배열(오름차순)에서 기준 주(selWeek) 이하의 가장 최근 주 인덱스. 없으면 마지막(최신).
-// delayWeekly·leadDistByContactWeek는 최신주가 perf.weekly보다 이르므로(누적조건) '<=' 매핑.
+// leadDistByContactWeek는 최신주가 perf.weekly보다 이르므로(누적조건) '<=' 매핑.
 function boardWeekIdx(arr, selWeek){
   if(!arr||!arr.length) return -1;
   if(!selWeek) return arr.length-1;
@@ -3653,7 +3653,7 @@ var CUR_TAB="weeklyboard"; // 현재 보고 있는 메뉴(탭). 날짜조회 시
 //    카드를 지워 실제로 안 쓰게 되면 여기서도 섹션을 빼야 커스텀 날짜조회가 다시 빨라진다.
 //    (cohort=미설치 잔여 경과일·월 목표 / perf=KPI 타일·채널비율·설치소요일 분포 / reasons=D+7 지연사유)
 var TAB_SECTIONS={
-  ops:["ops","perf","cohort","reasons"], dept:["reasons"],
+  ops:["ops","perf","cohort","reasons"],
   perf:["perf","reasons"], cohort:["cohort"],
   weekly:["perf"], daily:["perf"], report:["perf"],
   shipweekly:["ship"], shipdaily:["ship"], accel:["accel"],
