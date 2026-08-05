@@ -785,7 +785,6 @@
     <div class="tiles" id="board-tiles"></div>
     <div class="grid">
       <div class="card col-12" data-cid="boardNote"><h3>📝 회의 코멘트 <span id="board-week" class="board-wk"></span></h3><div class="sub">이번 주 회의 메모 · 저장 시 공유 · <b>지난 주차 메모는 '주차별 리포트' 탭 하단 📚 전체 주차 메모</b>에서 한 번에 볼 수 있습니다</div><div id="boardNote" class="rpt-note"></div></div>
-      <div class="card col-12 fill" data-cid="boardLead"><h3>📐 설치소요일 분포 <small class="th-tgt" style="display:inline">최초컨택 주 기준</small></h3><div class="sub"><b>그 주에 최초컨택한 건들</b>이 출고→설치까지 며칠 걸렸는지 분포 · 전주 vs 금주 · 막대 위 %는 그 주 총건 대비 비중 (빠를수록 왼쪽)</div><div class="chart-wrap ch-m"><canvas id="boardLead"></canvas></div></div>
     </div>
 
     <!-- ③ 주간·일간 처리속도 상세 — 구 '주간 비교'/'일간 비교' 탭 흡수(2026-08-04, 운영자 요청).
@@ -860,6 +859,12 @@
         <div class="coldef accel-remote-coldef"></div>
         <div class="tbl-wrap"><table class="dtable no-grp" id="accelSdTable"></table></div>
       </div>
+    </div>
+
+    <!-- 구 운영탭 '설치소요일 분포' 이동(2026-08-05, 운영자 요청) — 최초컨택 주 기준이라 accel의 다른 카드(출고/통화 주 기준)와 축이 다름을 명시 -->
+    <div class="accel-sec">📐 설치소요일 분포 <small>최초컨택 주 기준 — 위 카드들과 기준 주가 다릅니다</small></div>
+    <div class="grid">
+      <div class="card col-12 fill" data-cid="boardLead"><h3>📐 설치소요일 분포 <small class="th-tgt" style="display:inline">최초컨택 주 기준</small></h3><div class="sub"><b>그 주에 최초컨택한 건들</b>이 출고→설치까지 며칠 걸렸는지 분포 · 전주 vs 금주 · 막대 위 %는 그 주 총건 대비 비중 (빠를수록 왼쪽)</div><div class="chart-wrap ch-m"><canvas id="boardLead"></canvas></div></div>
     </div>
   </section>
 
@@ -3653,10 +3658,10 @@ var CUR_TAB="weeklyboard"; // 현재 보고 있는 메뉴(탭). 날짜조회 시
 //    카드를 지워 실제로 안 쓰게 되면 여기서도 섹션을 빼야 커스텀 날짜조회가 다시 빨라진다.
 //    (cohort=미설치 잔여 경과일·월 목표 / perf=KPI 타일·채널비율·설치소요일 분포 / reasons=D+7 지연사유)
 var TAB_SECTIONS={
-  ops:["ops","perf","cohort","reasons"],
+  ops:["ops","cohort","reasons"],
   perf:["perf","reasons"], cohort:["cohort"],
   weekly:["perf"], daily:["perf"], report:["perf"],
-  shipweekly:["ship"], shipdaily:["ship"], accel:["accel"],
+  shipweekly:["ship"], shipdaily:["ship"], accel:["accel","perf"],
   weeklyboard:["ship","reasons","weeklyBoard"],
   weeklyaction:["cohort","weeklyBoard","accel"]
 };
