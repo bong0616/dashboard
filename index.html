@@ -1020,6 +1020,26 @@
         <div class="wa-callout" id="waEventCallout" style="display:none"></div>
       </div>
 
+      <div class="card col-12" data-cid="atlHead">
+        <h3>📐 액션 시행 전/후 비교</h3>
+        <div class="sub">각 액션의 <b>시행일 기준 전 4주 vs 후 4주</b> 실측 비교입니다 · 시행 후 4주가 안 지났으면 가용한 기간만 집계됩니다</div>
+      </div>
+      <div class="card col-4 fill" data-cid="atlPmDelivery"><h3>🚚 오후배송반영 (7/21~)</h3>
+        <div class="sub">배송업데이트 대비 당일설치율 · 전/후 4주</div>
+        <div class="chart-wrap ch-m"><canvas id="atlPmDeliveryChart"></canvas></div>
+        <div id="atlPmDeliveryNote" class="wa-callout"></div>
+      </div>
+      <div class="card col-4 fill" data-cid="atlNightIntake"><h3>🌙 야간원격접수 (7/21~, 집계 7/23~)</h3>
+        <div class="sub">통화당일 설치율 · 전/후 4주</div>
+        <div class="chart-wrap ch-m"><canvas id="atlNightIntakeChart"></canvas></div>
+        <div id="atlNightIntakeNote" class="wa-callout"></div>
+      </div>
+      <div class="card col-4 fill" data-cid="atlEventBonus"><h3>💰 1만원 이벤트 (7/28~)</h3>
+        <div class="sub">안내건 대비 D+1 설치율 · 전/후 4주</div>
+        <div class="chart-wrap ch-m"><canvas id="atlEventBonusChart"></canvas></div>
+        <div id="atlEventBonusNote" class="wa-callout"></div>
+      </div>
+
       <div class="card col-12" data-cid="waNoteCard">
         <h3>✍️ 운영자 코멘트 (이 주차)</h3>
         <div class="sub">계산값과 별개로 해석·판단을 직접 남깁니다 · 저장 시 모든 사용자에게 공유됩니다(주차별 리포트 코멘트와는 별개 저장소)</div>
@@ -2964,6 +2984,29 @@ function renderWeeklyAction(d){
   document.getElementById("waWeekSel").addEventListener("change", function(){ WA.week=this.value; paintWeeklyAction(d); });
   waBindButtons();
   paintWeeklyAction(d);
+  paintActionTimeline(d.actionTimeline);
+}
+// 액션 시행일(pmDelivery/nightIntake/eventBonus) 기준 전/후 4주 실측 비교 카드 3종.
+// 서술형 설명(문장)은 Task 8(AI초안)이 각 note 슬롯에 덧붙인다 — 여기서는 수치+경고만 채운다.
+function paintActionTimeline(atl){
+  if(!atl || !atl.actions) return;
+  var idMap = { pmDelivery: "atlPmDelivery", nightIntake: "atlNightIntake", eventBonus: "atlEventBonus" };
+  atl.actions.forEach(function(a){
+    var base = idMap[a.key]; if(!base) return;
+    mk(base+"Chart", { type:"bar",
+      data:{ labels:["시행 전 4주","시행 후 4주"],
+        datasets:[{ data:[a.before.rate, a.after.rate], backgroundColor:[C["--muted"], C["--s-blue"]], borderRadius:6 }] },
+      options: Object.assign(axes({horizontal:false}), { plugins:{ datalabels: dlBarTop({formatter:function(v){return pct(v,1);}}) } })
+    });
+    var noteEl = document.getElementById(base+"Note");
+    if(!noteEl) return;
+    var warn = [];
+    if(a.insufficientBefore) warn.push("시행 전 데이터 부족");
+    if(a.insufficientAfter) warn.push("시행 후 아직 4주 미경과(집계중)");
+    var deltaWord = a.deltaPct==null ? "–" : (a.deltaPct>=0?"+":"") + (Math.round(a.deltaPct*1000)/10) + "%p";
+    noteEl.innerHTML = "<b>" + pct(a.before.rate,1) + " → " + pct(a.after.rate,1) + "</b> (" + deltaWord + ")" +
+      (warn.length ? " · <span style=\"color:var(--s-orange)\">" + warn.join(", ") + "</span>" : "");
+  });
 }
 
 // 저장된 AI 초안은 JSON 문자열이다(narrative+verdicts+callouts, 2026-08-03 구조화). 구버전(순수
