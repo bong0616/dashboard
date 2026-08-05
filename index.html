@@ -3044,9 +3044,9 @@ function waParseAiDraft(raw){
   if(!raw) return null;
   try {
     var obj = JSON.parse(raw);
-    if(obj && typeof obj==="object") return { narrative: obj.narrative||"", verdicts: obj.verdicts||[], callouts: obj.callouts||{} };
+    if(obj && typeof obj==="object") return { narrative: obj.narrative||"", verdicts: obj.verdicts||[], callouts: obj.callouts||{}, actionTimelineNotes: obj.actionTimelineNotes||{} };
   } catch(e){}
-  return { narrative: String(raw), verdicts: [], callouts: {} };
+  return { narrative: String(raw), verdicts: [], callouts: {}, actionTimelineNotes: {} };
 }
 function waVerdictTagClass(tag){
   if(tag==="효과 확인") return "good";
