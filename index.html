@@ -932,6 +932,10 @@
   <section class="tab-content active" id="tab-weeklyboard">
     <div class="grid">
       <div class="card col-12" data-cid="wbScore"><h3>🗓️ 출고주 6주 스코어보드</h3><div class="sub">최근 6개 출고주 · 재컨택소요일·설치율·설치속도는 출고 코호트 기준(출고주 비교 탭과 동일 집계) · 배송완료→당일설치/당일통화→당일설치는 당통비교 기준(자가설치 제외) · <span style="color:var(--muted)">회색 '진행중'</span> 주는 아직 안 굳음</div><div class="tbl-wrap"><table class="dtable" id="wbScoreTable"></table></div></div>
+      <div class="card col-12" data-cid="wbGap"><h3>📞 주간 통화-설치 갭</h3>
+        <div class="sub">그 주 통화건수(실적로그, 자가설치 제외) 대비 설치완료건수(로우데이터 설치일 기준) 격차 · 격차가 클수록 부재·미룸 등으로 재컨택 리소스가 더 들었다는 뜻 · 주요 지연사유는 출고주 기준(지연사유 6주 추세와 동일 집계)이라 이 표의 통화·설치(활동일 기준)와 모집단이 완전히 같지는 않습니다</div>
+        <div class="tbl-wrap"><table class="dtable no-grp" id="wbGapTable"></table></div>
+      </div>
       <div class="card col-8" data-cid="wbDelay"><h3>🐢 지연사유 6주 추세 (로우데이터)</h3><div class="sub">완료+미완료 모두 포함(완료건 출고→설치 D+7초과 · 미완료건 출고 후 7일+) · 방문설치 접수/원격 접수는 별도 집계 · <b>총 지연건</b> 행은 정렬 대상에서 제외(항상 고정) · 옆 "콜리스트 현재 스냅샷"(잔여건만)과는 모집단이 달라 숫자가 다를 수 있습니다</div><div class="tbl-wrap"><table class="dtable" id="wbDelayTable"></table></div></div>
       <div class="card col-4" data-cid="wbSnap"><h3>📋 콜리스트 현재 지연사유 스냅샷</h3><div class="sub">지금 이 시점 콜리스트 잔여 기준(옆 6주 추세와 모집단이 다름) · 버튼을 눌러야 조회되며 캐시에 포함되지 않습니다</div>
         <div style="margin:8px 0 4px">배송 후 <input type="number" id="wbSnapDays" value="7" min="1" max="60" style="width:56px"> 일 이상 지난 건 <button class="fbtn fbtn-go" id="wbSnapBtn" style="margin-left:4px">지금 조회</button></div>
@@ -1782,6 +1786,18 @@ function wbScoreTableHTML(rows){
   return head+'<tbody>'+body+'</tbody>';
 }
 
+// 주간 통화-설치 갭 표(2026-08-05 신설, Task 7) — d.weeklyBoard.weeklyGap(활동일 기준, 최근 6주)를 그대로 렌더.
+function wbGapTableHTML(rows){
+  var html = "<thead><tr><th>주</th><th>통화</th><th>설치완료</th><th>격차</th><th>격차율</th><th>주요 지연사유</th></tr></thead><tbody>";
+  if (!rows || !rows.length) return html + '<tr><td colspan="6" style="color:var(--muted)">아직 집계된 주가 없습니다</td></tr></tbody>';
+  rows.slice(-6).reverse().forEach(function(r){
+    var reasonsTxt = (r.topReasons||[]).map(function(x){ return esc(x.cat)+" "+fmt(x.count)+"건"; }).join(" · ") || "–";
+    html += "<tr><td>"+wkLabel(r.week)+"</td><td>"+fmt(r.calls)+"</td><td>"+fmt(r.installs)+"</td>"+
+      "<td>"+fmt(r.gap)+"</td><td>"+pct(r.gapRate,1)+"</td><td>"+reasonsTxt+"</td></tr>";
+  });
+  return html + "</tbody>";
+}
+
 // 사유를 세로(행)로, 주차를 가로(헤더)로 배치 — 사유가 12종이라 가로로 나열하면 한눈에 안 들어온다는 지적(2026-07-31).
 // weeks는 오름차순(과거→최근)으로 들어오므로 그대로 좌→우에 쓰면 시간 흐름이 자연스럽다.
 // '총 지연건'은 정렬 대상에서 빼고 항상 맨 위 고정(헤드처럼) — 나머지 사유 행만 주차별/6주평균 값 기준으로 재정렬한다.
@@ -1937,6 +1953,7 @@ function wbBindSnapButton(){
 function renderWeeklyBoard(d){
   if(!d) return;
   document.getElementById("wbScoreTable").innerHTML = wbScoreTableHTML(wbMergeScoreRows(d));
+  if(d.weeklyBoard) document.getElementById("wbGapTable").innerHTML = wbGapTableHTML(d.weeklyBoard.weeklyGap);
   var reasons = d.reasons || {};
   WB_DELAY_LAST = { weeks: reasons.delayCldWeekly||[], cats: reasons.delayCldCats||[] };
   wbRenderDelayTable();
