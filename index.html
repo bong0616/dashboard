@@ -711,6 +711,7 @@
   </div>
   <div class="navitem active" data-tab="weeklyboard" id="nav-weeklyboard"><span class="ic">📅</span><div>위클리 현황판<small>출고주 6주 스코어보드</small></div><span class="navcaret" id="weeklyboard-caret">▸</span></div>
   <div class="navitem navchild" data-tab="weeklyaction" id="nav-weeklyaction" style="display:none"><span class="ic">📄</span><div>보고서<small>1만원·야간원격·당일배송 주차별 검토</small></div></div>
+  <div class="navitem navchild" data-tab="weeklyreport" id="nav-weeklyreport" style="display:none"><span class="ic">🗒️</span><div>위클리 리포트<small>주차별 요약 게시판</small></div></div>
   <div class="navitem" data-tab="cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div></div>
   <div class="navitem" data-tab="accel"><span class="ic">🚀</span><div>설치가속화 Action<small>배송반영·통화 당일설치</small></div></div>
   <div class="navitem" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량 · 주간 요약</small></div></div>
@@ -1093,6 +1094,35 @@
             <li>야간원격접수는 <b>기존에도 있던 채널</b>입니다 — 2026-07-20부터는 자동 집계(Slack 스크래핑)가 시작된 것이지, 접수 자체가 새로 생긴 게 아닙니다.</li>
           </ul>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WEEKLY REPORT (위클리 리포트 게시판, Phase 1, 2026-08-06 신설) — 위클리 현황판 하위 -->
+  <section class="tab-content" id="tab-weeklyreport">
+    <div class="grid">
+      <div class="card col-12" data-cid="wrHead">
+        <h3>🗒️ 위클리 리포트</h3>
+        <div class="sub">주차별 리포트를 게시판 형식으로 적재합니다. 지금은 요약을 직접 입력합니다(Phase 1) — 추후 AI 자동 초안 생성이 추가될 예정입니다.</div>
+      </div>
+      <div class="card col-12" data-cid="wrEditor">
+        <h3>✍️ 이번 주 리포트 작성</h3>
+        <div class="sub">주차(월요일)를 고르고 주요회의내용을 4-5줄로 요약해 저장하세요. 이미 있는 주를 고르면 그 요약을 수정합니다.</div>
+        <div style="display:flex; align-items:center; gap:10px; margin:8px 0 10px">
+          <span class="flab">주차(월요일)</span>
+          <input type="date" id="wrWeekInput" style="padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:var(--page); color:var(--text-primary)">
+          <span id="wrWeekLabel" style="font-size:12.5px; color:var(--muted)"></span>
+        </div>
+        <textarea id="wrSummaryInput" maxlength="1000" rows="6" style="width:100%; box-sizing:border-box; resize:vertical; font-family:var(--font); font-size:13px; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--page); color:var(--text-primary)" placeholder="예: 1) 1만원 이벤트 D+1 전환율 40%대 확인, 계속 유지 결정. 2) 야간원격접수 효과 있음, 대상 시간대 확대 논의. 3) 개인사유(휴가) 지연 비중 증가 — 시즌 요인인지 다음 주 재확인. 4) ..."></textarea>
+        <div style="display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-top:6px">
+          <span id="wrMsg" class="rpt-msg"></span>
+          <button class="rpt-save" id="wrSave">저장</button>
+        </div>
+      </div>
+      <div class="card col-12" data-cid="wrBoard">
+        <h3>📋 지난 리포트</h3>
+        <div class="sub">최신 주부터 표시됩니다.</div>
+        <div id="wrBoardList" style="display:flex; flex-direction:column; gap:12px; margin-top:10px"></div>
       </div>
     </div>
   </section>
@@ -1938,6 +1968,94 @@ function paintCldWeekDetail(r){
     }).join('')+'</tbody></table>';
 }
 
+// ==================== 위클리 리포트 게시판(Phase 1, 2026-08-06) ====================
+var WR_LAST = [];      // 마지막으로 받은 리포트 배열(최신 주 먼저)
+var WR_BOUND = false;  // 저장 버튼 리스너 중복 등록 방지
+
+// 임의 날짜 문자열("YYYY-MM-DD")을 그 주 월요일 키로 스냅(입력창은 아무 날이나 고를 수 있으므로).
+function wrMondayKey(dateStr){
+  if(!dateStr) return "";
+  var d = new Date(dateStr+"T00:00:00");
+  if (isNaN(d.getTime())) return "";
+  var day = d.getDay(); // 0=일 ... 1=월
+  var diff = (day===0) ? -6 : (1-day);
+  d.setDate(d.getDate()+diff);
+  var y=d.getFullYear(), m=("0"+(d.getMonth()+1)).slice(-2), dd=("0"+d.getDate()).slice(-2);
+  return y+"-"+m+"-"+dd;
+}
+// "YYYY-MM-DD"(월요일) → "08월06일 위클리 리포트" 제목
+function wrTitle(week){
+  var s=week.split("-");
+  return s[1]+"월"+s[2]+"일 위클리 리포트";
+}
+function wrBoardHTML(reports){
+  if(!reports || !reports.length) return '<div class="modal-empty">아직 등록된 리포트가 없습니다. 위에서 첫 리포트를 작성해 보세요.</div>';
+  return reports.map(function(r){
+    return '<div class="card" style="padding:14px 16px" data-wr-week="'+esc(r.week)+'">'
+      +'<div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px">'
+      +'<b style="font-size:13.5px">'+esc(wrTitle(r.week))+'</b>'
+      +'<span style="font-size:11px; color:var(--muted)">'+esc(rptWeekLabel(r.week))+' · 수정 '+esc(r.updatedAt||"")+'</span>'
+      +'</div>'
+      +'<div style="font-size:13px; line-height:1.7; margin-top:8px; white-space:pre-wrap">'+esc(r.summary)+'</div>'
+      +'<div style="margin-top:8px; text-align:right"><button type="button" class="fbtn wr-edit-btn" data-week="'+esc(r.week)+'">✏️ 수정</button></div>'
+      +'</div>';
+  }).join('');
+}
+function wrRenderBoard(reports){
+  WR_LAST = reports||[];
+  var box=document.getElementById("wrBoardList");
+  if(!box) return;
+  box.innerHTML = wrBoardHTML(WR_LAST);
+  box.querySelectorAll('.wr-edit-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var wk = btn.getAttribute('data-week');
+      var found = WR_LAST.filter(function(r){ return r.week===wk; })[0];
+      if(!found) return;
+      document.getElementById("wrWeekInput").value = wk;
+      document.getElementById("wrSummaryInput").value = found.summary;
+      document.getElementById("wrWeekLabel").textContent = wrTitle(wk)+" ("+rptWeekLabel(wk)+")";
+      document.getElementById("wrSummaryInput").focus();
+      window.scrollTo({top:0, behavior:"smooth"});
+    });
+  });
+}
+function wrInitWeekDefault(){
+  var input = document.getElementById("wrWeekInput");
+  if(!input || input.value) return; // 이미 값이 있으면(수정 진입 등) 건드리지 않음
+  var today = new Date();
+  var y=today.getFullYear(), m=("0"+(today.getMonth()+1)).slice(-2), d=("0"+today.getDate()).slice(-2);
+  input.value = y+"-"+m+"-"+d;
+  var wk = wrMondayKey(input.value);
+  document.getElementById("wrWeekLabel").textContent = wk ? (wrTitle(wk)+" ("+rptWeekLabel(wk)+")") : "";
+}
+function wrBindEditor(){
+  var input = document.getElementById("wrWeekInput");
+  if(input && !input._wrBound){
+    input._wrBound = true;
+    input.addEventListener('change', function(){
+      var wk = wrMondayKey(input.value);
+      document.getElementById("wrWeekLabel").textContent = wk ? (wrTitle(wk)+" ("+rptWeekLabel(wk)+")") : "";
+    });
+  }
+  if(WR_BOUND) return;
+  WR_BOUND = true;
+  document.getElementById("wrSave").addEventListener('click', function(){
+    if(!LAST_PASS) return;
+    var wk = wrMondayKey(document.getElementById("wrWeekInput").value);
+    var summary = document.getElementById("wrSummaryInput").value.trim();
+    var msg = document.getElementById("wrMsg");
+    if(!wk){ msg.textContent="주차를 먼저 선택하세요"; msg.style.color="var(--s-red)"; return; }
+    if(!summary){ msg.textContent="요약 내용을 입력하세요"; msg.style.color="var(--s-red)"; return; }
+    msg.textContent="저장 중…"; msg.style.color="var(--muted)";
+    fetchData(LAST_PASS, function(r){
+      if(!r || !r.ok){ msg.textContent="저장 실패: "+((r&&r.error)||"알 수 없음"); msg.style.color="var(--s-red)"; return; }
+      msg.textContent="저장 완료"; msg.style.color="var(--good, #3E8A5C)";
+      wrRenderBoard(r.reports||[]);
+    }, function(m){ msg.textContent="저장 실패: "+m; msg.style.color="var(--s-red)"; },
+    { params:{ action:"setweeklyreport", week:wk, summary:summary } });
+  });
+}
+
 // 일자별(2026-07-31 주차별→일자별 전환, 카드도 축소) — "YYYY-MM-DD" 문자열끼리는 그대로 사전순 비교가
 // 날짜 비교와 같아서 별도 파싱 헬퍼 없이 firstDate와 바로 비교한다.
 function wbNightTableHTML(ni){
@@ -2031,6 +2149,10 @@ function renderWeeklyBoard(d){
   wbRenderMemoLog();
   wbBindMemoButton();
   wbBindMemoLog();
+  // 🆕 2026-08-06(Phase 1): 위클리 리포트 게시판
+  wrRenderBoard((d.weeklyBoard && d.weeklyBoard.weeklyReports) || []);
+  wrInitWeekDefault();
+  wrBindEditor();
 }
 
 // 📝 주차별 메모장(누적형) — 리포트 탭 '전체 주차 메모'(주당 1건, 덮어쓰기)와는 다른 저장소다.
@@ -3812,7 +3934,8 @@ var TAB_SECTIONS={
   weekly:["perf"], daily:["perf"], report:["perf"],
   shipweekly:["ship"], shipdaily:["ship"], accel:["accel","perf"],
   weeklyboard:["ship","reasons","weeklyBoard"],
-  weeklyaction:["cohort","weeklyBoard","accel"]
+  weeklyaction:["cohort","weeklyBoard","accel"],
+  weeklyreport:["weeklyBoard"]
 };
 var TAB_LOADED={}; // 탭 → 마지막으로 로드된 기간키("start|end", 전체는 ""). 같은 기간 재조회 방지.
 function periodKey(){ return CUR_PERIOD.start ? (CUR_PERIOD.start+"|"+CUR_PERIOD.end) : ""; }
@@ -4253,7 +4376,7 @@ function shareTabLayout(){
   if(s) s.addEventListener("click", shareTabLayout);
 })();
 
-var TABMETA={ ops:["운영 대시보드","① 현재 잔여 업무량(콜리스트 기준) + ② 주간 요약(구 현황판) · 두 섹션은 기준 시점이 다릅니다"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(K) 대비 설치예정(D) 병기"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 1만원 이벤트·야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"] };
+var TABMETA={ ops:["운영 대시보드","① 현재 잔여 업무량(콜리스트 기준) + ② 주간 요약(구 현황판) · 두 섹션은 기준 시점이 다릅니다"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(K) 대비 설치예정(D) 병기"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 1만원 이벤트·야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"], weeklyreport:["위클리 리포트","주차별 리포트 게시판 · 주요회의내용 4-5줄 요약(수기 입력, Phase 1)"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
@@ -4263,7 +4386,7 @@ document.querySelectorAll(".navitem").forEach(function(n){
     // (D+7 지연분석은 2026-07-23 부서별 지연원인 탭으로 통합돼 하위 메뉴에서 빠졌다)
     // perf 는 2026-07-28 하위메뉴(월·주·일 흐름)가 사라져 TOGGLE 에서 뺐다.
     // ⚠️ 여기 남겨두면 getElementById("nav-flow") 가 null 이라 성과 탭 클릭이 통째로 죽는다.
-    var TOGGLE = { shipweekly:{children:["nav-shipdaily"], caret:"shipweekly-caret"}, weeklyboard:{children:["nav-weeklyaction"], caret:"weeklyboard-caret"} };
+    var TOGGLE = { shipweekly:{children:["nav-shipdaily"], caret:"shipweekly-caret"}, weeklyboard:{children:["nav-weeklyaction","nav-weeklyreport"], caret:"weeklyboard-caret"} };
     if (TOGGLE[t]) {
       var first = document.getElementById(TOGGLE[t].children[0]);
       var open = (first.style.display === "none");
