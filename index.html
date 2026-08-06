@@ -1997,7 +1997,10 @@ function wrBoardHTML(reports){
       +'<span style="font-size:11px; color:var(--muted)">'+esc(rptWeekLabel(r.week))+' · 수정 '+esc(r.updatedAt||"")+'</span>'
       +'</div>'
       +'<div style="font-size:13px; line-height:1.7; margin-top:8px; white-space:pre-wrap">'+esc(r.summary)+'</div>'
-      +'<div style="margin-top:8px; text-align:right"><button type="button" class="fbtn wr-edit-btn" data-week="'+esc(r.week)+'">✏️ 수정</button></div>'
+      +'<div style="margin-top:8px; text-align:right; display:flex; justify-content:flex-end; gap:8px">'
+      +'<button type="button" class="fbtn wr-full-btn" data-week="'+esc(r.week)+'">📄 전체 리포트 보기</button>'
+      +'<button type="button" class="fbtn wr-edit-btn" data-week="'+esc(r.week)+'">✏️ 수정</button>'
+      +'</div>'
       +'</div>';
   }).join('');
 }
@@ -2018,6 +2021,104 @@ function wrRenderBoard(reports){
       window.scrollTo({top:0, behavior:"smooth"});
     });
   });
+  box.querySelectorAll('.wr-full-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ wrOpenFullReport(btn.getAttribute('data-week')); });
+  });
+}
+
+// ---- Phase 2(2026-08-06): 게시판 항목 "전체 리포트 보기" — 이미 로드된 LAST_DATA만 사용(서버 재조회 없음).
+// 커스텀 SVG 차트 대신 표 위주로 구성(비용·구현 시간 절감) — 하드코딩 리포트(2026-08-06 Artifact)의
+// 핵심 섹션(속도지표·지연사유 전체분류·액션전후비교·1만원 이벤트)을 라이브 데이터로 재구성한다.
+function wrRow_(cells){ return '<tr>'+cells.map(function(c,i){ return '<td'+(i===0?' style="text-align:left"':'')+'>'+c+'</td>'; }).join('')+'</tr>'; }
+function wrPct_(v){ return v==null ? '<span style="color:var(--muted)">–</span>' : (Math.round(v*1000)/10)+'%'; }
+function wrNum_(v,suf){ return v==null ? '<span style="color:var(--muted)">–</span>' : (Math.round(v*10)/10)+(suf||''); }
+function wrOpenFullReport(week){
+  var d = LAST_DATA;
+  document.getElementById("modal-box").classList.add("wide");
+  document.getElementById("modal-title").textContent = wrTitle(week)+" · 전체 리포트";
+  document.getElementById("modal-sub").textContent = "현재 로드된 최신 데이터 기준(이 게시판 항목이 가리키는 과거 시점 스냅샷이 아닙니다)";
+  if(!d){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">데이터가 아직 로드되지 않았습니다.</div>'; document.getElementById("modal").classList.add("open"); return; }
+
+  var html = '';
+
+  // ① 최근 4주 출고 코호트 속도지표
+  var shipRows = ((d.ship && d.ship.weekly)||[]).slice(-4);
+  html += '<h4 style="margin:0 0 8px">① 주차별 속도 지표(출고일 코호트)</h4>';
+  html += '<table class="lcd-tbl"><thead><tr><th style="text-align:left">주차</th><th>출고량</th><th>완료율</th><th>평균설치소요일</th><th>평균재컨택</th></tr></thead><tbody>';
+  shipRows.forEach(function(w){
+    html += wrRow_([rptWeekLabel(w.week)+(w.immature?' <span style="color:var(--muted);font-size:10.5px">(진행중)</span>':''),
+      fmt(w.shipped)+'건', wrPct_(w.doneRate), wrNum_(w.avgSpeed,'일'), wrNum_(w.avgRetouch,'회')]);
+  });
+  html += '</tbody></table>';
+
+  // ② 통화-설치 갭 + 원격접수
+  var gapRows = ((d.weeklyBoard && d.weeklyBoard.weeklyGap)||[]).slice(-4);
+  html += '<h4 style="margin:16px 0 8px">② 통화-설치 갭 · 원격접수(주간)</h4>';
+  html += '<table class="lcd-tbl"><thead><tr><th style="text-align:left">주차</th><th>통화시도</th><th>설치완료</th><th>갭</th><th>원격접수(M열)</th></tr></thead><tbody>';
+  gapRows.forEach(function(w){
+    html += wrRow_([rptWeekLabel(w.week), fmt(w.calls)+'건', fmt(w.installs)+'건',
+      (w.gap>0?'+':'')+fmt(w.gap), fmt(w.remoteRecv||0)+'건']);
+  });
+  html += '</tbody></table>';
+
+  // ③ 지연사유 전체분류(최근 3주, leadSum/leadN 평균 포함)
+  var reasonWeeks = ((d.reasons && d.reasons.delayCldWeekly)||[]).slice(-3);
+  var cats = (d.reasons && d.reasons.delayCldCats)||[];
+  html += '<h4 style="margin:16px 0 8px">③ 지연사유 전체분류(D+7일 이상, 최근 3주)</h4>';
+  if(reasonWeeks.length){
+    var totals = {}; cats.forEach(function(c){ totals[c]={cnt:0,leadSum:0,leadN:0}; });
+    reasonWeeks.forEach(function(w){ cats.forEach(function(c){
+      totals[c].cnt += (w.cats&&w.cats[c])||0;
+      totals[c].leadSum += (w.leadSum&&w.leadSum[c])||0;
+      totals[c].leadN += (w.leadN&&w.leadN[c])||0;
+    }); });
+    var sorted = cats.slice().sort(function(a,b){ return totals[b].cnt-totals[a].cnt; });
+    html += '<table class="lcd-tbl"><thead><tr><th style="text-align:left">사유</th><th>'+reasonWeeks.map(function(w){return rptWeekLabel(w.week);}).join('</th><th>')+'</th><th>3주합계</th><th>평균설치소요일</th></tr></thead><tbody>';
+    sorted.forEach(function(c){
+      if(totals[c].cnt===0) return;
+      var perWeek = reasonWeeks.map(function(w){ return fmt((w.cats&&w.cats[c])||0); });
+      var avgLead = totals[c].leadN>0 ? wrNum_(totals[c].leadSum/totals[c].leadN,'일')+' (n='+totals[c].leadN+')' : '<span style="color:var(--muted)">-</span>';
+      html += wrRow_([esc(c), perWeek.join('</td><td>'), '<b>'+fmt(totals[c].cnt)+'</b>', avgLead]);
+    });
+    html += '</tbody></table>';
+  } else {
+    html += '<div class="modal-empty">지연사유 데이터가 없습니다.</div>';
+  }
+
+  // ④ 설치가속화 액션 전/후 비교
+  var actions = (d.actionTimeline && d.actionTimeline.actions)||[];
+  html += '<h4 style="margin:16px 0 8px">④ 설치가속화 액션 시행 전/후 비교('+((d.actionTimeline&&d.actionTimeline.compareWeeks)||'?')+'주)</h4>';
+  if(actions.length){
+    html += '<table class="lcd-tbl"><thead><tr><th style="text-align:left">액션</th><th>시행 전</th><th>시행 후</th><th>변화</th></tr></thead><tbody>';
+    actions.forEach(function(a){
+      var delta = a.deltaPct==null ? '<span style="color:var(--muted)">–</span>' : ((a.deltaPct>=0?'+':'')+(Math.round(a.deltaPct*1000)/10)+'%p');
+      var warn = [];
+      if(a.insufficientBefore) warn.push('시행전 데이터부족');
+      if(a.insufficientAfter) warn.push('진행중');
+      html += wrRow_([esc(a.label), wrPct_(a.before.rate), wrPct_(a.after.rate),
+        delta + (warn.length?' <span style="color:var(--s-orange,#c9822e);font-size:10.5px">('+warn.join(', ')+')</span>':'')]);
+    });
+    html += '</tbody></table>';
+  }
+
+  // ⑤ 1만원 이벤트 최근 일자별
+  var eb = (d.eventBonusDaily||[]).slice(-7);
+  html += '<h4 style="margin:16px 0 8px">⑤ 1만원 이벤트 안내 · D+1이내 설치(최근 7일)</h4>';
+  if(eb.length){
+    html += '<table class="lcd-tbl"><thead><tr><th style="text-align:left">날짜</th><th>안내건수</th><th>D+1이내 설치</th><th>전환율</th></tr></thead><tbody>';
+    eb.forEach(function(x){
+      var rate = x.notice>0 ? wrPct_(x.installedD1/x.notice) : '<span style="color:var(--muted)">–</span>';
+      html += wrRow_([esc(x.date), fmt(x.notice)+'건', fmt(x.installedD1)+'건', rate]);
+    });
+    html += '</tbody></table>';
+  } else {
+    html += '<div class="modal-empty">1만원 이벤트 데이터가 없습니다.</div>';
+  }
+
+  html += '<div style="margin-top:14px; font-size:11px; color:var(--muted)">※ 라이브 데이터 기준(현재 로드된 payload) — 게시판 요약 작성 시점의 스냅샷이 아닙니다. 과거 시점을 그대로 재현하려면 Phase 3(주차별 데이터 고정 저장)가 필요합니다.</div>';
+
+  document.getElementById("modal-body").innerHTML = html;
+  document.getElementById("modal").classList.add("open");
 }
 function wrInitWeekDefault(){
   var input = document.getElementById("wrWeekInput");
