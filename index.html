@@ -459,6 +459,9 @@
   #wbDelayTable { min-width: 0; }
   #wbDelayTable tr.total-row td, #wbDelayTable tr.total-row th { font-weight: 700; background: color-mix(in srgb, var(--s-blue) 7%, transparent); }
   #wbDelayTable td.avgcol { color: var(--s-blue-d); font-weight: 700; }
+  /* 🆕 2026-08-06(운영자 요청): 사유×주차 셀 클릭 → 주문번호·메모 상세 */
+  #wbDelayTable td.cld-clickable { cursor: pointer; }
+  #wbDelayTable td.cld-clickable:hover { background: color-mix(in srgb, var(--s-blue) 12%, transparent); }
   /* 야간원격접수 — 6주(넓은 표) → 일자별 축소 카드(col-4)로 전환. 열이 3개뿐이라 전역 min-width가 불필요.
      width:auto로 카드 전체폭에 억지로 늘어나지 않게 해 '일자'~'상담원 접수' 사이 공백을 줄인다
      (열이 3개뿐인데 width:100%면 짧은 값 사이 여백이 카드 폭만큼 벌어져 보였다, 운영자 지적). */
@@ -1824,17 +1827,22 @@ function wbDelaySortIcon(key){
   return '<span class="sort-btn'+(active?' active':'')+'" data-key="'+key+'" title="클릭: 오름차순/내림차순 전환(지연 많은 사유 순으로 정렬)">'+icon+'</span>';
 }
 // 한 주차 셀 = 건수 + 직전 주 대비 증감%(전주대비). 지연은 줄어드는 쪽이 좋으므로 감소=초록(up클래스), 증가=빨강(down클래스).
-function wbDelayCellHTML(vals, i){
+// 🆕 2026-08-06(운영자 요청): weekKey/catLabel이 있으면(=총계행이 아닌 사유행) data-week/data-cat을
+// 얹어 클릭 가능하게 만든다 — wbRenderDelayTable의 클릭 위임이 이 속성으로 셀을 식별한다.
+function wbDelayCellHTML(vals, i, weekKey, catLabel){
   var v = vals[i];
   var main = v ? fmt(v) : '<span style="color:var(--muted)">–</span>';
-  if (i===0) return '<td>'+main+'</td>';   // 맨 왼쪽 주는 비교할 직전 주 데이터가 표에 없음
+  var attrs = (weekKey && catLabel && v)
+    ? ' class="cld-clickable" data-week="'+esc(weekKey)+'" data-cat="'+esc(catLabel)+'" title="클릭: 주문번호·메모 보기"'
+    : '';
+  if (i===0) return '<td'+attrs+'>'+main+'</td>';   // 맨 왼쪽 주는 비교할 직전 주 데이터가 표에 없음
   var prev = vals[i-1], cur = v;
-  if (prev===0 && cur===0) return '<td>'+main+'</td>';
-  if (prev===0) return '<td>'+main+' <span class="wow down">신규</span></td>';
-  if (cur===prev) return '<td>'+main+' <span class="wow flat">–</span></td>';
+  if (prev===0 && cur===0) return '<td'+attrs+'>'+main+'</td>';
+  if (prev===0) return '<td'+attrs+'>'+main+' <span class="wow down">신규</span></td>';
+  if (cur===prev) return '<td'+attrs+'>'+main+' <span class="wow flat">–</span></td>';
   var better = cur < prev;
   var pct = Math.round(Math.abs(cur-prev)/prev*100);
-  return '<td>'+main+' <span class="wow '+(better?"up":"down")+'">'+(cur>prev?"▲":"▼")+pct+'%</span></td>';
+  return '<td'+attrs+'>'+main+' <span class="wow '+(better?"up":"down")+'">'+(cur>prev?"▲":"▼")+pct+'%</span></td>';
 }
 function wbDelayAvgVsHTML(avg, latest){
   if (avg<=0) return latest>0 ? '<span style="color:var(--s-red);font-weight:700">신규</span>' : '<span style="color:var(--muted)">–</span>';
@@ -1843,11 +1851,13 @@ function wbDelayAvgVsHTML(avg, latest){
   var color = pct>0 ? "var(--s-red)" : pct<0 ? "var(--good)" : "var(--muted)";
   return '<span style="color:'+color+';font-weight:700">'+arrow+(pct===0?"":" "+Math.abs(pct)+"%")+'</span>';
 }
-function wbDelayRowHTML(label, vals, isTotal){
+// 🆕 2026-08-06: weekKeys(각 열의 실제 주차 키, "YYYY-MM-DD")를 받아 총계행이 아닐 때만 셀에 클릭용
+// data-week/data-cat을 얹는다. 총계행(isTotal)은 특정 사유 하나가 아니라 클릭 상세가 성립하지 않는다.
+function wbDelayRowHTML(label, vals, isTotal, weekKeys){
   var sum=0; for(var i=0;i<vals.length;i++) sum+=vals[i];
   var avg = vals.length ? sum/vals.length : 0;
   var latest = vals.length ? vals[vals.length-1] : 0;
-  var cells=''; for(var j=0;j<vals.length;j++) cells+=wbDelayCellHTML(vals,j);
+  var cells=''; for(var j=0;j<vals.length;j++) cells+=wbDelayCellHTML(vals,j, isTotal?null:(weekKeys&&weekKeys[j]), isTotal?null:label);
   return '<tr'+(isTotal?' class="total-row"':'')+'><td>'+esc(label)+'</td>'+cells
     +'<td class="avgcol">'+(Math.round(avg*10)/10)+'</td>'
     +'<td>'+wbDelayAvgVsHTML(avg, latest)+'</td></tr>';
@@ -1859,7 +1869,8 @@ function wbDelayTableHTML(){
   var head='<thead><tr><th>사유</th>'
     +wkLabels.map(function(l,i){ return '<th>'+l+wbDelaySortIcon('w'+i)+'</th>'; }).join('')
     +'<th>6주평균'+wbDelaySortIcon('avg')+'</th><th>평균대비</th></tr></thead>';
-  var totalRow = wbDelayRowHTML('총 지연건', weeks.map(function(w){ return w.total||0; }), true);
+  var weekKeys = weeks.map(function(w){ return w.week; });
+  var totalRow = wbDelayRowHTML('총 지연건', weeks.map(function(w){ return w.total||0; }), true, weekKeys);
   var rows = cats.map(function(c){
     var vals = weeks.map(function(w){ return (w.cats&&w.cats[c])||0; });
     var sum=0; vals.forEach(function(v){ sum+=v; });
@@ -1873,7 +1884,7 @@ function wbDelayTableHTML(){
       return (av-bv)*dir;
     });
   }
-  var catRowsHtml = rows.map(function(r){ return wbDelayRowHTML(r.label, r.vals, false); }).join('');
+  var catRowsHtml = rows.map(function(r){ return wbDelayRowHTML(r.label, r.vals, false, weekKeys); }).join('');
   return head+'<tbody>'+totalRow+catRowsHtml+'</tbody>';
 }
 function wbRenderDelayTable(){
@@ -1887,6 +1898,44 @@ function wbRenderDelayTable(){
       wbRenderDelayTable();
     });
   });
+  // 🆕 2026-08-06(운영자 요청): 사유×주차 셀 클릭 → 주문번호·J열 메모 상세. innerHTML을 매번 새로
+  // 그리므로 위임(delegation)으로 한 번만 건다(재렌더마다 리스너가 쌓이지 않게 el 자체에 건다 —
+  // sort-btn과 달리 el.querySelectorAll 루프가 아니라 el 하나에만 addEventListener하면 되지만,
+  // wbRenderDelayTable이 재호출될 때마다 el.innerHTML이 통째로 바뀌어도 el 자체는 그대로라
+  // 리스너가 중복 등록되는 걸 막기 위해 el.onclick으로 덮어쓴다).
+  el.onclick = function(e){
+    var td = e.target.closest ? e.target.closest('td.cld-clickable') : null;
+    if (!td) return;
+    openCldWeekDetail(td.getAttribute('data-week'), td.getAttribute('data-cat'));
+  };
+}
+
+// 지연사유 6주 추세 · 셀 클릭 상세 — 주문번호 + J열 메모 원문(마스킹).
+// paintAgingDetail과 동일한 모달·테이블 패턴 재사용(로우데이터 A열/J열 노출 예외, 파일 상단 규칙 참고).
+function openCldWeekDetail(week, cat){
+  if (!week || !cat || !LAST_PASS) return;
+  openDrill(rptWeekLabel(week)+"주 · "+cat);
+  fetchData(LAST_PASS, function(r){
+    if(!r || !r.ok){ failLastCallDetail((r&&r.error)||"조회 실패"); return; }
+    paintCldWeekDetail(r);
+  }, failLastCallDetail, { params:{ action:"cldweekdetail", week:week, cat:cat } });
+}
+function paintCldWeekDetail(r){
+  var rows=r.rows||[];
+  document.getElementById("modal-title").textContent=rptWeekLabel(r.week)+"주 · "+r.cat+" ("+fmt(r.count||0)+"건)";
+  document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · J열 메모 원문 · 출고일 오름차순";
+  if(!rows.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">해당 주·사유에 건이 없습니다.</div>'; return; }
+  document.getElementById("modal-body").innerHTML=
+    '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
+    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>출고</th><th>상태</th><th>설치</th><th>메모 (J열)</th></tr></thead><tbody>'+
+    rows.map(function(x){
+      var memo=String(x.memo||"").trim();
+      return '<tr><td class="lcd-ord">'+esc(x.order)+'</td>'+
+        '<td class="lcd-date">'+esc(x.shipped)+'</td>'+
+        '<td class="lcd-st">'+esc(x.status)+'</td>'+
+        '<td class="lcd-date">'+(x.installed?esc(x.installed):'<span style="color:var(--muted)">미완료</span>')+'</td>'+
+        '<td class="lcd-memo'+(memo?'':' empty')+'">'+(memo?esc(memo):"(메모 없음)")+'</td></tr>';
+    }).join('')+'</tbody></table>';
 }
 
 // 일자별(2026-07-31 주차별→일자별 전환, 카드도 축소) — "YYYY-MM-DD" 문자열끼리는 그대로 사전순 비교가
