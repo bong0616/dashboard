@@ -1103,25 +1103,11 @@
     <div class="grid">
       <div class="card col-12" data-cid="wrHead">
         <h3>🗒️ 위클리 리포트</h3>
-        <div class="sub">주차별 리포트를 게시판 형식으로 적재합니다. 지금은 요약을 직접 입력합니다(Phase 1) — 추후 AI 자동 초안 생성이 추가될 예정입니다.</div>
-      </div>
-      <div class="card col-12" data-cid="wrEditor">
-        <h3>✍️ 이번 주 리포트 작성</h3>
-        <div class="sub">주차(월요일)를 고르고 주요회의내용을 4-5줄로 요약해 저장하세요. 이미 있는 주를 고르면 그 요약을 수정합니다.</div>
-        <div style="display:flex; align-items:center; gap:10px; margin:8px 0 10px">
-          <span class="flab">주차(월요일)</span>
-          <input type="date" id="wrWeekInput" style="padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:var(--page); color:var(--text-primary)">
-          <span id="wrWeekLabel" style="font-size:12.5px; color:var(--muted)"></span>
-        </div>
-        <textarea id="wrSummaryInput" maxlength="1000" rows="6" style="width:100%; box-sizing:border-box; resize:vertical; font-family:var(--font); font-size:13px; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--page); color:var(--text-primary)" placeholder="예: 1) 1만원 이벤트 D+1 전환율 40%대 확인, 계속 유지 결정. 2) 야간원격접수 효과 있음, 대상 시간대 확대 논의. 3) 개인사유(휴가) 지연 비중 증가 — 시즌 요인인지 다음 주 재확인. 4) ..."></textarea>
-        <div style="display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-top:6px">
-          <span id="wrMsg" class="rpt-msg"></span>
-          <button class="rpt-save" id="wrSave">저장</button>
-        </div>
+        <div class="sub">카드를 클릭하면 요약을 쓰거나 고칠 수 있고, 그 아래에 상세 리포트가 함께 보입니다. 아직 요약이 없는 최근 주는 "아직 작성 안 함"으로 표시됩니다.</div>
       </div>
       <div class="card col-12" data-cid="wrBoard">
-        <h3>📋 지난 리포트</h3>
-        <div class="sub">최신 주부터 표시됩니다.</div>
+        <h3>📋 위클리 리포트 목록</h3>
+        <div class="sub">최신 주부터 표시됩니다. 카드를 클릭하면 리포트창이 뜹니다.</div>
         <div id="wrBoardList" style="display:flex; flex-direction:column; gap:12px; margin-top:10px"></div>
       </div>
     </div>
@@ -1968,39 +1954,58 @@ function paintCldWeekDetail(r){
     }).join('')+'</tbody></table>';
 }
 
-// ==================== 위클리 리포트 게시판(Phase 1, 2026-08-06) ====================
-var WR_LAST = [];      // 마지막으로 받은 리포트 배열(최신 주 먼저)
-var WR_BOUND = false;  // 저장 버튼 리스너 중복 등록 방지
+// ==================== 위클리 리포트 게시판(Phase 1~2, 2026-08-06 / Phase 3, PHASE 115) ====================
+var WR_LAST = [];      // 서버가 준 리포트 배열(최신 주 먼저, 요약 또는 AI초안이 있는 주만)
+var WR_RECENT_N = 8;   // 게시판에 항상 보여줄 최근 주 개수(요약도 AI초안도 없어도 "아직 작성 안 함" 카드로 노출)
 
-// 임의 날짜 문자열("YYYY-MM-DD")을 그 주 월요일 키로 스냅(입력창은 아무 날이나 고를 수 있으므로).
-function wrMondayKey(dateStr){
-  if(!dateStr) return "";
-  var d = new Date(dateStr+"T00:00:00");
-  if (isNaN(d.getTime())) return "";
-  var day = d.getDay(); // 0=일 ... 1=월
-  var diff = (day===0) ? -6 : (1-day);
-  d.setDate(d.getDate()+diff);
-  var y=d.getFullYear(), m=("0"+(d.getMonth()+1)).slice(-2), dd=("0"+d.getDate()).slice(-2);
-  return y+"-"+m+"-"+dd;
-}
 // "YYYY-MM-DD"(월요일) → "08월06일 위클리 리포트" 제목
 function wrTitle(week){
   var s=week.split("-");
   return s[1]+"월"+s[2]+"일 위클리 리포트";
 }
-function wrBoardHTML(reports){
-  if(!reports || !reports.length) return '<div class="modal-empty">아직 등록된 리포트가 없습니다. 위에서 첫 리포트를 작성해 보세요.</div>';
-  return reports.map(function(r){
-    return '<div class="card" style="padding:14px 16px" data-wr-week="'+esc(r.week)+'">'
-      +'<div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px">'
-      +'<b style="font-size:13.5px">'+esc(wrTitle(r.week))+'</b>'
-      +'<span style="font-size:11px; color:var(--muted)">'+esc(rptWeekLabel(r.week))+' · 수정 '+esc(r.updatedAt||"")+'</span>'
-      +'</div>'
-      +'<div style="font-size:13px; line-height:1.7; margin-top:8px; white-space:pre-wrap">'+esc(r.summary)+'</div>'
-      +'<div style="margin-top:8px; text-align:right; display:flex; justify-content:flex-end; gap:8px">'
-      +'<button type="button" class="fbtn wr-full-btn" data-week="'+esc(r.week)+'">📄 전체 리포트 보기</button>'
-      +'<button type="button" class="fbtn wr-edit-btn" data-week="'+esc(r.week)+'">✏️ 수정</button>'
-      +'</div>'
+// 오늘이 속한 주의 월요일부터 거슬러 최근 n개 주차 키를 최신순으로 반환.
+function wrRecentWeeks_(n){
+  var today = new Date();
+  var day = today.getDay(); // 0=일 ... 1=월
+  var diff = (day===0) ? -6 : (1-day);
+  var mon = new Date(today.getFullYear(), today.getMonth(), today.getDate()+diff);
+  var out = [];
+  for(var i=0;i<n;i++){
+    var d = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate()-7*i);
+    var y=d.getFullYear(), m=("0"+(d.getMonth()+1)).slice(-2), dd=("0"+d.getDate()).slice(-2);
+    out.push(y+"-"+m+"-"+dd);
+  }
+  return out;
+}
+// 서버 리포트 배열(WR_LAST)과 "최근 N주" 플레이스홀더를 합쳐 렌더용 배열을 만든다. 서버에 있는
+// 주는 그 데이터를 쓰고, 없는 주는 빈 자리표시 객체로 채운다(요약 없어도 목록에 계속 보이게).
+function wrMergedList_(){
+  var byWeek = {};
+  WR_LAST.forEach(function(r){ byWeek[r.week] = r; });
+  var weeks = wrRecentWeeks_(WR_RECENT_N);
+  WR_LAST.forEach(function(r){ if(weeks.indexOf(r.week)===-1) weeks.push(r.week); }); // 8주보다 오래된 것도 저장된 건 유지
+  weeks.sort(function(a,b){ return a<b?1:(a>b?-1:0); }); // 최신 먼저
+  var seen = {};
+  return weeks.filter(function(w){ if(seen[w]) return false; seen[w]=true; return true; })
+    .map(function(w){ return byWeek[w] || { week:w, summary:"", updatedAt:"", aiDraft:"", aiDraftAt:"", snapshot:"" }; });
+}
+function wrBoardHTML(list){
+  if(!list.length) return '<div class="modal-empty">표시할 리포트가 없습니다.</div>';
+  return list.map(function(r){
+    var body;
+    if(r.summary){
+      body = '<div style="font-size:13px; margin-top:6px">'+mdRender_(r.summary)+'</div>';
+    } else if(r.aiDraft){
+      body = '<div style="font-size:12.5px; color:var(--muted); margin-top:4px">아직 작성 안 함 · 🤖 AI 초안 있음(클릭해서 확인)</div>';
+    } else {
+      body = '<div style="font-size:12.5px; color:var(--muted); margin-top:4px">아직 작성 안 함</div>';
+    }
+    var lock = r.snapshot ? '<div style="margin-top:6px; font-size:11px; color:var(--good,#3E8A5C)">🔒 저장 시점 스냅샷 보유</div>' : '';
+    return '<div class="card wr-card" style="padding:14px 16px; cursor:pointer" data-wr-week="'+esc(r.week)+'">'
+      +'<div style="display:flex; justify-content:space-between; align-items:baseline; gap:10px">'
+      +'<b style="font-size:15px">'+esc(wrTitle(r.week))+'</b>'
+      +'<span style="font-size:11px; color:var(--muted)">'+esc(rptWeekLabel(r.week))+(r.updatedAt?' · 수정 '+esc(r.updatedAt):'')+'</span>'
+      +'</div>'+body+lock
       +'</div>';
   }).join('');
 }
@@ -2008,40 +2013,21 @@ function wrRenderBoard(reports){
   WR_LAST = reports||[];
   var box=document.getElementById("wrBoardList");
   if(!box) return;
-  box.innerHTML = wrBoardHTML(WR_LAST);
-  box.querySelectorAll('.wr-edit-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var wk = btn.getAttribute('data-week');
-      var found = WR_LAST.filter(function(r){ return r.week===wk; })[0];
-      if(!found) return;
-      document.getElementById("wrWeekInput").value = wk;
-      document.getElementById("wrSummaryInput").value = found.summary;
-      document.getElementById("wrWeekLabel").textContent = wrTitle(wk)+" ("+rptWeekLabel(wk)+")";
-      document.getElementById("wrSummaryInput").focus();
-      window.scrollTo({top:0, behavior:"smooth"});
-    });
-  });
-  box.querySelectorAll('.wr-full-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){ wrOpenFullReport(btn.getAttribute('data-week')); });
+  var list = wrMergedList_();
+  box.innerHTML = wrBoardHTML(list);
+  box.querySelectorAll('.wr-card').forEach(function(el){
+    el.addEventListener('click', function(){ wrOpenReport(el.getAttribute('data-wr-week')); });
   });
 }
 
-// ---- Phase 2(2026-08-06): 게시판 항목 "전체 리포트 보기" — 이미 로드된 LAST_DATA만 사용(서버 재조회 없음).
-// 커스텀 SVG 차트 대신 표 위주로 구성(비용·구현 시간 절감) — 하드코딩 리포트(2026-08-06 Artifact)의
-// 핵심 섹션(속도지표·지연사유 전체분류·액션전후비교·1만원 이벤트)을 라이브 데이터로 재구성한다.
+// ---- 리포트창(Phase 2의 "전체 리포트 보기" + Phase 1의 요약편집을 통합, PHASE 115) ----
 function wrRow_(cells){ return '<tr>'+cells.map(function(c,i){ return '<td'+(i===0?' style="text-align:left"':'')+'>'+c+'</td>'; }).join('')+'</tr>'; }
 function wrPct_(v){ return v==null ? '<span style="color:var(--muted)">–</span>' : (Math.round(v*1000)/10)+'%'; }
 function wrNum_(v,suf){ return v==null ? '<span style="color:var(--muted)">–</span>' : (Math.round(v*10)/10)+(suf||''); }
-function wrOpenFullReport(week){
-  var d = LAST_DATA;
-  document.getElementById("modal-box").classList.add("wide");
-  document.getElementById("modal-title").textContent = wrTitle(week)+" · 전체 리포트";
-  document.getElementById("modal-sub").textContent = "현재 로드된 최신 데이터 기준(이 게시판 항목이 가리키는 과거 시점 스냅샷이 아닙니다)";
-  if(!d){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">데이터가 아직 로드되지 않았습니다.</div>'; document.getElementById("modal").classList.add("open"); return; }
 
+// 5섹션 상세표 HTML — d는 buildWeeklyReportSnapshot_() 모양(스냅샷) 또는 LAST_DATA(라이브 폴백) 둘 다 받는다.
+function wrDetailHTML_(d){
   var html = '';
-
-  // ① 최근 4주 출고 코호트 속도지표
   var shipRows = ((d.ship && d.ship.weekly)||[]).slice(-4);
   html += '<h4 style="margin:0 0 8px">① 주차별 속도 지표(출고일 코호트)</h4>';
   html += '<table class="lcd-tbl"><thead><tr><th style="text-align:left">주차</th><th>출고량</th><th>완료율</th><th>평균설치소요일</th><th>평균재컨택</th></tr></thead><tbody>';
@@ -2051,7 +2037,6 @@ function wrOpenFullReport(week){
   });
   html += '</tbody></table>';
 
-  // ② 통화-설치 갭 + 원격접수
   var gapRows = ((d.weeklyBoard && d.weeklyBoard.weeklyGap)||[]).slice(-4);
   html += '<h4 style="margin:16px 0 8px">② 통화-설치 갭 · 원격접수(주간)</h4>';
   html += '<table class="lcd-tbl"><thead><tr><th style="text-align:left">주차</th><th>통화시도</th><th>설치완료</th><th>갭</th><th>원격접수(M열)</th></tr></thead><tbody>';
@@ -2061,7 +2046,6 @@ function wrOpenFullReport(week){
   });
   html += '</tbody></table>';
 
-  // ③ 지연사유 전체분류(최근 3주, leadSum/leadN 평균 포함)
   var reasonWeeks = ((d.reasons && d.reasons.delayCldWeekly)||[]).slice(-3);
   var cats = (d.reasons && d.reasons.delayCldCats)||[];
   html += '<h4 style="margin:16px 0 8px">③ 지연사유 전체분류(D+7일 이상, 최근 3주)</h4>';
@@ -2085,7 +2069,6 @@ function wrOpenFullReport(week){
     html += '<div class="modal-empty">지연사유 데이터가 없습니다.</div>';
   }
 
-  // ④ 설치가속화 액션 전/후 비교
   var actions = (d.actionTimeline && d.actionTimeline.actions)||[];
   html += '<h4 style="margin:16px 0 8px">④ 설치가속화 액션 시행 전/후 비교('+((d.actionTimeline&&d.actionTimeline.compareWeeks)||'?')+'주)</h4>';
   if(actions.length){
@@ -2101,7 +2084,6 @@ function wrOpenFullReport(week){
     html += '</tbody></table>';
   }
 
-  // ⑤ 1만원 이벤트 최근 일자별
   var eb = (d.eventBonusDaily||[]).slice(-7);
   html += '<h4 style="margin:16px 0 8px">⑤ 1만원 이벤트 안내 · D+1이내 설치(최근 7일)</h4>';
   if(eb.length){
@@ -2114,46 +2096,63 @@ function wrOpenFullReport(week){
   } else {
     html += '<div class="modal-empty">1만원 이벤트 데이터가 없습니다.</div>';
   }
+  return html;
+}
 
-  html += '<div style="margin-top:14px; font-size:11px; color:var(--muted)">※ 라이브 데이터 기준(현재 로드된 payload) — 게시판 요약 작성 시점의 스냅샷이 아닙니다. 과거 시점을 그대로 재현하려면 Phase 3(주차별 데이터 고정 저장)가 필요합니다.</div>';
+// 요약편집 영역 HTML — r은 wrMergedList_()가 만든 리포트 객체(빈 자리표시 포함).
+function wrEditorHTML_(r){
+  var showBadge = !r.summary && r.aiDraft;
+  var initialText = r.summary || r.aiDraft || "";
+  return '<div style="padding:10px; background:rgba(120,120,120,0.08); border-radius:8px">'
+    +'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">'
+    +(showBadge ? '<span class="wa-ai-badge">🤖 AI 추정 · 검토 전</span>' : '<span></span>')
+    +'<button type="button" class="fbtn" id="wrAiBtn" style="font-size:11px; padding:4px 10px">🤖 새로 불러오기</button>'
+    +'</div>'
+    +'<textarea id="wrEditorInput" maxlength="1000" rows="6" style="width:100%; box-sizing:border-box; resize:vertical; font-family:var(--font); font-size:13px; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--page); color:var(--text-primary)">'+esc(initialText)+'</textarea>'
+    +'<div style="display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-top:6px">'
+    +'<span id="wrEditorMsg" class="rpt-msg"></span>'
+    +'<button class="rpt-save" id="wrEditorSave">💾 요약 저장</button>'
+    +'</div></div>';
+}
 
-  document.getElementById("modal-body").innerHTML = html;
+function wrOpenReport(week){
+  var r = wrMergedList_().filter(function(x){ return x.week===week; })[0] || { week:week, summary:"", aiDraft:"", snapshot:"" };
+  var d = r.snapshot ? JSON.parse(r.snapshot) : LAST_DATA;
+  document.getElementById("modal-box").classList.add("wide");
+  document.getElementById("modal-title").textContent = wrTitle(week);
+  document.getElementById("modal-sub").innerHTML = r.snapshot
+    ? '<span style="color:var(--good,#3E8A5C)">🔒 저장 시점 스냅샷</span>'
+    : '<span style="color:var(--s-orange,#c9822e)">현재 로드된 최신 데이터 기준(이 항목의 저장 시점 스냅샷이 아직 없습니다)</span>';
+
+  var detailHtml = d ? wrDetailHTML_(d) : '<div class="modal-empty">데이터가 아직 로드되지 않았습니다.</div>';
+  document.getElementById("modal-body").innerHTML = wrEditorHTML_(r) + '<hr style="border-color:var(--border); margin:14px 0">' + detailHtml;
   document.getElementById("modal").classList.add("open");
-}
-function wrInitWeekDefault(){
-  var input = document.getElementById("wrWeekInput");
-  if(!input || input.value) return; // 이미 값이 있으면(수정 진입 등) 건드리지 않음
-  var today = new Date();
-  var y=today.getFullYear(), m=("0"+(today.getMonth()+1)).slice(-2), d=("0"+today.getDate()).slice(-2);
-  input.value = y+"-"+m+"-"+d;
-  var wk = wrMondayKey(input.value);
-  document.getElementById("wrWeekLabel").textContent = wk ? (wrTitle(wk)+" ("+rptWeekLabel(wk)+")") : "";
-}
-function wrBindEditor(){
-  var input = document.getElementById("wrWeekInput");
-  if(input && !input._wrBound){
-    input._wrBound = true;
-    input.addEventListener('change', function(){
-      var wk = wrMondayKey(input.value);
-      document.getElementById("wrWeekLabel").textContent = wk ? (wrTitle(wk)+" ("+rptWeekLabel(wk)+")") : "";
-    });
-  }
-  if(WR_BOUND) return;
-  WR_BOUND = true;
-  document.getElementById("wrSave").addEventListener('click', function(){
+
+  document.getElementById("wrAiBtn").addEventListener('click', function(){
     if(!LAST_PASS) return;
-    var wk = wrMondayKey(document.getElementById("wrWeekInput").value);
-    var summary = document.getElementById("wrSummaryInput").value.trim();
-    var msg = document.getElementById("wrMsg");
-    if(!wk){ msg.textContent="주차를 먼저 선택하세요"; msg.style.color="var(--s-red)"; return; }
-    if(!summary){ msg.textContent="요약 내용을 입력하세요"; msg.style.color="var(--s-red)"; return; }
-    msg.textContent="저장 중…"; msg.style.color="var(--muted)";
-    fetchData(LAST_PASS, function(r){
-      if(!r || !r.ok){ msg.textContent="저장 실패: "+((r&&r.error)||"알 수 없음"); msg.style.color="var(--s-red)"; return; }
-      msg.textContent="저장 완료"; msg.style.color="var(--good, #3E8A5C)";
-      wrRenderBoard(r.reports||[]);
-    }, function(m){ msg.textContent="저장 실패: "+m; msg.style.color="var(--s-red)"; },
-    { params:{ action:"setweeklyreport", week:wk, summary:summary } });
+    var msg = document.getElementById("wrEditorMsg");
+    msg.textContent = "생성 중…"; msg.style.color = "var(--muted)";
+    fetchData(LAST_PASS, function(resp){
+      if(!resp || !resp.ok){ msg.textContent = "생성 실패: "+((resp&&resp.error)||"알 수 없음"); msg.style.color = "var(--s-red)"; return; }
+      msg.textContent = "새 초안을 불러왔습니다"; msg.style.color = "var(--good,#3E8A5C)";
+      document.getElementById("wrEditorInput").value = resp.aiDraft;
+      wrRenderBoard(resp.reports||[]);
+    }, function(m){ msg.textContent = "생성 실패: "+m; msg.style.color = "var(--s-red)"; },
+    { params:{ action:"genweeklyreportai", week:week } });
+  });
+
+  document.getElementById("wrEditorSave").addEventListener('click', function(){
+    if(!LAST_PASS) return;
+    var summary = document.getElementById("wrEditorInput").value.trim();
+    var msg = document.getElementById("wrEditorMsg");
+    if(!summary){ msg.textContent = "요약 내용을 입력하세요"; msg.style.color = "var(--s-red)"; return; }
+    msg.textContent = "저장 중…"; msg.style.color = "var(--muted)";
+    fetchData(LAST_PASS, function(resp){
+      if(!resp || !resp.ok){ msg.textContent = "저장 실패: "+((resp&&resp.error)||"알 수 없음"); msg.style.color = "var(--s-red)"; return; }
+      msg.textContent = "저장 완료"; msg.style.color = "var(--good,#3E8A5C)";
+      wrRenderBoard(resp.reports||[]);
+    }, function(m){ msg.textContent = "저장 실패: "+m; msg.style.color = "var(--s-red)"; },
+    { params:{ action:"setweeklyreport", week:week, summary:summary } });
   });
 }
 
@@ -2252,8 +2251,6 @@ function renderWeeklyBoard(d){
   wbBindMemoLog();
   // 🆕 2026-08-06(Phase 1): 위클리 리포트 게시판
   wrRenderBoard((d.weeklyBoard && d.weeklyBoard.weeklyReports) || []);
-  wrInitWeekDefault();
-  wrBindEditor();
 }
 
 // 📝 주차별 메모장(누적형) — 리포트 탭 '전체 주차 메모'(주당 1건, 덮어쓰기)와는 다른 저장소다.
