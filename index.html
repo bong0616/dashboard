@@ -527,6 +527,14 @@
   .coldef .cd-warn { color: var(--s-red); font-weight: 700; }
   .coldef .cd-row { display: block; margin-bottom: 3px; }
   @media (max-width: 900px) { .coldef { font-size: 13.5px; } .coldef .cd-k { min-width: 0; display: block; } }
+  /* 🆕 2026-08-07: 분류·설명이 한 줄에 이어붙어 읽기 어렵다는 지적 — 표(2열)로 바꿔 분류 열 폭을
+     고정하고 설명을 항상 같은 위치에서 시작하게 한다(긴 분류명은 셀 안에서만 줄바꿈). */
+  .legend-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13.5px; }
+  .legend-table td { padding: 8px 16px 8px 0; vertical-align: top; border-top: 1px solid var(--border); line-height: 1.65; color: var(--text-secondary); }
+  .legend-table tr:first-child td { border-top: none; }
+  .legend-table .lg-k { width: 230px; font-weight: 700; color: var(--s-blue-d); }
+  .legend-table b { color: var(--text-primary); font-weight: 700; }
+  @media (max-width: 900px) { .legend-table, .legend-table tbody, .legend-table tr, .legend-table td { display: block; width: auto; } .legend-table tr { padding: 8px 0; border-top: 1px solid var(--border); } .legend-table tr:first-child { border-top: none; } .legend-table td { padding: 2px 0; border-top: none; } }
   /* 설치완료 그룹이 없는 표(nth-child(5)/(7) 아쿠아 세로선 규칙에서 제외) */
   table.dtable.no-grp td:nth-child(5) { border-left: 0; }
   table.dtable.no-grp td:nth-child(7) { border-right: 0; }
@@ -943,7 +951,15 @@
         <div style="margin:8px 0 2px">기준 주차 <span id="wbTrendWeekBox"></span></div>
         <div id="wbTrendBody"></div>
       </div>
-      <div class="card col-12" data-cid="wbScore"><h3>🗓️ 출고주 6주 스코어보드</h3><div class="sub">최근 6개 출고주 · 재컨택소요일·설치율·설치속도는 출고 코호트 기준(출고주 비교 탭과 동일 집계) · 배송완료→당일설치/당일통화→당일설치는 당통비교 기준(자가설치 제외) · <span style="color:var(--muted)">회색 '진행중'</span> 주는 아직 안 굳음</div><div class="tbl-wrap"><table class="dtable" id="wbScoreTable"></table></div><div class="coldef"><span class="cd-row"><span class="cd-k">출고건수</span> 그 주 출고된 물량 전체(코호트 분모).</span><span class="cd-row"><span class="cd-k">재컨택소요일</span> 메모 <b>[날짜]</b> 스탬프 간격 평균 — 출고 코호트 기준(출고주 비교 탭과 동일 집계).</span><span class="cd-row"><span class="cd-k">설치율</span> 그 주 출고 대비 <b>현재 시점</b> 설치완료 비율(설치완료건/출고건 병기).</span><span class="cd-row"><span class="cd-k">설치속도</span> 출고일→설치일 평균 소요일(설치완료건만).</span><span class="cd-row"><span class="cd-k">배송완료→당일설치<br>(배송기준)</span> 배송완료 후 <b>최초컨택일</b> 기준으로 <b>당일 설치</b>한 매장의 집계(자가설치 제외).</span><span class="cd-row"><span class="cd-k">당일통화→당일설치<br>(마지막통화일기준,<br>출고일과거포함)</span> 배송완료 후 시일이 좀 지났더라도, <b>마지막 통화일</b> 기준으로 그날 <b>당일 설치</b> 완료된 건(자가설치 제외, 참고용).</span><span class="cd-row"><span class="cd-k">반품/폐업</span> 로우데이터 I열 상태값에 반품·폐업이 포함된 건.</span></div></div>
+      <div class="card col-12" data-cid="wbScore"><h3>🗓️ 출고주 6주 스코어보드</h3><div class="sub">최근 6개 출고주 · 재컨택소요일·설치율·설치속도는 출고 코호트 기준(출고주 비교 탭과 동일 집계) · 배송완료→당일설치/당일통화→당일설치는 당통비교 기준(자가설치 제외) · <span style="color:var(--muted)">회색 '진행중'</span> 주는 아직 안 굳음</div><div class="tbl-wrap"><table class="dtable" id="wbScoreTable"></table></div><table class="legend-table"><tbody>
+<tr><td class="lg-k">출고건수</td><td>그 주 출고된 물량 전체(코호트 분모).</td></tr>
+<tr><td class="lg-k">재컨택소요일</td><td>메모 <b>[날짜]</b> 스탬프 간격 평균 — 출고 코호트 기준(출고주 비교 탭과 동일 집계).</td></tr>
+<tr><td class="lg-k">설치율</td><td>그 주 출고 대비 <b>현재 시점</b> 설치완료 비율(설치완료건/출고건 병기).</td></tr>
+<tr><td class="lg-k">설치속도</td><td>출고일→설치일 평균 소요일(설치완료건만).</td></tr>
+<tr><td class="lg-k">배송완료→당일설치(배송기준)</td><td>배송완료 후 <b>최초컨택일</b> 기준으로 <b>당일 설치</b>한 매장의 집계(자가설치 제외).</td></tr>
+<tr><td class="lg-k">당일통화→당일설치(마지막통화일기준,출고일과거포함)</td><td>배송완료 후 시일이 좀 지났더라도, <b>마지막 통화일</b> 기준으로 그날 <b>당일 설치</b> 완료된 건(자가설치 제외, 참고용).</td></tr>
+<tr><td class="lg-k">반품/폐업</td><td>로우데이터 I열 상태값에 반품·폐업이 포함된 건.</td></tr>
+</tbody></table></div>
       <div class="card col-12" data-cid="wbGap"><h3>📞 주간 통화-설치 갭</h3>
         <div class="sub">그 주 통화건수(실적로그, 자가설치 제외) 대비 설치완료건수(로우데이터 설치일 기준) 격차 · 격차가 클수록 부재·미룸 등으로 재컨택 리소스가 더 들었다는 뜻 · 주요 지연사유는 출고주 기준(지연사유 6주 추세와 동일 집계)이라 이 표의 통화·설치(활동일 기준)와 모집단이 완전히 같지는 않습니다</div>
         <div class="tbl-wrap"><table class="dtable no-grp" id="wbGapTable"></table></div>
@@ -993,10 +1009,11 @@
 
       <div class="card col-12 fill" data-cid="waD7">
         <h3>📦 출고주차별 D+7 누적 설치완료율</h3>
-        <div class="sub">출고 후 7일 이내 설치완료 비율 · 우클리핑 영향이 없는(관측 성숙) 유일한 비교 지표 · 최근 몇 주는 "집계중"으로 표시됩니다</div>
+        <div class="sub">출고 후 7일 이내 설치완료 비율 · 우클리핑 영향이 없는(관측 성숙) 유일한 비교 지표 · 최근 몇 주는 "집계중"으로 표시됩니다 · 옆 스코어보드 전 지표를 병합 표시(원천 데이터 보유기간이 짧은 열은 그 이전 주 "–")</div>
         <div class="chart-wrap ch-l"><canvas id="waD7Chart"></canvas></div>
         <div class="tbl-wrap"><table class="dtable no-grp" id="waD7Table"></table></div>
         <div class="wa-callout" id="waD7Callout"></div>
+        <table class="legend-table" id="waD7Legend"><tbody></tbody></table>
       </div>
 
       <div class="card col-6 fill" data-cid="waDangtong">
@@ -3646,7 +3663,7 @@ function paintWeeklyAction(d){
 
   paintWaSummary(d, w);
   paintWaVerdict(aiDraft, aiWeek, actionNotes);
-  paintWaD7(d7rows, w);
+  paintWaD7(d7rows, w, d);
   waAppendAiCallout("waD7Callout", "d7", aiDraft, aiWeek, w, actionNotes);
   paintWaDangtong(dtRows, w);
   waAppendAiCallout("waDangtongCallout", "dangtong", aiDraft, aiWeek, w, actionNotes);
@@ -3660,7 +3677,7 @@ function paintWeeklyAction(d){
   paintWaAiDraft(aiDraft);
 }
 
-function paintWaD7(rows, selWeek){
+function paintWaD7(rows, selWeek, d){
   var labels = rows.map(function(r){return waShortLabel(r.week);});
   var data = rows.map(function(r){ return r.d7==null? null : Math.round(r.d7*1000)/10; });
   var bg = rows.map(function(r){ return r.week===selWeek ? C["--s-blue-d"] : C["--s-aqua"]; });
@@ -3676,14 +3693,47 @@ function paintWaD7(rows, selWeek){
       plugins:{ legend:{display:false},
         tooltip:{callbacks:{label:function(ctx){ var v=ctx.parsed.y; return v==null?"집계중":v+"%"; }}} } } });
 
+  // 🆕 2026-08-07(운영자 요청): 옆 "출고주 6주 스코어보드"의 전 지표를 이 18주 표에도 week 키로
+  // 병합. 각 원천의 보유기간이 서로 달라(ship.weekly/dangtong=16주, 지연사유Long=18주) 짧은 열은
+  // 그 이전 주에 "–"가 뜬다(운영자 승인 사항 — 신규 필드 없는데 억지로 계산하지 않는다).
+  var shipByWk = {}; ((d&&d.ship&&d.ship.weekly)||[]).forEach(function(w2){ shipByWk[w2.week]=w2; });
+  var DTB_FLOOR = "2026-05-04"; // 배송완료→당일설치/당일통화→당일설치 공통 시작 주(옆 카드 WA_DANGTONG_FLOOR와 동일 기준 재사용)
+  var dtbByWk = {}; ((d&&d.weeklyBoard&&d.weeklyBoard.dangtong)||[]).forEach(function(w2){ dtbByWk[w2.week]=w2; });
+  var reasonByWk = {}; ((d&&d.reasons&&d.reasons.delayCldWeeklyLong)||[]).forEach(function(w2){
+    reasonByWk[w2.week] = (w2.top3 && w2.top3[0]) || null;
+  });
+  var dash = '<span style="color:var(--muted)">–</span>';
+
   var tbl = document.getElementById("waD7Table");
   if(tbl){
-    var head = '<thead><tr><th>출고주</th><th>출고건수</th><th>D+7 누적 설치완료율</th></tr></thead>';
+    var head = '<thead><tr><th>출고주</th><th>출고건수</th><th>D+7 누적 설치완료율</th>'
+      +'<th>설치율(현재)</th><th>설치속도</th><th>배송완료→당일설치(배송기준)</th><th>당일통화→당일설치(마지막통화일기준)</th>'
+      +'<th>반품/폐업</th><th>주요 지연사유</th></tr></thead>';
     var body = rows.slice().reverse().map(function(r){
+      var sw = shipByWk[r.week], dt = dtbByWk[r.week], rs = reasonByWk[r.week], floorOk = r.week >= DTB_FLOOR;
+      var fcCell = (floorOk && dt && dt.fcRate!=null) ? (pct(dt.fcRate,1)+' <span class="cell-pct">('+fmt(dt.fcInstall)+'/'+fmt(dt.contacted)+'건)</span>') : dash;
+      var lcCell = (floorOk && dt && dt.lcRate!=null) ? (pct(dt.lcRate,1)+' <span class="cell-pct">('+fmt(dt.lcInstall)+'/'+fmt(dt.contacted)+'건)</span>') : dash;
+      var rateCell = (sw && sw.doneRate!=null) ? (shipPct(sw.doneRate)+'% <span class="cell-pct">('+fmt(sw.installs)+'/'+fmt(sw.shipped)+'건)</span>') : dash;
+      var spdCell = (sw && sw.avgSpeed!=null) ? (round1(sw.avgSpeed)+'일') : dash;
+      var retCell = (sw && sw.returned!=null) ? fmt(sw.returned) : dash;
+      var rsCell = rs ? (esc(rs.label)+' '+fmt(rs.count)+'건') : dash;
       return '<tr'+(r.week===selWeek?' class="cur"':'')+'><td>'+rptWeekLabel(r.week)+'</td><td>'+fmt(r.shipped)+'</td><td>'
-        +(r.d7==null?'<span style="color:var(--muted)">집계중</span>':pct(r.d7,1))+'</td></tr>';
+        +(r.d7==null?'<span style="color:var(--muted)">집계중</span>':pct(r.d7,1))+'</td>'
+        +'<td>'+rateCell+'</td><td>'+spdCell+'</td><td>'+fcCell+'</td><td>'+lcCell+'</td><td>'+retCell+'</td><td>'+rsCell+'</td></tr>';
     }).join('');
     tbl.innerHTML = head+'<tbody>'+body+'</tbody>';
+  }
+  var legEl = document.getElementById("waD7Legend");
+  if(legEl){
+    legEl.innerHTML = '<tbody>'
+      +'<tr><td class="lg-k">D+7 누적 설치완료율</td><td>출고 후 7일 이내 설치완료 비율(가장 오래 보유된 지표, 18주).</td></tr>'
+      +'<tr><td class="lg-k">설치율(현재)</td><td>그 주 출고 대비 <b>현재 시점</b> 설치완료 비율(설치완료건/출고건 병기) · 16주까지만 보유, 그 이전은 "–".</td></tr>'
+      +'<tr><td class="lg-k">설치속도</td><td>출고일→설치일 평균 소요일(설치완료건만) · 16주까지만 보유.</td></tr>'
+      +'<tr><td class="lg-k">배송완료→당일설치(배송기준)</td><td>배송완료 후 <b>최초컨택일</b> 기준 당일 설치(자가설치 제외) · <b>2026-05-04주부터</b> 집계(채널분류 시작 전 데이터는 "–").</td></tr>'
+      +'<tr><td class="lg-k">당일통화→당일설치(마지막통화일기준)</td><td>배송완료 후 시일이 지났어도 <b>마지막 통화일</b> 기준 당일 설치(자가설치 제외, 참고용) · <b>2026-05-04주부터</b> 집계(그 이전은 "–").</td></tr>'
+      +'<tr><td class="lg-k">반품/폐업</td><td>로우데이터 I열 상태값에 반품·폐업 포함된 건 · 16주까지만 보유.</td></tr>'
+      +'<tr><td class="lg-k">주요 지연사유</td><td>완료+미완료 전부(출고→설치 D+7초과 또는 미완료 경과 7일+) 중 메모기준 분류로 그 주 최다 1건만 표시 · 18주 보유.</td></tr>'
+      +'</tbody>';
   }
   var co = document.getElementById("waD7Callout");
   if(co){
