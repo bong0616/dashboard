@@ -2030,10 +2030,10 @@ function wrDetailHTML_(d){
   var html = '';
   var shipRows = ((d.ship && d.ship.weekly)||[]).slice(-4);
   html += '<h4 style="margin:0 0 8px">① 주차별 속도 지표(출고일 코호트)</h4>';
-  html += '<table class="lcd-tbl"><thead><tr><th style="text-align:left">주차</th><th>출고량</th><th>완료율</th><th>평균설치소요일</th><th>평균재컨택</th></tr></thead><tbody>';
+  html += '<table class="lcd-tbl"><thead><tr><th style="text-align:left">주차</th><th>출고량</th><th>완료율</th><th>평균설치소요일</th><th>평균재컨택</th><th>반품/폐업</th></tr></thead><tbody>';
   shipRows.forEach(function(w){
     html += wrRow_([rptWeekLabel(w.week)+(w.immature?' <span style="color:var(--muted);font-size:10.5px">(진행중)</span>':''),
-      fmt(w.shipped)+'건', wrPct_(w.doneRate), wrNum_(w.avgSpeed,'일'), wrNum_(w.avgRetouch,'회')]);
+      fmt(w.shipped)+'건', wrPct_(w.doneRate), wrNum_(w.avgSpeed,'일'), wrNum_(w.avgRetouch,'회'), fmt(w.returned||0)+'건']);
   });
   html += '</tbody></table>';
 
