@@ -3016,7 +3016,9 @@ function renderCohort(c) {
 }
 
 // 🗂️ 출고월별 현재 상태 — 누적막대 차트 대신 건수+비율 표(2026-07-21, 가독성 요청)
-var COH_STATUS_CATS = ["설치완료","설치예정","미설치","부재","반품·폐업","기타"];
+// 🆕 2026-08-07: 상단 요약 타일(summary)과 동일한 9개 카테고리로 맞춤(보류·설치거부/장기지연·
+// 명의변경·위약금청구진행중이 전부 "기타"로 뭉쳐있던 것을 분리) — 대시보드API.js buildCohort_와 동기화.
+var COH_STATUS_CATS = ["설치완료","설치예정","미설치·보류","명의변경","부재총계","설치거부·장기지연","반품·폐업","위약금청구진행중","기타"];
 function renderCohortStatusTable(ms){
   var el=document.getElementById("cohStatusTable"); if(!el) return;
   ms = ms || {};
