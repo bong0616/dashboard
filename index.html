@@ -1793,14 +1793,16 @@ function wbMergeScoreRows(d){
     var dt = dtbByWk[w.week] || {};
     return {
       week:w.week, shipped:w.shipped, doneRate:w.doneRate, avgSpeed:w.avgSpeed, avgRetouch:w.avgRetouch,
-      immature:w.immature, fcRate:dt.fcRate!=null?dt.fcRate:null, lcRate:dt.lcRate!=null?dt.lcRate:null
+      immature:w.immature, fcRate:dt.fcRate!=null?dt.fcRate:null, lcRate:dt.lcRate!=null?dt.lcRate:null,
+      returned:w.returned // 🆕 2026-08-07: 반품/폐업 건수(운영자 요청, 이미 buildShipCohortScore_가 반환 중)
     };
   });
 }
 function wbGrayCell(v,unit){ return '<td><span class="cell-main" style="color:var(--muted)">'+(v==null?"–":v)+(unit||"")+'</span></td>'; }
 function wbScoreTableHTML(rows){
   var head='<thead><tr><th>출고주(월요일)</th><th>출고건수</th><th>재컨택소요일</th><th>설치율</th><th>설치속도</th>'
-    +'<th title="자가설치 제외 · 최초컨택일=설치일">배송완료→당일설치</th><th title="자가설치 제외 · 마지막통화일=설치일(참고)">당일통화→당일설치</th></tr></thead>';
+    +'<th title="자가설치 제외 · 최초컨택일=설치일">배송완료→당일설치</th><th title="자가설치 제외 · 마지막통화일=설치일(참고)">당일통화→당일설치</th>'
+    +'<th title="I열 상태값에 반품/폐업 포함된 건">반품/폐업</th></tr></thead>';
   var lastIdx=rows.length-1;
   var body=rows.map(function(w,i){
     var prev=i>0?rows[i-1]:null;
@@ -1811,10 +1813,11 @@ function wbScoreTableHTML(rows){
     var rtcCell=im?wbGrayCell(w.avgRetouch==null?null:round1(w.avgRetouch),"일"):wowCell(w.avgRetouch, prev?prev.avgRetouch:null, {valFn:round1, unit:"일", lowerBetter:true});
     var fcCell=im?wbGrayCell(shipPct(w.fcRate),"%"):wowCell(w.fcRate, prev?prev.fcRate:null, {valFn:shipPct, unit:"%"});
     var lcCell=im?wbGrayCell(shipPct(w.lcRate),"%"):wowCell(w.lcRate, prev?prev.lcRate:null, {valFn:shipPct, unit:"%"});
+    var retCell=im?wbGrayCell(w.returned):wowCell(w.returned, prev?prev.returned:null, {lowerBetter:true});
     return '<tr>'
       +'<td>'+w.week.slice(5).replace("-",".")+'주'+tag+'</td>'
       +wowCell(w.shipped, prev&&prev.shipped)
-      +rtcCell+rateCell+spdCell+fcCell+lcCell
+      +rtcCell+rateCell+spdCell+fcCell+lcCell+retCell
       +'</tr>';
   }).reverse().join("");
   return head+'<tbody>'+body+'</tbody>';
