@@ -1870,23 +1870,29 @@ function wbCldTop3_(catsObj){
     .slice(0, 3);
 }
 // series: [{week, top3:[{label,count}]}] 오름차순(과거→최근). 순위 서술(N주 연속 1위/신규진입/순위변동)을 만든다.
-function wbReasonTrendLine_(series, label, sourceTag){
+// curWeek: d.ship.weekly 기준 "금주"(wbPickMatureWeeks가 고른 성숙주)의 week 문자열. delayCldWeekly/
+// delayKWeekly는 출고주 성숙 여부와 다른 기준(지연임계 도달 행 존재)으로 채워지므로 series의 마지막 항목이
+// curWeek보다 더 최근 주일 수 있다 — series[n-1]을 그냥 쓰면 카드 안에서 "금주"가 줄마다 달라지는 사고가
+// 난다(2026-08-07 리뷰 지적). 반드시 curWeek과 week가 일치하는 항목을 찾아 그 인덱스를 "금주"로 쓴다.
+function wbReasonTrendLine_(series, curWeek, label, sourceTag){
   if (!series || !series.length) return null;
-  var n = series.length;
-  var cur = series[n-1];
+  var idx = -1;
+  for (var wi = 0; wi < series.length; wi++) { if (series[wi].week === curWeek) { idx = wi; break; } }
+  if (idx === -1) return null; // 해당 주에 아직 지연 임계 도달 행이 없음 — 다른 라인들과 같은 방식으로 조용히 건너뜀
+  var cur = series[idx];
   if (!cur.top3 || !cur.top3.length) return null;
   var parts = cur.top3.map(function(item, i){
     var rank = i + 1;
-    var text = rank + "위 " + item.label;
+    var text = rank + "위 " + esc(item.label);
     if (rank === 1) {
       var streak = 0;
-      for (var j = n - 1; j >= 0; j--) {
+      for (var j = idx; j >= 0; j--) {
         var wk = series[j];
         if (wk.top3 && wk.top3[0] && wk.top3[0].label === item.label) streak++; else break;
       }
       text += "(" + streak + "주 연속 1위)";
-    } else if (n >= 2) {
-      var prev = series[n-2], prevRank = null;
+    } else if (idx >= 1) {
+      var prev = series[idx-1], prevRank = null;
       if (prev.top3) { for (var k = 0; k < prev.top3.length; k++) { if (prev.top3[k].label === item.label) { prevRank = k+1; break; } } }
       text += prevRank == null ? "(신규 진입)" : (prevRank > rank ? "(지난주 대비 순위 상승)" : (prevRank < rank ? "(지난주 대비 순위 하락)" : ""));
     }
@@ -1925,11 +1931,11 @@ function wbBuildTrendSummary(d){
   }
 
   var cldSeries = ((d.reasons && d.reasons.delayCldWeekly) || []).map(function(w){ return { week:w.week, top3: wbCldTop3_(w.cats) }; });
-  var cldLine = wbReasonTrendLine_(cldSeries, "🗂️ 지연사유(메모기준)", ' <span class="wb-trend-src">(출처: 로우데이터 J열 메모, 상담미흡·오배송만 K열 보조)</span>');
+  var cldLine = wbReasonTrendLine_(cldSeries, cur.week, "🗂️ 지연사유(메모기준)", ' <span class="wb-trend-src">(출처: 로우데이터 J열 메모, 상담미흡·오배송만 K열 보조)</span>');
   if (cldLine) lines.push(cldLine);
 
   var kSeries = (d.reasons && d.reasons.delayKWeekly) || [];
-  var kLine = wbReasonTrendLine_(kSeries, "🏷️ 최초지연사유(K열)", ' <span class="wb-trend-src">(출처: 로우데이터 K열, 미기재 제외)</span>');
+  var kLine = wbReasonTrendLine_(kSeries, cur.week, "🏷️ 최초지연사유(K열)", ' <span class="wb-trend-src">(출처: 로우데이터 K열, 미기재 제외)</span>');
   if (kLine) lines.push(kLine);
 
   var gapWeekly = (d.weeklyBoard && d.weeklyBoard.weeklyGap) || [];
