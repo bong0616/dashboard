@@ -2316,31 +2316,51 @@ function wrEditorHTML_(r){
     +'</div></div>';
 }
 
+// 🆕 2026-08-08: 위클리 리포트는 화면 폭이 좁은 공용 모달(#modal) 대신 크기조절 가능한 별도
+// 브라우저 창으로 띄운다(운영자 요청 — 작은 창에서 가독성이 안 좋음). 같은 window name("wrReportWindow")을
+// 재사용해 카드를 여러 번 눌러도 창이 계속 늘어나지 않고 내용만 갈아끼운다.
 function wrOpenReport(week){
   var r = wrMergedList_().filter(function(x){ return x.week===week; })[0] || { week:week, summary:"", aiDraft:"", snapshot:"" };
   var d = r.snapshot ? JSON.parse(r.snapshot) : LAST_DATA;
-  document.getElementById("modal-box").classList.add("wide");
-  document.getElementById("modal-title").textContent = wrTitle(week);
-  document.getElementById("modal-sub").innerHTML = r.snapshot
+  var win = window.open('', 'wrReportWindow', 'width=1120,height=880,resizable=yes,scrollbars=yes');
+  if(!win){ alert('팝업이 차단되었습니다. 브라우저 주소창의 팝업 차단 아이콘을 눌러 이 사이트를 허용해주세요.'); return; }
+
+  var snapNote = r.snapshot
     ? '<span style="color:var(--good,#3E8A5C)">🔒 저장 시점 스냅샷</span>'
     : '<span style="color:var(--s-orange,#c9822e)">현재 로드된 최신 데이터 기준(이 항목의 저장 시점 스냅샷이 아직 없습니다)</span>';
-
   var detailHtml = d ? wrDetailHTML_(d) : '<div class="modal-empty">데이터가 아직 로드되지 않았습니다.</div>';
-  document.getElementById("modal-body").innerHTML = wrEditorHTML_(r) + '<hr style="border-color:var(--border); margin:14px 0">' + detailHtml;
-  document.getElementById("modal").classList.add("open");
-  bindNoteEditor_(document.getElementById("wrEditorInput"), { previewId:"wrEditorPreview" });
+  var styleTag = document.querySelector('style'); // 메인 문서의 CSS 변수·다크모드까지 그대로 재사용
+  var styleHtml = styleTag ? styleTag.outerHTML : '';
 
-  document.getElementById("wrAiBtn").addEventListener('click', function(){
+  win.document.open();
+  win.document.write(
+    '<!doctype html><html lang="ko"><head><meta charset="utf-8">'
+    + '<title>'+esc(wrTitle(week))+'</title>'
+    + styleHtml
+    + '<style>body{padding:24px 28px; max-width:980px; margin:0 auto} .wr-win-sub{margin:4px 0 18px; font-size:13px}</style>'
+    + '</head><body>'
+    + '<h2 style="margin-bottom:4px">'+esc(wrTitle(week))+'</h2>'
+    + '<div class="wr-win-sub">'+snapNote+'</div>'
+    + '<div id="wrEditorRoot"></div>'
+    + '<hr style="border-color:var(--border); margin:14px 0">'
+    + '<div id="wrDetailRoot">'+detailHtml+'</div>'
+    + '</body></html>'
+  );
+  win.document.close();
+  win.document.getElementById("wrEditorRoot").innerHTML = wrEditorHTML_(r);
+  bindNoteEditor_(win.document.getElementById("wrEditorInput"), { previewId:"wrEditorPreview", doc:win.document });
+
+  win.document.getElementById("wrAiBtn").addEventListener('click', function(){
     if(!LAST_PASS) return;
     var btn = this, originalHTML = btn.innerHTML;
-    var msg = document.getElementById("wrEditorMsg");
+    var msg = win.document.getElementById("wrEditorMsg");
     btn.disabled = true; btn.innerHTML = "⏳ 불러오는 중…";
     msg.textContent = "생성 중…"; msg.style.color = "var(--muted)";
     fetchData(LAST_PASS, function(resp){
       btn.disabled = false; btn.innerHTML = originalHTML;
       if(!resp || !resp.ok){ msg.textContent = "생성 실패: "+((resp&&resp.error)||"알 수 없음"); msg.style.color = "var(--s-red)"; return; }
       msg.textContent = "새 초안을 불러왔습니다"; msg.style.color = "var(--good,#3E8A5C)";
-      var ta = document.getElementById("wrEditorInput");
+      var ta = win.document.getElementById("wrEditorInput");
       ta.value = resp.aiDraft;
       ta.dispatchEvent(new Event("input", {bubbles:true}));
       wrRenderBoard(resp.reports||[]);
@@ -2348,10 +2368,10 @@ function wrOpenReport(week){
     { params:{ action:"genweeklyreportai", week:week } });
   });
 
-  document.getElementById("wrEditorSave").addEventListener('click', function(){
+  win.document.getElementById("wrEditorSave").addEventListener('click', function(){
     if(!LAST_PASS) return;
-    var summary = document.getElementById("wrEditorInput").value.trim();
-    var msg = document.getElementById("wrEditorMsg");
+    var summary = win.document.getElementById("wrEditorInput").value.trim();
+    var msg = win.document.getElementById("wrEditorMsg");
     if(!summary){ msg.textContent = "요약 내용을 입력하세요"; msg.style.color = "var(--s-red)"; return; }
     msg.textContent = "저장 중…"; msg.style.color = "var(--muted)";
     fetchData(LAST_PASS, function(resp){
@@ -3994,8 +4014,9 @@ function bindNoteEditor_(taEl, opts){
   if(!taEl || taEl.dataset.mdBound) return;
   taEl.dataset.mdBound = "1";
   opts = opts || {};
-  var cntEl = opts.cntId ? document.getElementById(opts.cntId) : null;
-  var prevEl = opts.previewId ? document.getElementById(opts.previewId) : null;
+  var doc = opts.doc || document; // 🆕 2026-08-08(위클리 리포트 별도창): 팝업 문서 대상일 때 opts.doc로 지정
+  var cntEl = opts.cntId ? doc.getElementById(opts.cntId) : null;
+  var prevEl = opts.previewId ? doc.getElementById(opts.previewId) : null;
   var maxLen = taEl.getAttribute("maxlength") || "1000";
   function refresh(){
     if(cntEl) cntEl.textContent = taEl.value.length + "/" + maxLen;
