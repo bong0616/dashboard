@@ -938,11 +938,11 @@
   <!-- WEEKLY BOARD (위클리 6주 현황판, 2026-07-30 신설) — 2026-07-31 운영자 지시로 첫 화면 -->
   <section class="tab-content active" id="tab-weeklyboard">
     <div class="grid">
-      <div class="card col-12" data-cid="wbTrend"><h3>💡 이번 주 요약</h3>
+      <div class="card col-12" data-cid="wbTrend"><h3 id="wbTrendTitle">💡 이번 주 요약</h3>
         <div class="sub" id="wbTrendSub">최근 6주 데이터 기준 자동 생성 · 저장 없이 조회할 때마다 재계산됩니다</div>
         <div id="wbTrendBody"></div>
       </div>
-      <div class="card col-12" data-cid="wbScore"><h3>🗓️ 출고주 6주 스코어보드</h3><div class="sub">최근 6개 출고주 · 재컨택소요일·설치율·설치속도는 출고 코호트 기준(출고주 비교 탭과 동일 집계) · 배송완료→당일설치/당일통화→당일설치는 당통비교 기준(자가설치 제외) · <span style="color:var(--muted)">회색 '진행중'</span> 주는 아직 안 굳음</div><div class="tbl-wrap"><table class="dtable" id="wbScoreTable"></table></div></div>
+      <div class="card col-12" data-cid="wbScore"><h3>🗓️ 출고주 6주 스코어보드</h3><div class="sub">최근 6개 출고주 · 재컨택소요일·설치율·설치속도는 출고 코호트 기준(출고주 비교 탭과 동일 집계) · 배송완료→당일설치/당일통화→당일설치는 당통비교 기준(자가설치 제외) · <span style="color:var(--muted)">회색 '진행중'</span> 주는 아직 안 굳음</div><div class="tbl-wrap"><table class="dtable" id="wbScoreTable"></table></div><div class="coldef"><span class="cd-row"><span class="cd-k">출고건수</span> 그 주 출고된 물량 전체(코호트 분모).</span><span class="cd-row"><span class="cd-k">재컨택소요일</span> 메모 <b>[날짜]</b> 스탬프 간격 평균 — 출고 코호트 기준(출고주 비교 탭과 동일 집계).</span><span class="cd-row"><span class="cd-k">설치율</span> 그 주 출고 대비 <b>현재 시점</b> 설치완료 비율(설치완료건/출고건 병기).</span><span class="cd-row"><span class="cd-k">설치속도</span> 출고일→설치일 평균 소요일(설치완료건만).</span><span class="cd-row"><span class="cd-k">배송완료→당일설치<br>(배송기준)</span> 배송완료 후 <b>최초컨택일</b> 기준으로 <b>당일 설치</b>한 매장의 집계(자가설치 제외).</span><span class="cd-row"><span class="cd-k">당일통화→당일설치<br>(마지막통화일기준,<br>출고일과거포함)</span> 배송완료 후 시일이 좀 지났더라도, <b>마지막 통화일</b> 기준으로 그날 <b>당일 설치</b> 완료된 건(자가설치 제외, 참고용).</span><span class="cd-row"><span class="cd-k">반품/폐업</span> 로우데이터 I열 상태값에 반품·폐업이 포함된 건.</span></div></div>
       <div class="card col-12" data-cid="wbGap"><h3>📞 주간 통화-설치 갭</h3>
         <div class="sub">그 주 통화건수(실적로그, 자가설치 제외) 대비 설치완료건수(로우데이터 설치일 기준) 격차 · 격차가 클수록 부재·미룸 등으로 재컨택 리소스가 더 들었다는 뜻 · 주요 지연사유는 출고주 기준(지연사유 6주 추세와 동일 집계)이라 이 표의 통화·설치(활동일 기준)와 모집단이 완전히 같지는 않습니다</div>
         <div class="tbl-wrap"><table class="dtable no-grp" id="wbGapTable"></table></div>
@@ -1488,14 +1488,16 @@ function wowCell(cur, prev, opts){
   var main = '<span class="'+mcls+'">'+(cur==null?"–":valFn(cur))+(opts.unit||"")+'</span>';
   // 설치완료 대비 비중(%) — 채널 셀에만 전달됨
   var share = (opts.share!=null) ? '<span class="share">'+opts.share+'%</span>' : '';
+  // 🆕 2026-08-07: 분자/분모 건수 병기(운영자 요청) — %만 있으면 실제 모수를 알 수 없어서.
+  var sub = (opts.sub!=null) ? '<br><span class="cell-pct">'+opts.sub+'</span>' : '';
   if (cur==null || prev==null || prev===0 || cur===prev) {
     var flat = (cur===prev && cur!=null) ? '<span class="wow flat">–</span>' : '';
-    return '<td>'+main+share+flat+'</td>';
+    return '<td>'+main+share+flat+sub+'</td>';
   }
   var up = cur > prev;
   var better = opts.lowerBetter ? (cur < prev) : (cur > prev);
   var pctv = Math.abs(Math.round((cur-prev)/prev*100));
-  return '<td>'+main+share+'<span class="wow '+(better?"up":"down")+'">'+(up?"▲":"▼")+pctv+'%</span></td>';
+  return '<td>'+main+share+'<span class="wow '+(better?"up":"down")+'">'+(up?"▲":"▼")+pctv+'%</span>'+sub+'</td>';
 }
 
 function renderWeekly(p){
@@ -1801,25 +1803,32 @@ function wbMergeScoreRows(d){
     return {
       week:w.week, shipped:w.shipped, doneRate:w.doneRate, avgSpeed:w.avgSpeed, avgRetouch:w.avgRetouch,
       immature:w.immature, fcRate:dt.fcRate!=null?dt.fcRate:null, lcRate:dt.lcRate!=null?dt.lcRate:null,
-      returned:w.returned // 🆕 2026-08-07: 반품/폐업 건수(운영자 요청, 이미 buildShipCohortScore_가 반환 중)
+      returned:w.returned, // 🆕 2026-08-07: 반품/폐업 건수(운영자 요청, 이미 buildShipCohortScore_가 반환 중)
+      // 🆕 2026-08-07: %만으론 실제 모수를 알 수 없다는 지적 — 분자/분모 건수도 함께 병기.
+      installs:w.installs, contacted:dt.contacted!=null?dt.contacted:null,
+      fcInstall:dt.fcInstall!=null?dt.fcInstall:null, lcInstall:dt.lcInstall!=null?dt.lcInstall:null
     };
   });
 }
-function wbGrayCell(v,unit){ return '<td><span class="cell-main" style="color:var(--muted)">'+(v==null?"–":v)+(unit||"")+'</span></td>'; }
+function wbGrayCell(v,unit,sub){ return '<td><span class="cell-main" style="color:var(--muted)">'+(v==null?"–":v)+(unit||"")+'</span>'+(sub!=null?'<br><span class="cell-pct">'+sub+'</span>':'')+'</td>'; }
+function wbCountSub_(num, den){ return (num!=null && den!=null) ? (fmt(num)+"/"+fmt(den)+"건") : null; }
 function wbScoreTableHTML(rows){
   var head='<thead><tr><th>출고주(월요일)</th><th>출고건수</th><th>재컨택소요일</th><th>설치율</th><th>설치속도</th>'
-    +'<th title="자가설치 제외 · 최초컨택일=설치일">배송완료→당일설치</th><th title="자가설치 제외 · 마지막통화일=설치일(참고)">당일통화→당일설치</th>'
+    +'<th title="자가설치 제외 · 최초컨택일=설치일">배송완료→당일설치(배송기준)</th><th title="자가설치 제외 · 마지막통화일=설치일(참고)">당일통화→당일설치(마지막통화일기준,출고일과거포함)</th>'
     +'<th title="I열 상태값에 반품/폐업 포함된 건">반품/폐업</th></tr></thead>';
   var lastIdx=rows.length-1;
   var body=rows.map(function(w,i){
     var prev=i>0?rows[i-1]:null;
     var im=w.immature;
     var tag=im?'<span class="curtag" style="background:var(--muted)">진행중</span>':(i===lastIdx?'<span class="curtag">최신</span>':'');
-    var rateCell=im?wbGrayCell(shipPct(w.doneRate),"%"):wowCell(w.doneRate, prev?prev.doneRate:null, {valFn:shipPct, unit:"%"});
+    var rateSub=wbCountSub_(w.installs, w.shipped);
+    var fcSub=wbCountSub_(w.fcInstall, w.contacted);
+    var lcSub=wbCountSub_(w.lcInstall, w.contacted);
+    var rateCell=im?wbGrayCell(shipPct(w.doneRate),"%",rateSub):wowCell(w.doneRate, prev?prev.doneRate:null, {valFn:shipPct, unit:"%", sub:rateSub});
     var spdCell=im?wbGrayCell(w.avgSpeed==null?null:round1(w.avgSpeed),"일"):wowCell(w.avgSpeed, prev?prev.avgSpeed:null, {valFn:round1, unit:"일", lowerBetter:true});
     var rtcCell=im?wbGrayCell(w.avgRetouch==null?null:round1(w.avgRetouch),"일"):wowCell(w.avgRetouch, prev?prev.avgRetouch:null, {valFn:round1, unit:"일", lowerBetter:true});
-    var fcCell=im?wbGrayCell(shipPct(w.fcRate),"%"):wowCell(w.fcRate, prev?prev.fcRate:null, {valFn:shipPct, unit:"%"});
-    var lcCell=im?wbGrayCell(shipPct(w.lcRate),"%"):wowCell(w.lcRate, prev?prev.lcRate:null, {valFn:shipPct, unit:"%"});
+    var fcCell=im?wbGrayCell(shipPct(w.fcRate),"%",fcSub):wowCell(w.fcRate, prev?prev.fcRate:null, {valFn:shipPct, unit:"%", sub:fcSub});
+    var lcCell=im?wbGrayCell(shipPct(w.lcRate),"%",lcSub):wowCell(w.lcRate, prev?prev.lcRate:null, {valFn:shipPct, unit:"%", sub:lcSub});
     var retCell=im?wbGrayCell(w.returned):wowCell(w.returned, prev?prev.returned:null, {lowerBetter:true});
     return '<tr>'
       +'<td>'+w.week.slice(5).replace("-",".")+'주'+tag+'</td>'
@@ -1843,15 +1852,10 @@ function wbGapTableHTML(rows){
 }
 
 // ---------- 위클리 현황판 6주 추세 요약 카드(2026-08-07 신설) ----------
-// "금주" = 배열 마지막 주가 아니라 immature===false인 가장 최근 주(진행중 코호트의 완료율·소요일이
-// 실제보다 낮게 찍히는 착시를 막기 위함, 설계문서 "금주 기준" 절 참고).
-function wbPickMatureWeeks(shipWeekly){
-  var rows = shipWeekly || [];
-  for (var i = rows.length - 1; i >= 0; i--) {
-    if (!rows[i].immature) return rows.slice(0, i + 1);
-  }
-  return null; // 전 구간이 진행중(서비스 극초반) — 카드는 데이터부족 안내로 대체
-}
+// "금주" = 항상 이번 주 월요일주(d.ship.weekly 배열의 마지막 원소) — 사용자 결정(2026-08-07):
+// 진행중이라도 매주 월요일 기준으로 그대로 잡는다. immature=true(코호트 마감 10일 미만)면
+// 완료율·소요일·반품폐업·갭이 아직 덜 채워진 값이라, 그 항목들은 "직전 5주 평균 대비 개선/악화"
+// 판정과 최고/최저치 비교를 생략하고 대신 "진행중" 안내만 붙인다(비교 자체가 아직 무의미하므로).
 function wbWeekShort(week){ return week.slice(5).replace("-",".")+"주"; }
 function wbAvgOf(arr, key){
   var vals = (arr||[]).map(function(w){ return w[key]; }).filter(function(v){ return v!=null; });
@@ -1900,42 +1904,57 @@ function wbReasonTrendLine_(series, curWeek, label, sourceTag){
   });
   return label + " 상위 " + cur.top3.length + "건: " + parts.join(" · ") + sourceTag;
 }
-// 반환값이 배열이 아니라 {lines, basisWeek} 객체인 이유(2026-08-07 리뷰 지적 Finding 1): 카드 부제(.sub)에
-// "기준 주"를 렌더링하려면 렌더 시점에 cur.week를 알아야 하는데, 그 값을 계산하는 곳이 이 함수뿐이다.
-// basisWeek===null 이면 성숙주가 아예 없다는 뜻(데이터부족 안내만 표시) — renderWeeklyBoard가 이 경우
-// 부제를 원래의 일반 문구로 되돌린다.
+// 반환값이 배열이 아니라 {lines, basisWeek, immature} 객체인 이유(2026-08-07 리뷰 지적 Finding 1
+// + 2026-08-07 후속 결정): 카드 제목/부제를 렌더링하려면 렌더 시점에 cur.week·immature 여부를
+// 알아야 하는데, 그 값을 계산하는 곳이 이 함수뿐이다. basisWeek===null이면 출고 이력이 아예 없다는
+// 뜻(데이터부족 안내만 표시) — renderWeeklyBoard가 이 경우 제목/부제를 원래의 일반 문구로 되돌린다.
 function wbBuildTrendSummary(d){
   var shipWeekly = (d.ship && d.ship.weekly) || [];
-  var mature = wbPickMatureWeeks(shipWeekly);
-  if (!mature || !mature.length) return { lines: ["집계할 데이터가 부족합니다"], basisWeek: null };
+  if (!shipWeekly.length) return { lines: ["집계할 데이터가 부족합니다"], basisWeek: null, immature: false };
 
   var lines = [];
-  var cur = mature[mature.length - 1];
+  var cur = shipWeekly[shipWeekly.length - 1]; // 사용자 결정: 항상 이번 주 월요일주(진행중이어도 그대로)
   var wkTag = wbWeekShort(cur.week);
-  var prior5 = mature.slice(-6, -1);
-  var last6 = mature.slice(-6);
+  var immature = !!cur.immature;
+  var prior5 = shipWeekly.slice(-6, -1);
+  var last6 = shipWeekly.slice(-6);
+  var progressNote = ' <span class="wb-trend-src">(진행중 — 주 마감 전까지 정상적으로 바뀝니다)</span>';
 
   if (cur.doneRate != null) {
-    var priorDone = wbAvgOf(prior5, "doneRate");
     var t1 = "📈 설치완료율 " + pct(cur.doneRate,1) + "(현재 시점 기준, " + wkTag + ")";
-    if (priorDone != null) t1 += " — 직전 5주 평균 " + pct(priorDone,1) + " 대비 " + wbTrendJudge((cur.doneRate-priorDone)*100, 2, false);
+    if (immature) {
+      t1 += progressNote;
+    } else {
+      var priorDone = wbAvgOf(prior5, "doneRate");
+      if (priorDone != null) t1 += " — 직전 5주 평균 " + pct(priorDone,1) + " 대비 " + wbTrendJudge((cur.doneRate-priorDone)*100, 2, false);
+    }
     lines.push(t1 + ' <span class="wb-trend-src">(출처: 출고코호트 스코어보드)</span>');
   }
   if (cur.avgSpeed != null) {
-    var priorSpeed = wbAvgOf(prior5, "avgSpeed");
     var t2 = "⏱️ 평균 설치소요일 " + round1(cur.avgSpeed) + "일";
-    if (priorSpeed != null) t2 += " — 직전 5주 평균 " + round1(priorSpeed) + "일 대비 " + wbTrendJudge(cur.avgSpeed-priorSpeed, 0.3, true);
+    if (immature) {
+      t2 += progressNote;
+    } else {
+      var priorSpeed = wbAvgOf(prior5, "avgSpeed");
+      if (priorSpeed != null) t2 += " — 직전 5주 평균 " + round1(priorSpeed) + "일 대비 " + wbTrendJudge(cur.avgSpeed-priorSpeed, 0.3, true);
+    }
     lines.push(t2 + ' <span class="wb-trend-src">(출처: 출고코호트 스코어보드, 출고일→설치일)</span>');
   }
   if (cur.returned != null && last6.length) {
-    var maxR = Math.max.apply(null, last6.map(function(w){ return w.returned||0; }));
-    var minR = Math.min.apply(null, last6.map(function(w){ return w.returned||0; }));
-    // Finding 2: "최근 N주"만 쓰면 아래 wbScore 표(shipRows.slice(-6), 미성숙주 포함)와 다른 6주를
-    // 가리킬 수 있어 표와 어긋나 보인다 — 실제 비교 구간(성숙주 기준 주 범위)을 이름으로 박는다.
-    var rangeTag = "최근 " + last6.length + "개 성숙주(" + wbWeekShort(last6[0].week) + "~" + wbWeekShort(last6[last6.length-1].week) + ")";
-    // Finding 2b: 전 구간이 동률(예: 전부 0건)이면 최고/최저가 의미 없으므로 태그 자체를 생략한다.
-    var tag = maxR === minR ? null : (cur.returned === maxR ? (rangeTag+" 중 최고치") : (cur.returned === minR ? (rangeTag+" 중 최저치") : null));
-    lines.push("↩️ 반품/폐업 " + cur.returned + "건" + (tag ? " — "+tag : "") + ' <span class="wb-trend-src">(출처: 로우데이터 I열 상태값)</span>');
+    var t3 = "↩️ 반품/폐업 " + cur.returned + "건";
+    if (immature) {
+      t3 += progressNote;
+    } else {
+      var maxR = Math.max.apply(null, last6.map(function(w){ return w.returned||0; }));
+      var minR = Math.min.apply(null, last6.map(function(w){ return w.returned||0; }));
+      // Finding 2: "최근 N주"만 쓰면 아래 wbScore 표(shipRows.slice(-6))와 다른 6주를 가리킬 수
+      // 있어 표와 어긋나 보인다 — 실제 비교 구간을 이름으로 박는다.
+      var rangeTag = "최근 " + last6.length + "주(" + wbWeekShort(last6[0].week) + "~" + wbWeekShort(last6[last6.length-1].week) + ")";
+      // Finding 2b: 전 구간이 동률(예: 전부 0건)이면 최고/최저가 의미 없으므로 태그 자체를 생략한다.
+      var tag = maxR === minR ? null : (cur.returned === maxR ? (rangeTag+" 중 최고치") : (cur.returned === minR ? (rangeTag+" 중 최저치") : null));
+      if (tag) t3 += " — " + tag;
+    }
+    lines.push(t3 + ' <span class="wb-trend-src">(출처: 로우데이터 I열 상태값)</span>');
   }
 
   var cldSeries = ((d.reasons && d.reasons.delayCldWeekly) || []).map(function(w){ return { week:w.week, top3: wbCldTop3_(w.cats) }; });
@@ -1963,13 +1982,18 @@ function wbBuildTrendSummary(d){
     var priorGaps = gapWeekly.slice(Math.max(0, curGapIdx-5), curGapIdx);
     var priorGapRate = wbAvgOf(priorGaps, "gapRate");
     var t6 = "📞 통화-설치 갭 " + fmt(curGap.gap) + "건(격차율 " + pct(curGap.gapRate,1) + ")";
-    // Finding 5: curGap.gapRate가 null이면 (curGap.gapRate-priorGapRate)가 NaN이 되어 wbTrendJudge가
-    // "악화"를 잘못 반환한다 — 두 값이 모두 있을 때만 판정 문구를 붙인다(다른 라인의 우아한 성능저하 패턴과 동일).
-    if (curGap.gapRate != null && priorGapRate != null) t6 += " — 직전 5주 평균 격차율 " + pct(priorGapRate,1) + " 대비 " + wbTrendJudge((curGap.gapRate-priorGapRate)*100, 5, true);
+    if (immature) {
+      // 진행중인 주는 통화·설치가 둘 다 아직 덜 쌓여 격차율이 실제보다 크게 튈 수 있어 판정을 생략한다.
+      t6 += progressNote;
+    } else if (curGap.gapRate != null && priorGapRate != null) {
+      // Finding 5: curGap.gapRate가 null이면 (curGap.gapRate-priorGapRate)가 NaN이 되어 wbTrendJudge가
+      // "악화"를 잘못 반환한다 — 두 값이 모두 있을 때만 판정 문구를 붙인다(다른 라인의 우아한 성능저하 패턴과 동일).
+      t6 += " — 직전 5주 평균 격차율 " + pct(priorGapRate,1) + " 대비 " + wbTrendJudge((curGap.gapRate-priorGapRate)*100, 5, true);
+    }
     lines.push(t6 + ' <span class="wb-trend-src">(출처: 실적로그 K열 통화건수 · 로우데이터 S열 설치건수)</span>');
   }
 
-  return { lines: lines.length ? lines : ["집계할 데이터가 부족합니다"], basisWeek: cur.week };
+  return { lines: lines.length ? lines : ["집계할 데이터가 부족합니다"], basisWeek: cur.week, immature: immature };
 }
 function wbTrendHTML(summary){
   return '<ul class="wb-trend-list">' + summary.lines.map(function(t){ return '<li>'+t+'</li>'; }).join('') + '</ul>';
@@ -2024,6 +2048,10 @@ function wbDelayRowHTML(label, vals, isTotal, weekKeys){
 function wbDelayTableHTML(){
   var weeks=(WB_DELAY_LAST&&WB_DELAY_LAST.weeks)||[], cats=(WB_DELAY_LAST&&WB_DELAY_LAST.cats)||[];
   if (!weeks.length) return '<thead><tr><th>사유</th></tr></thead><tbody><tr><td style="color:var(--muted)">아직 집계된 주가 없습니다</td></tr></tbody>';
+  // 기본 정렬(2026-08-07 사용자 요청): 매번 버튼을 눌러야 하는 게 불편하다 — 처음 로드 시 "마지막 주(가장
+  // 최근 주) 건수 내림차순"을 기본값으로 한 번 확정해둔다. 이후 사용자가 다른 열을 클릭하면 그 선택이
+  // WB_DELAY_SORT.key를 덮어써서 그대로 유지되므로, 오름/내림차순 토글 기능 자체는 그대로 남아있다.
+  if (WB_DELAY_SORT.key === null) WB_DELAY_SORT.key = 'w' + (weeks.length - 1);
   var wkLabels = weeks.map(function(w){ return w.week.slice(5).replace("-",".")+'주'; });
   var head='<thead><tr><th>사유</th>'
     +wkLabels.map(function(l,i){ return '<th>'+l+wbDelaySortIcon('w'+i)+'</th>'; }).join('')
@@ -2385,17 +2413,20 @@ function wbBindSnapButton(){
 
 function renderWeeklyBoard(d){
   if(!d) return;
-  // 🆕 2026-08-07: 6주 추세 요약 카드 · Finding 1(2026-08-07 리뷰): 부제에 실제 기준 주를 밝힌다 —
-  // 카드 본문 5~6줄 중 설치완료율 한 줄만 기준 주(wkTag)를 적고 나머지는 안 적어 "이번 주" 값처럼
-  // 읽히는 착시가 있었다(기준 주는 최대 1~2.5주 전일 수 있음).
+  // 🆕 2026-08-07: 6주 추세 요약 카드. 기준 주가 몇 주 전 데이터인지 한눈에 보이도록 제목 자체에
+  // "(MM/DD일 기준 요약데이터)"를 박고, 진행중인 주(immature)면 배지를 덧붙인다(2026-08-07 사용자 결정 —
+  // "금주"는 항상 이번 주 월요일주로 고정, 진행중이어도 그대로 잡고 배지로만 알린다).
   var wbSummary = wbBuildTrendSummary(d);
   document.getElementById("wbTrendBody").innerHTML = wbTrendHTML(wbSummary);
-  var wbSubEl = document.getElementById("wbTrendSub");
-  if (wbSubEl) {
-    wbSubEl.textContent = wbSummary.basisWeek
-      ? ("기준 주: " + wbWeekShort(wbSummary.basisWeek) + " · 최근 1~2주는 아직 집계중이라 제외 · 조회할 때마다 재계산")
-      : "최근 6주 데이터 기준 자동 생성 · 저장 없이 조회할 때마다 재계산됩니다";
+  var wbTitleEl = document.getElementById("wbTrendTitle");
+  if (wbTitleEl) {
+    wbTitleEl.innerHTML = wbSummary.basisWeek
+      ? ("💡 이번 주 요약 (" + wbSummary.basisWeek.slice(5).replace("-","/") + "일 기준 요약데이터)"
+         + (wbSummary.immature ? ' <span class="curtag" style="background:var(--s-orange)">⚠️진행중</span>' : ''))
+      : "💡 이번 주 요약";
   }
+  var wbSubEl = document.getElementById("wbTrendSub");
+  if (wbSubEl) wbSubEl.textContent = "최근 6주 데이터 기준 자동 생성 · 저장 없이 조회할 때마다 재계산됩니다";
   document.getElementById("wbScoreTable").innerHTML = wbScoreTableHTML(wbMergeScoreRows(d));
   if(d.weeklyBoard) document.getElementById("wbGapTable").innerHTML = wbGapTableHTML(d.weeklyBoard.weeklyGap);
   var reasons = d.reasons || {};
