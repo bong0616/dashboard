@@ -939,7 +939,7 @@
   <section class="tab-content active" id="tab-weeklyboard">
     <div class="grid">
       <div class="card col-12" data-cid="wbTrend"><h3>💡 이번 주 요약</h3>
-        <div class="sub">최근 6주 데이터 기준 자동 생성 · 저장 없이 조회할 때마다 재계산됩니다</div>
+        <div class="sub" id="wbTrendSub">최근 6주 데이터 기준 자동 생성 · 저장 없이 조회할 때마다 재계산됩니다</div>
         <div id="wbTrendBody"></div>
       </div>
       <div class="card col-12" data-cid="wbScore"><h3>🗓️ 출고주 6주 스코어보드</h3><div class="sub">최근 6개 출고주 · 재컨택소요일·설치율·설치속도는 출고 코호트 기준(출고주 비교 탭과 동일 집계) · 배송완료→당일설치/당일통화→당일설치는 당통비교 기준(자가설치 제외) · <span style="color:var(--muted)">회색 '진행중'</span> 주는 아직 안 굳음</div><div class="tbl-wrap"><table class="dtable" id="wbScoreTable"></table></div></div>
@@ -1900,10 +1900,14 @@ function wbReasonTrendLine_(series, curWeek, label, sourceTag){
   });
   return label + " 상위 " + cur.top3.length + "건: " + parts.join(" · ") + sourceTag;
 }
+// 반환값이 배열이 아니라 {lines, basisWeek} 객체인 이유(2026-08-07 리뷰 지적 Finding 1): 카드 부제(.sub)에
+// "기준 주"를 렌더링하려면 렌더 시점에 cur.week를 알아야 하는데, 그 값을 계산하는 곳이 이 함수뿐이다.
+// basisWeek===null 이면 성숙주가 아예 없다는 뜻(데이터부족 안내만 표시) — renderWeeklyBoard가 이 경우
+// 부제를 원래의 일반 문구로 되돌린다.
 function wbBuildTrendSummary(d){
   var shipWeekly = (d.ship && d.ship.weekly) || [];
   var mature = wbPickMatureWeeks(shipWeekly);
-  if (!mature || !mature.length) return ["집계할 데이터가 부족합니다"];
+  if (!mature || !mature.length) return { lines: ["집계할 데이터가 부족합니다"], basisWeek: null };
 
   var lines = [];
   var cur = mature[mature.length - 1];
@@ -1926,7 +1930,11 @@ function wbBuildTrendSummary(d){
   if (cur.returned != null && last6.length) {
     var maxR = Math.max.apply(null, last6.map(function(w){ return w.returned||0; }));
     var minR = Math.min.apply(null, last6.map(function(w){ return w.returned||0; }));
-    var tag = cur.returned === maxR ? ("최근 "+last6.length+"주 중 최고치") : (cur.returned === minR ? ("최근 "+last6.length+"주 중 최저치") : null);
+    // Finding 2: "최근 N주"만 쓰면 아래 wbScore 표(shipRows.slice(-6), 미성숙주 포함)와 다른 6주를
+    // 가리킬 수 있어 표와 어긋나 보인다 — 실제 비교 구간(성숙주 기준 주 범위)을 이름으로 박는다.
+    var rangeTag = "최근 " + last6.length + "개 성숙주(" + wbWeekShort(last6[0].week) + "~" + wbWeekShort(last6[last6.length-1].week) + ")";
+    // Finding 2b: 전 구간이 동률(예: 전부 0건)이면 최고/최저가 의미 없으므로 태그 자체를 생략한다.
+    var tag = maxR === minR ? null : (cur.returned === maxR ? (rangeTag+" 중 최고치") : (cur.returned === minR ? (rangeTag+" 중 최저치") : null));
     lines.push("↩️ 반품/폐업 " + cur.returned + "건" + (tag ? " — "+tag : "") + ' <span class="wb-trend-src">(출처: 로우데이터 I열 상태값)</span>');
   }
 
@@ -1935,8 +1943,17 @@ function wbBuildTrendSummary(d){
   if (cldLine) lines.push(cldLine);
 
   var kSeries = (d.reasons && d.reasons.delayKWeekly) || [];
-  var kLine = wbReasonTrendLine_(kSeries, cur.week, "🏷️ 최초지연사유(K열)", ' <span class="wb-trend-src">(출처: 로우데이터 K열, 미기재 제외)</span>');
-  if (kLine) lines.push(kLine);
+  var kSourceTag = ' <span class="wb-trend-src">(출처: 로우데이터 K열, 미기재 제외)</span>';
+  var kLine = wbReasonTrendLine_(kSeries, cur.week, "🏷️ 최초지연사유(K열)", kSourceTag);
+  if (kLine) {
+    // Finding 3: delayKWeekly 각 항목은 이미 blank(미기재 건수)를 갖고 있는데 지금까지 안 그려졌다.
+    // wbReasonTrendLine_는 idx를 반환하지 않으므로(공유 헬퍼로 만들 만큼 크지 않아) 여기서 cur.week로
+    // kSeries를 다시 한번 찾는다 — kSeries가 작은 배열이라 재탐색 비용은 무시할 만하다.
+    var kBlank = 0;
+    for (var kwi = 0; kwi < kSeries.length; kwi++) { if (kSeries[kwi].week === cur.week) { kBlank = kSeries[kwi].blank || 0; break; } }
+    kLine = kLine.slice(0, kLine.length - kSourceTag.length) + " · 미기재 " + kBlank + "건" + kSourceTag;
+    lines.push(kLine);
+  }
 
   var gapWeekly = (d.weeklyBoard && d.weeklyBoard.weeklyGap) || [];
   var curGapIdx = -1;
@@ -1946,15 +1963,16 @@ function wbBuildTrendSummary(d){
     var priorGaps = gapWeekly.slice(Math.max(0, curGapIdx-5), curGapIdx);
     var priorGapRate = wbAvgOf(priorGaps, "gapRate");
     var t6 = "📞 통화-설치 갭 " + fmt(curGap.gap) + "건(격차율 " + pct(curGap.gapRate,1) + ")";
-    if (priorGapRate != null) t6 += " — 직전 5주 평균 격차율 " + pct(priorGapRate,1) + " 대비 " + wbTrendJudge((curGap.gapRate-priorGapRate)*100, 5, true);
+    // Finding 5: curGap.gapRate가 null이면 (curGap.gapRate-priorGapRate)가 NaN이 되어 wbTrendJudge가
+    // "악화"를 잘못 반환한다 — 두 값이 모두 있을 때만 판정 문구를 붙인다(다른 라인의 우아한 성능저하 패턴과 동일).
+    if (curGap.gapRate != null && priorGapRate != null) t6 += " — 직전 5주 평균 격차율 " + pct(priorGapRate,1) + " 대비 " + wbTrendJudge((curGap.gapRate-priorGapRate)*100, 5, true);
     lines.push(t6 + ' <span class="wb-trend-src">(출처: 실적로그 K열 통화건수 · 로우데이터 S열 설치건수)</span>');
   }
 
-  return lines.length ? lines : ["집계할 데이터가 부족합니다"];
+  return { lines: lines.length ? lines : ["집계할 데이터가 부족합니다"], basisWeek: cur.week };
 }
-function wbTrendHTML(d){
-  var lines = wbBuildTrendSummary(d);
-  return '<ul class="wb-trend-list">' + lines.map(function(t){ return '<li>'+t+'</li>'; }).join('') + '</ul>';
+function wbTrendHTML(summary){
+  return '<ul class="wb-trend-list">' + summary.lines.map(function(t){ return '<li>'+t+'</li>'; }).join('') + '</ul>';
 }
 
 // 사유를 세로(행)로, 주차를 가로(헤더)로 배치 — 사유가 12종이라 가로로 나열하면 한눈에 안 들어온다는 지적(2026-07-31).
@@ -2367,7 +2385,17 @@ function wbBindSnapButton(){
 
 function renderWeeklyBoard(d){
   if(!d) return;
-  document.getElementById("wbTrendBody").innerHTML = wbTrendHTML(d); // 🆕 2026-08-07: 6주 추세 요약 카드
+  // 🆕 2026-08-07: 6주 추세 요약 카드 · Finding 1(2026-08-07 리뷰): 부제에 실제 기준 주를 밝힌다 —
+  // 카드 본문 5~6줄 중 설치완료율 한 줄만 기준 주(wkTag)를 적고 나머지는 안 적어 "이번 주" 값처럼
+  // 읽히는 착시가 있었다(기준 주는 최대 1~2.5주 전일 수 있음).
+  var wbSummary = wbBuildTrendSummary(d);
+  document.getElementById("wbTrendBody").innerHTML = wbTrendHTML(wbSummary);
+  var wbSubEl = document.getElementById("wbTrendSub");
+  if (wbSubEl) {
+    wbSubEl.textContent = wbSummary.basisWeek
+      ? ("기준 주: " + wbWeekShort(wbSummary.basisWeek) + " · 최근 1~2주는 아직 집계중이라 제외 · 조회할 때마다 재계산")
+      : "최근 6주 데이터 기준 자동 생성 · 저장 없이 조회할 때마다 재계산됩니다";
+  }
   document.getElementById("wbScoreTable").innerHTML = wbScoreTableHTML(wbMergeScoreRows(d));
   if(d.weeklyBoard) document.getElementById("wbGapTable").innerHTML = wbGapTableHTML(d.weeklyBoard.weeklyGap);
   var reasons = d.reasons || {};
