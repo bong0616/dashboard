@@ -448,6 +448,9 @@
   /* 위클리 현황판 3종 표(지연사유 6주 추세·콜리스트 스냅샷·야간원격접수) — 공란이 너무 넓고 글자가
      작다는 지적(2026-08-01) — 셋 다 셀 여백을 줄이고(가로+세로) 폰트를 키워 밀도 있게 보이게 한다. */
   #wbSnapTable, #wbDelayTable, #wbNightTable { font-size: 14px; }
+  .wb-trend-list { list-style:none; display:grid; gap:8px; margin-top:8px; }
+  .wb-trend-list li { display:flex; gap:8px; align-items:flex-start; background: color-mix(in srgb, var(--s-blue) 6%, transparent); border-left:3px solid var(--s-blue); border-radius:8px; padding:9px 12px; font-size:13.5px; line-height:1.55; color: var(--text-secondary); }
+  .wb-trend-src { font-size:11px; color: var(--muted); }
   #wbSnapTable th, #wbDelayTable th, #wbNightTable th { font-size: 12.5px; }
   #wbSnapTable th, #wbSnapTable td,
   #wbDelayTable th, #wbDelayTable td,
@@ -935,6 +938,10 @@
   <!-- WEEKLY BOARD (위클리 6주 현황판, 2026-07-30 신설) — 2026-07-31 운영자 지시로 첫 화면 -->
   <section class="tab-content active" id="tab-weeklyboard">
     <div class="grid">
+      <div class="card col-12" data-cid="wbTrend"><h3>💡 이번 주 요약</h3>
+        <div class="sub">최근 6주 데이터 기준 자동 생성 · 저장 없이 조회할 때마다 재계산됩니다</div>
+        <div id="wbTrendBody"></div>
+      </div>
       <div class="card col-12" data-cid="wbScore"><h3>🗓️ 출고주 6주 스코어보드</h3><div class="sub">최근 6개 출고주 · 재컨택소요일·설치율·설치속도는 출고 코호트 기준(출고주 비교 탭과 동일 집계) · 배송완료→당일설치/당일통화→당일설치는 당통비교 기준(자가설치 제외) · <span style="color:var(--muted)">회색 '진행중'</span> 주는 아직 안 굳음</div><div class="tbl-wrap"><table class="dtable" id="wbScoreTable"></table></div></div>
       <div class="card col-12" data-cid="wbGap"><h3>📞 주간 통화-설치 갭</h3>
         <div class="sub">그 주 통화건수(실적로그, 자가설치 제외) 대비 설치완료건수(로우데이터 설치일 기준) 격차 · 격차가 클수록 부재·미룸 등으로 재컨택 리소스가 더 들었다는 뜻 · 주요 지연사유는 출고주 기준(지연사유 6주 추세와 동일 집계)이라 이 표의 통화·설치(활동일 기준)와 모집단이 완전히 같지는 않습니다</div>
@@ -1835,6 +1842,115 @@ function wbGapTableHTML(rows){
   return html + "</tbody>";
 }
 
+// ---------- 위클리 현황판 6주 추세 요약 카드(2026-08-07 신설) ----------
+// "금주" = 배열 마지막 주가 아니라 immature===false인 가장 최근 주(진행중 코호트의 완료율·소요일이
+// 실제보다 낮게 찍히는 착시를 막기 위함, 설계문서 "금주 기준" 절 참고).
+function wbPickMatureWeeks(shipWeekly){
+  var rows = shipWeekly || [];
+  for (var i = rows.length - 1; i >= 0; i--) {
+    if (!rows[i].immature) return rows.slice(0, i + 1);
+  }
+  return null; // 전 구간이 진행중(서비스 극초반) — 카드는 데이터부족 안내로 대체
+}
+function wbWeekShort(week){ return week.slice(5).replace("-",".")+"주"; }
+function wbAvgOf(arr, key){
+  var vals = (arr||[]).map(function(w){ return w[key]; }).filter(function(v){ return v!=null; });
+  if (!vals.length) return null;
+  return vals.reduce(function(a,b){ return a+b; }, 0) / vals.length;
+}
+function wbTrendJudge(diff, thresh, lowerBetter){
+  if (Math.abs(diff) < thresh) return "보합";
+  var improved = lowerBetter ? diff < 0 : diff > 0;
+  return improved ? "개선" : "악화";
+}
+function wbCldTop3_(catsObj){
+  return Object.keys(catsObj||{}).map(function(k){ return { label:k, count:catsObj[k] }; })
+    .filter(function(x){ return x.count > 0; })
+    .sort(function(a,b){ return b.count - a.count; })
+    .slice(0, 3);
+}
+// series: [{week, top3:[{label,count}]}] 오름차순(과거→최근). 순위 서술(N주 연속 1위/신규진입/순위변동)을 만든다.
+function wbReasonTrendLine_(series, label, sourceTag){
+  if (!series || !series.length) return null;
+  var n = series.length;
+  var cur = series[n-1];
+  if (!cur.top3 || !cur.top3.length) return null;
+  var parts = cur.top3.map(function(item, i){
+    var rank = i + 1;
+    var text = rank + "위 " + item.label;
+    if (rank === 1) {
+      var streak = 0;
+      for (var j = n - 1; j >= 0; j--) {
+        var wk = series[j];
+        if (wk.top3 && wk.top3[0] && wk.top3[0].label === item.label) streak++; else break;
+      }
+      text += "(" + streak + "주 연속 1위)";
+    } else if (n >= 2) {
+      var prev = series[n-2], prevRank = null;
+      if (prev.top3) { for (var k = 0; k < prev.top3.length; k++) { if (prev.top3[k].label === item.label) { prevRank = k+1; break; } } }
+      text += prevRank == null ? "(신규 진입)" : (prevRank > rank ? "(지난주 대비 순위 상승)" : (prevRank < rank ? "(지난주 대비 순위 하락)" : ""));
+    }
+    return text;
+  });
+  return label + " 상위 " + cur.top3.length + "건: " + parts.join(" · ") + sourceTag;
+}
+function wbBuildTrendSummary(d){
+  var shipWeekly = (d.ship && d.ship.weekly) || [];
+  var mature = wbPickMatureWeeks(shipWeekly);
+  if (!mature || !mature.length) return ["집계할 데이터가 부족합니다"];
+
+  var lines = [];
+  var cur = mature[mature.length - 1];
+  var wkTag = wbWeekShort(cur.week);
+  var prior5 = mature.slice(-6, -1);
+  var last6 = mature.slice(-6);
+
+  if (cur.doneRate != null) {
+    var priorDone = wbAvgOf(prior5, "doneRate");
+    var t1 = "📈 설치완료율 " + pct(cur.doneRate,1) + "(현재 시점 기준, " + wkTag + ")";
+    if (priorDone != null) t1 += " — 직전 5주 평균 " + pct(priorDone,1) + " 대비 " + wbTrendJudge((cur.doneRate-priorDone)*100, 2, false);
+    lines.push(t1 + ' <span class="wb-trend-src">(출처: 출고코호트 스코어보드)</span>');
+  }
+  if (cur.avgSpeed != null) {
+    var priorSpeed = wbAvgOf(prior5, "avgSpeed");
+    var t2 = "⏱️ 평균 설치소요일 " + round1(cur.avgSpeed) + "일";
+    if (priorSpeed != null) t2 += " — 직전 5주 평균 " + round1(priorSpeed) + "일 대비 " + wbTrendJudge(cur.avgSpeed-priorSpeed, 0.3, true);
+    lines.push(t2 + ' <span class="wb-trend-src">(출처: 출고코호트 스코어보드, 출고일→설치일)</span>');
+  }
+  if (cur.returned != null && last6.length) {
+    var maxR = Math.max.apply(null, last6.map(function(w){ return w.returned||0; }));
+    var minR = Math.min.apply(null, last6.map(function(w){ return w.returned||0; }));
+    var tag = cur.returned === maxR ? ("최근 "+last6.length+"주 중 최고치") : (cur.returned === minR ? ("최근 "+last6.length+"주 중 최저치") : null);
+    lines.push("↩️ 반품/폐업 " + cur.returned + "건" + (tag ? " — "+tag : "") + ' <span class="wb-trend-src">(출처: 로우데이터 I열 상태값)</span>');
+  }
+
+  var cldSeries = ((d.reasons && d.reasons.delayCldWeekly) || []).map(function(w){ return { week:w.week, top3: wbCldTop3_(w.cats) }; });
+  var cldLine = wbReasonTrendLine_(cldSeries, "🗂️ 지연사유(메모기준)", ' <span class="wb-trend-src">(출처: 로우데이터 J열 메모, 상담미흡·오배송만 K열 보조)</span>');
+  if (cldLine) lines.push(cldLine);
+
+  var kSeries = (d.reasons && d.reasons.delayKWeekly) || [];
+  var kLine = wbReasonTrendLine_(kSeries, "🏷️ 최초지연사유(K열)", ' <span class="wb-trend-src">(출처: 로우데이터 K열, 미기재 제외)</span>');
+  if (kLine) lines.push(kLine);
+
+  var gapWeekly = (d.weeklyBoard && d.weeklyBoard.weeklyGap) || [];
+  var curGapIdx = -1;
+  for (var gi = 0; gi < gapWeekly.length; gi++) { if (gapWeekly[gi].week === cur.week) { curGapIdx = gi; break; } }
+  if (curGapIdx !== -1) {
+    var curGap = gapWeekly[curGapIdx];
+    var priorGaps = gapWeekly.slice(Math.max(0, curGapIdx-5), curGapIdx);
+    var priorGapRate = wbAvgOf(priorGaps, "gapRate");
+    var t6 = "📞 통화-설치 갭 " + fmt(curGap.gap) + "건(격차율 " + pct(curGap.gapRate,1) + ")";
+    if (priorGapRate != null) t6 += " — 직전 5주 평균 격차율 " + pct(priorGapRate,1) + " 대비 " + wbTrendJudge((curGap.gapRate-priorGapRate)*100, 5, true);
+    lines.push(t6 + ' <span class="wb-trend-src">(출처: 실적로그 K열 통화건수 · 로우데이터 S열 설치건수)</span>');
+  }
+
+  return lines.length ? lines : ["집계할 데이터가 부족합니다"];
+}
+function wbTrendHTML(d){
+  var lines = wbBuildTrendSummary(d);
+  return '<ul class="wb-trend-list">' + lines.map(function(t){ return '<li>'+t+'</li>'; }).join('') + '</ul>';
+}
+
 // 사유를 세로(행)로, 주차를 가로(헤더)로 배치 — 사유가 12종이라 가로로 나열하면 한눈에 안 들어온다는 지적(2026-07-31).
 // weeks는 오름차순(과거→최근)으로 들어오므로 그대로 좌→우에 쓰면 시간 흐름이 자연스럽다.
 // '총 지연건'은 정렬 대상에서 빼고 항상 맨 위 고정(헤드처럼) — 나머지 사유 행만 주차별/6주평균 값 기준으로 재정렬한다.
@@ -2245,6 +2361,7 @@ function wbBindSnapButton(){
 
 function renderWeeklyBoard(d){
   if(!d) return;
+  document.getElementById("wbTrendBody").innerHTML = wbTrendHTML(d); // 🆕 2026-08-07: 6주 추세 요약 카드
   document.getElementById("wbScoreTable").innerHTML = wbScoreTableHTML(wbMergeScoreRows(d));
   if(d.weeklyBoard) document.getElementById("wbGapTable").innerHTML = wbGapTableHTML(d.weeklyBoard.weeklyGap);
   var reasons = d.reasons || {};
