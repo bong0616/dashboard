@@ -940,6 +940,7 @@
     <div class="grid">
       <div class="card col-12" data-cid="wbTrend"><h3 id="wbTrendTitle">💡 이번 주 요약</h3>
         <div class="sub" id="wbTrendSub">최근 6주 데이터 기준 자동 생성 · 저장 없이 조회할 때마다 재계산됩니다</div>
+        <div style="margin:8px 0 2px">기준 주차 <span id="wbTrendWeekBox"></span></div>
         <div id="wbTrendBody"></div>
       </div>
       <div class="card col-12" data-cid="wbScore"><h3>🗓️ 출고주 6주 스코어보드</h3><div class="sub">최근 6개 출고주 · 재컨택소요일·설치율·설치속도는 출고 코호트 기준(출고주 비교 탭과 동일 집계) · 배송완료→당일설치/당일통화→당일설치는 당통비교 기준(자가설치 제외) · <span style="color:var(--muted)">회색 '진행중'</span> 주는 아직 안 굳음</div><div class="tbl-wrap"><table class="dtable" id="wbScoreTable"></table></div><div class="coldef"><span class="cd-row"><span class="cd-k">출고건수</span> 그 주 출고된 물량 전체(코호트 분모).</span><span class="cd-row"><span class="cd-k">재컨택소요일</span> 메모 <b>[날짜]</b> 스탬프 간격 평균 — 출고 코호트 기준(출고주 비교 탭과 동일 집계).</span><span class="cd-row"><span class="cd-k">설치율</span> 그 주 출고 대비 <b>현재 시점</b> 설치완료 비율(설치완료건/출고건 병기).</span><span class="cd-row"><span class="cd-k">설치속도</span> 출고일→설치일 평균 소요일(설치완료건만).</span><span class="cd-row"><span class="cd-k">배송완료→당일설치<br>(배송기준)</span> 배송완료 후 <b>최초컨택일</b> 기준으로 <b>당일 설치</b>한 매장의 집계(자가설치 제외).</span><span class="cd-row"><span class="cd-k">당일통화→당일설치<br>(마지막통화일기준,<br>출고일과거포함)</span> 배송완료 후 시일이 좀 지났더라도, <b>마지막 통화일</b> 기준으로 그날 <b>당일 설치</b> 완료된 건(자가설치 제외, 참고용).</span><span class="cd-row"><span class="cd-k">반품/폐업</span> 로우데이터 I열 상태값에 반품·폐업이 포함된 건.</span></div></div>
@@ -1908,16 +1909,23 @@ function wbReasonTrendLine_(series, curWeek, label, sourceTag){
 // + 2026-08-07 후속 결정): 카드 제목/부제를 렌더링하려면 렌더 시점에 cur.week·immature 여부를
 // 알아야 하는데, 그 값을 계산하는 곳이 이 함수뿐이다. basisWeek===null이면 출고 이력이 아예 없다는
 // 뜻(데이터부족 안내만 표시) — renderWeeklyBoard가 이 경우 제목/부제를 원래의 일반 문구로 되돌린다.
-function wbBuildTrendSummary(d){
+// selWeek(2026-08-07 신설, 주차 선택기): 지정하면 그 주(week 문자열)를 "금주"로 쓴다. 못 찾으면(옛
+// 선택값이 배열에서 사라짐 등) 기본값으로 폴백. 기본값 = "지난주"(배열 마지막에서 둘째, 즉 오늘
+// 기준 바로 전에 마감된 주) — 진행중 주를 기본으로 보여주지 않되, 선택기로 진행중 주도 직접 볼 수 있다.
+function wbBuildTrendSummary(d, selWeek){
   var shipWeekly = (d.ship && d.ship.weekly) || [];
   if (!shipWeekly.length) return { lines: ["집계할 데이터가 부족합니다"], basisWeek: null, immature: false };
 
+  var idx = -1;
+  if (selWeek) { for (var si = 0; si < shipWeekly.length; si++) { if (shipWeekly[si].week === selWeek) { idx = si; break; } } }
+  if (idx === -1) idx = shipWeekly.length >= 2 ? shipWeekly.length - 2 : shipWeekly.length - 1;
+
   var lines = [];
-  var cur = shipWeekly[shipWeekly.length - 1]; // 사용자 결정: 항상 이번 주 월요일주(진행중이어도 그대로)
+  var cur = shipWeekly[idx];
   var wkTag = wbWeekShort(cur.week);
   var immature = !!cur.immature;
-  var prior5 = shipWeekly.slice(-6, -1);
-  var last6 = shipWeekly.slice(-6);
+  var prior5 = shipWeekly.slice(Math.max(0, idx - 5), idx);
+  var last6 = shipWeekly.slice(Math.max(0, idx - 5), idx + 1);
   var progressNote = ' <span class="wb-trend-src">(진행중 — 주 마감 전까지 정상적으로 바뀝니다)</span>';
 
   if (cur.doneRate != null) {
@@ -2004,6 +2012,9 @@ function wbTrendHTML(summary){
 // '총 지연건'은 정렬 대상에서 빼고 항상 맨 위 고정(헤드처럼) — 나머지 사유 행만 주차별/6주평균 값 기준으로 재정렬한다.
 var WB_DELAY_LAST = null;                    // {weeks, cats} — 재정렬 시 재조회 없이 재사용
 var WB_DELAY_SORT = { key: null, dir: -1 };  // key: 'w0'..'w{n-1}'(주차) | 'avg'(6주평균) · dir: 1=오름차순, -1=내림차순
+// 🆕 2026-08-07(주차 선택기): "이번 주 요약" 카드 전용 선택 상태. null이면 wbBuildTrendSummary가
+// 기본값(지난주=배열 마지막에서 둘째)을 쓴다. 표(wbScore/wbGap/wbDelay)는 영향받지 않는다(범위 결정).
+var WB_TREND_SEL = { week: null };
 function wbDelaySortIcon(key){
   var active = WB_DELAY_SORT.key===key;
   var icon = active ? (WB_DELAY_SORT.dir===1 ? '▲' : '▼') : '⇅';
@@ -2411,12 +2422,28 @@ function wbBindSnapButton(){
   });
 }
 
-function renderWeeklyBoard(d){
-  if(!d) return;
-  // 🆕 2026-08-07: 6주 추세 요약 카드. 기준 주가 몇 주 전 데이터인지 한눈에 보이도록 제목 자체에
-  // "(MM/DD일 기준 요약데이터)"를 박고, 진행중인 주(immature)면 배지를 덧붙인다(2026-08-07 사용자 결정 —
-  // "금주"는 항상 이번 주 월요일주로 고정, 진행중이어도 그대로 잡고 배지로만 알린다).
-  var wbSummary = wbBuildTrendSummary(d);
+// 🆕 2026-08-07(주차 선택기): "이번 주 요약" 카드만 다시 그린다(표는 대상 범위 밖 — 사용자 결정).
+// 선택기 변경 시 이 함수만 재호출하면 되고, 데이터 재조회는 없다(이미 받은 d를 재사용).
+function wbPaintTrendCard(d){
+  var shipWeekly = (d.ship && d.ship.weekly) || [];
+  var defaultWeek = shipWeekly.length ? shipWeekly[shipWeekly.length >= 2 ? shipWeekly.length-2 : shipWeekly.length-1].week : null;
+  if (!WB_TREND_SEL.week || shipWeekly.every(function(w){ return w.week !== WB_TREND_SEL.week; })) WB_TREND_SEL.week = defaultWeek;
+
+  var selBox = document.getElementById("wbTrendWeekBox");
+  if (selBox && shipWeekly.length) {
+    var latestWeek = shipWeekly[shipWeekly.length-1].week;
+    var opts = shipWeekly.slice().reverse().map(function(w){
+      return '<option value="'+w.week+'"'+(w.week===WB_TREND_SEL.week?' selected':'')+'>'+wbWeekShort(w.week)
+        +(w.week===latestWeek?' (진행중)':'')+'</option>';
+    }).join('');
+    selBox.innerHTML = '<select class="rpt-week" id="wbTrendWeekSel">'+opts+'</select>';
+    document.getElementById("wbTrendWeekSel").addEventListener("change", function(){
+      WB_TREND_SEL.week = this.value;
+      wbPaintTrendCard(d);
+    });
+  }
+
+  var wbSummary = wbBuildTrendSummary(d, WB_TREND_SEL.week);
   document.getElementById("wbTrendBody").innerHTML = wbTrendHTML(wbSummary);
   var wbTitleEl = document.getElementById("wbTrendTitle");
   if (wbTitleEl) {
@@ -2427,6 +2454,10 @@ function renderWeeklyBoard(d){
   }
   var wbSubEl = document.getElementById("wbTrendSub");
   if (wbSubEl) wbSubEl.textContent = "최근 6주 데이터 기준 자동 생성 · 저장 없이 조회할 때마다 재계산됩니다";
+}
+function renderWeeklyBoard(d){
+  if(!d) return;
+  wbPaintTrendCard(d);
   document.getElementById("wbScoreTable").innerHTML = wbScoreTableHTML(wbMergeScoreRows(d));
   if(d.weeklyBoard) document.getElementById("wbGapTable").innerHTML = wbGapTableHTML(d.weeklyBoard.weeklyGap);
   var reasons = d.reasons || {};
