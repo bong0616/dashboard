@@ -3760,7 +3760,7 @@ function paintWaD7(rows, selWeek, d){
   var DTB_FLOOR = "2026-05-04"; // 배송완료→당일설치/당일통화→당일설치 공통 시작 주(옆 카드 WA_DANGTONG_FLOOR와 동일 기준 재사용)
   var dtbByWk = {}; ((d&&d.weeklyBoard&&d.weeklyBoard.dangtong)||[]).forEach(function(w2){ dtbByWk[w2.week]=w2; });
   var reasonByWk = {}; ((d&&d.reasons&&d.reasons.delayCldWeeklyLong)||[]).forEach(function(w2){
-    reasonByWk[w2.week] = (w2.top3 && w2.top3[0]) || null;
+    reasonByWk[w2.week] = w2.top1 || null;
   });
   var dash = '<span style="color:var(--muted)">–</span>';
 
