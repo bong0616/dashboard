@@ -2192,11 +2192,12 @@ function retRowHTML_(row, keyField, periodType){
     return '<td'+attrs+'><span class="cell-main">'+fmt(v)+'</span><span class="cell-pct2">'+pct.toFixed(1)+'%</span></td>';
   }).join('');
   var label = periodType==='week' ? (rptWeekLabel(row.week)+'주') : row.month;
-  return '<tr><td>'+esc(label)+'</td><td><span class="cell-main">'+fmt(row.total)+'</span></td>'+cells+'</tr>';
+  var pctTxt = row.pct==null ? '<span style="color:var(--muted)">–</span>' : row.pct+'%';
+  return '<tr><td>'+esc(label)+'</td><td>'+fmt(row.shipped||0)+'</td><td><span class="cell-main">'+fmt(row.total)+'</span></td><td>'+pctTxt+'</td>'+cells+'</tr>';
 }
 function retTableHTML_(rows, keyField, periodType){
   if(!rows || !rows.length) return '<tbody><tr><td style="color:var(--muted)">데이터 없음</td></tr></tbody>';
-  var head = '<thead><tr><th>'+(periodType==='week'?'출고주':'출고월')+'</th><th>건수</th>'
+  var head = '<thead><tr><th>'+(periodType==='week'?'출고주':'출고월')+'</th><th>출고건수</th><th>반품·폐업</th><th>반품률</th>'
     + RET_CATS.map(function(c){ return '<th>'+esc(c)+'</th>'; }).join('') + '</tr></thead>';
   var body = rows.slice().reverse().map(function(r){ return retRowHTML_(r, keyField, periodType); }).join(''); // 최신이 위
   return head + '<tbody>' + body + '</tbody>';
