@@ -3795,6 +3795,13 @@ function paintActionTimeline(atl){
     ["pmDelivery","eventBonus"].forEach(function(k){
       var el = document.getElementById("atl"+k.charAt(0).toUpperCase()+k.slice(1)+"Note");
       var txt = aiDraft.actionTimelineNotes[k];
+      // 🆕 2026-08-10(실제 발견): Gemini가 이 필드에서 반복 루프에 빠져 영어 지시문을 그대로
+      // 뱉은 사고가 있었다(액션리포트AI초안.js에서 저장 시점에도 걸러내지만, 그 수정 이전에
+      // 이미 저장된 이상 응답이 남아있을 수 있어 화면에서도 한 번 더 방어).
+      if(txt){
+        var korean=(txt.match(/[가-힣]/g)||[]).length, latin=(txt.match(/[A-Za-z]/g)||[]).length;
+        if(txt.length>300 || latin>korean) txt="";
+      }
       if(el && txt) el.innerHTML += "<div class=\"wa-callout-ai\">"+waAiBadgeHTML(WA.aiWeek, WA.actionNotes||{})+mdRender_(txt)+"</div>";
     });
   }
