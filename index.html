@@ -2185,11 +2185,17 @@ function paintCldWeekDetail(r){
 var RET_CATS = [];    // 서버가 준 고정 6개 사유 카테고리(reasons.cats 아니라 returnedAnalysis.cats)
 var RET_LAST = null;  // 마지막 payload(returnedAnalysis 전체) — 클릭 시 etc 세부분류 조회용
 function retRowHTML_(row, keyField, periodType){
+  // 🆕 2026-08-10(운영자 요청, 가독성): 그 주/월에서 건수가 가장 많은 사유 칸을 빨간색으로
+  // 강조 — 한눈에 "이번 주는 뭐가 제일 많았는지" 보이게. 0건 행(전부 0)은 강조 안 함.
+  var maxV = 0;
+  RET_CATS.forEach(function(c){ var v=(row.cats && row.cats[c])||0; if(v>maxV) maxV=v; });
   var cells = RET_CATS.map(function(c){
     var v = (row.cats && row.cats[c]) || 0;
     var attrs = v ? ' class="cld-clickable" data-period="'+esc(row[keyField])+'" data-periodtype="'+periodType+'" data-cat="'+esc(c)+'" title="클릭: 주문번호·메모 보기"' : '';
     var pct = row.total ? Math.round(v/row.total*1000)/10 : 0;
-    return '<td'+attrs+'><span class="cell-main">'+fmt(v)+'</span><span class="cell-pct2">'+pct.toFixed(1)+'%</span></td>';
+    var isMax = maxV>0 && v===maxV;
+    var mainStyle = isMax ? ' style="color:var(--s-red)"' : '';
+    return '<td'+attrs+'><span class="cell-main"'+mainStyle+'>'+fmt(v)+'</span><span class="cell-pct2">'+pct.toFixed(1)+'%</span></td>';
   }).join('');
   var label = periodType==='week' ? (rptWeekLabel(row.week)+'주') : row.month;
   var pctTxt = row.pct==null ? '<span style="color:var(--muted)">–</span>' : row.pct+'%';
