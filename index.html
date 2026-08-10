@@ -2186,7 +2186,7 @@ function wrMergedList_(){
   weeks.sort(function(a,b){ return a<b?1:(a>b?-1:0); }); // 최신 먼저
   var seen = {};
   return weeks.filter(function(w){ if(seen[w]) return false; seen[w]=true; return true; })
-    .map(function(w){ return byWeek[w] || { week:w, summary:"", updatedAt:"", aiDraft:"", aiDraftAt:"", snapshot:"" }; });
+    .map(function(w){ return byWeek[w] || { week:w, summary:"", updatedAt:"", aiDraft:"", aiDraftAt:"", hasSnapshot:false }; });
 }
 function wrBoardHTML(list){
   if(!list.length) return '<div class="modal-empty">표시할 리포트가 없습니다.</div>';
@@ -2199,7 +2199,7 @@ function wrBoardHTML(list){
     } else {
       body = '<div style="font-size:12.5px; color:var(--muted); margin-top:4px">아직 작성 안 함</div>';
     }
-    var lock = r.snapshot ? '<div style="margin-top:6px; font-size:11px; color:var(--good,#3E8A5C)">🔒 저장 시점 스냅샷 보유</div>' : '';
+    var lock = r.hasSnapshot ? '<div style="margin-top:6px; font-size:11px; color:var(--good,#3E8A5C)">🔒 저장 시점 스냅샷 보유</div>' : '';
     return '<div class="card wr-card" style="padding:14px 16px; cursor:pointer" data-wr-week="'+esc(r.week)+'">'
       +'<div style="display:flex; justify-content:space-between; align-items:baseline; gap:10px">'
       +'<b style="font-size:15px">'+esc(wrTitle(r.week))+'</b>'
@@ -2271,7 +2271,15 @@ function wrDetailHTML_(d){
   var actions = (d.actionTimeline && d.actionTimeline.actions)||[];
   html += '<h4 style="margin:16px 0 8px">④ 설치가속화 액션 시행 전/후 비교('+((d.actionTimeline&&d.actionTimeline.compareWeeks)||'?')+'주)</h4>';
   if(actions.length){
-    html += '<table class="lcd-tbl"><thead><tr><th style="text-align:left">액션</th><th>시행 전</th><th>시행 후</th><th>변화</th></tr></thead><tbody>';
+    // 🆕 PHASE 124(2026-08-10, 운영자 피드백): 이 표만 놓고 보면 "출고일축"·"마지막통화일 기준"이
+    // 무슨 기준인지, %가 무엇을 뜻하는지 알기 어렵다(메인 대시보드 카드에는 이 설명이 있지만
+    // 리포트창 표에는 빠져 있었다) → 대시보드 카드 부제와 같은 정의를 표 위에 붙인다.
+    html += '<div class="coldef" style="margin-top:0 0 10px">'
+      + '<span class="cd-row"><span class="cd-k">시행 전/후 값</span> 시행일 기준 <b>전 2주 vs 후 2주</b> 실측 비교 · %는 <b>출고일(또는 마지막통화일) 기준 D+1(당일+다음날 누적) 설치완료율</b>입니다.</span>'
+      + '<span class="cd-row"><span class="cd-k">· 출고일축</span> 그 물량이 <b>출고된 날</b>부터 며칠 만에 설치됐는지(출고일→설치일).</span>'
+      + '<span class="cd-row"><span class="cd-k">· 마지막통화일 기준</span> 상담원이 <b>마지막으로 통화한 날</b>부터 며칠 만에 설치됐는지(부재 등도 포함하는 느슨한 정의).</span>'
+      + '</div>';
+    html += '<table class="lcd-tbl"><thead><tr><th style="text-align:left">액션</th><th>시행 전(D+1)</th><th>시행 후(D+1)</th><th>변화</th></tr></thead><tbody>';
     actions.forEach(function(a){
       var delta = a.deltaPct==null ? '<span style="color:var(--muted)">–</span>' : ((a.deltaPct>=0?'+':'')+(Math.round(a.deltaPct*1000)/10)+'%p');
       var warn = [];
@@ -2320,15 +2328,15 @@ function wrEditorHTML_(r){
 // 브라우저 창으로 띄운다(운영자 요청 — 작은 창에서 가독성이 안 좋음). 같은 window name("wrReportWindow")을
 // 재사용해 카드를 여러 번 눌러도 창이 계속 늘어나지 않고 내용만 갈아끼운다.
 function wrOpenReport(week){
-  var r = wrMergedList_().filter(function(x){ return x.week===week; })[0] || { week:week, summary:"", aiDraft:"", snapshot:"" };
-  var d = r.snapshot ? JSON.parse(r.snapshot) : LAST_DATA;
+  var r = wrMergedList_().filter(function(x){ return x.week===week; })[0] || { week:week, summary:"", aiDraft:"", hasSnapshot:false };
   var win = window.open('', 'wrReportWindow', 'width=1120,height=880,resizable=yes,scrollbars=yes');
   if(!win){ alert('팝업이 차단되었습니다. 브라우저 주소창의 팝업 차단 아이콘을 눌러 이 사이트를 허용해주세요.'); return; }
 
-  var snapNote = r.snapshot
-    ? '<span style="color:var(--good,#3E8A5C)">🔒 저장 시점 스냅샷</span>'
-    : '<span style="color:var(--s-orange,#c9822e)">현재 로드된 최신 데이터 기준(이 항목의 저장 시점 스냅샷이 아직 없습니다)</span>';
-  var detailHtml = d ? wrDetailHTML_(d) : '<div class="modal-empty">데이터가 아직 로드되지 않았습니다.</div>';
+  // 🚨 PHASE 124(2026-08-10): 스냅샷 원문(주당 ~6.6KB)을 메인 payload에서 뺐다(매주 계속 쌓여
+  // CacheService 100KB 한도를 다시 넘긴 원인 — PHASE 104와 같은 "무한누적 필드" 함정).
+  // 창을 여는 이 시점에 그 주 1건만 서버에서 불러온다(메모 원문 드릴다운과 같은 on-demand 패턴).
+  // detailHtml은 아래에서 재할당되는 클로저 변수 — 노션복사 버튼이 클릭 시점 값을 그대로 읽는다.
+  var detailHtml = '<div class="modal-empty">불러오는 중…</div>';
   var styleTag = document.querySelector('style'); // 메인 문서의 CSS 변수·다크모드까지 그대로 재사용
   var styleHtml = styleTag ? styleTag.outerHTML : '';
 
@@ -2344,7 +2352,7 @@ function wrOpenReport(week){
     + '<style>body{display:block; padding:24px 28px; max-width:980px; margin:0 auto} .wr-win-sub{margin:4px 0 18px; font-size:13px}</style>'
     + '</head><body>'
     + '<h2 style="margin-bottom:4px">'+esc(wrTitle(week))+'</h2>'
-    + '<div class="wr-win-sub">'+snapNote+'</div>'
+    + '<div class="wr-win-sub" id="wrSnapNote">불러오는 중…</div>'
     // 🆕 2026-08-08(노션 복사): 제목+요약+상세표만 골라 클립보드에 담아 노션에 붙이면 표·제목으로
     // 바로 변환되게 한다(회의 중 반복 작업 — 운영자 요청, 검토 후 합의된 방식).
     + '<div style="margin:2px 0 16px">'
@@ -2359,6 +2367,25 @@ function wrOpenReport(week){
   win.document.close();
   win.document.getElementById("wrEditorRoot").innerHTML = wrEditorHTML_(r);
   bindNoteEditor_(win.document.getElementById("wrEditorInput"), { previewId:"wrEditorPreview", doc:win.document });
+
+  function renderDetail(d, isSnapshot){
+    detailHtml = d ? wrDetailHTML_(d) : '<div class="modal-empty">데이터가 아직 로드되지 않았습니다.</div>';
+    var noteEl = win.document.getElementById("wrSnapNote");
+    if(noteEl) noteEl.innerHTML = isSnapshot
+      ? '<span style="color:var(--good,#3E8A5C)">🔒 저장 시점 스냅샷</span>'
+      : '<span style="color:var(--s-orange,#c9822e)">현재 로드된 최신 데이터 기준(이 항목의 저장 시점 스냅샷이 아직 없습니다)</span>';
+    var rootEl = win.document.getElementById("wrDetailRoot");
+    if(rootEl) rootEl.innerHTML = detailHtml;
+  }
+  if(r.hasSnapshot){
+    fetchData(LAST_PASS, function(resp){
+      var parsed = null;
+      if(resp && resp.ok && resp.snapshot){ try { parsed = JSON.parse(resp.snapshot); } catch(e){ parsed = null; } }
+      renderDetail(parsed || LAST_DATA, !!parsed);
+    }, function(){ renderDetail(LAST_DATA, false); }, { params:{ action:"wrsnapshot", week:week } });
+  } else {
+    renderDetail(LAST_DATA, false);
+  }
 
   // 🆕 2026-08-08: 버튼·서식툴바·입력창 껍데기는 빼고 제목+요약(현재 입력값)+상세표만 골라
   // text/html·text/plain 둘 다 클립보드에 담는다 — 노션이 text/html을 해석해 표·제목 블록으로 붙인다.
