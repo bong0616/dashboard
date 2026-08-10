@@ -2135,12 +2135,26 @@ function openCldWeekDetail(week, cat){
     paintCldWeekDetail(r);
   }, failLastCallDetail, { params:{ action:"cldweekdetail", week:week, cat:cat } });
 }
+// 🆕 2026-08-10(PHASE 125): "기타" 셀 상세 모달 맨 위에 메모/K열 기준 자동 세분류(집계)를 먼저
+// 보여준다 — 이미 payload(WB_DELAY_LAST.weeks[].etc)에 있는 값이라 추가 조회 없이 즉시 표시.
+// 원문을 하나씩 읽기 전에 "대체로 뭐가 늘었는지"부터 보이게 하려는 목적(운영자 요청).
+function cldEtcSummaryHTML_(week, cat){
+  if(cat!=="기타") return "";
+  var wk=((WB_DELAY_LAST&&WB_DELAY_LAST.weeks)||[]).filter(function(w){return w.week===week;})[0];
+  var etc=(wk&&wk.etc)||[];
+  if(!etc.length) return "";
+  return '<div class="coldef" style="margin:0 0 12px">'
+    +'<span class="cd-row"><span class="cd-k">세부 분류</span> 메모 키워드·K열(설치지연사유) 코드 기준 자동 세분류(집계, 아래는 원문):</span>'
+    +'<span class="cd-row">'+etc.map(function(e){return esc(e.label)+' <b>'+fmt(e.count)+'건</b>';}).join(' · ')+'</span>'
+    +'</div>';
+}
 function paintCldWeekDetail(r){
   var rows=r.rows||[];
   document.getElementById("modal-title").textContent=rptWeekLabel(r.week)+"주 · "+r.cat+" ("+fmt(r.count||0)+"건)";
   document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · J열 메모 원문 · 출고일 오름차순";
-  if(!rows.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">해당 주·사유에 건이 없습니다.</div>'; return; }
+  if(!rows.length){ document.getElementById("modal-body").innerHTML=cldEtcSummaryHTML_(r.week,r.cat)+'<div class="modal-empty">해당 주·사유에 건이 없습니다.</div>'; return; }
   document.getElementById("modal-body").innerHTML=
+    cldEtcSummaryHTML_(r.week,r.cat)+
     '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
     '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>출고</th><th>상태</th><th>설치</th><th>메모 (J열)</th></tr></thead><tbody>'+
     rows.map(function(x){
@@ -2262,6 +2276,17 @@ function wrDetailHTML_(d){
       var perWeek = reasonWeeks.map(function(w){ return fmt((w.cats&&w.cats[c])||0); });
       var avgLead = totals[c].leadN>0 ? wrNum_(totals[c].leadSum/totals[c].leadN,'일')+' (n='+totals[c].leadN+')' : '<span style="color:var(--muted)">-</span>';
       html += wrRow_([esc(c), perWeek.join('</td><td>'), '<b>'+fmt(totals[c].cnt)+'</b>', avgLead]);
+      // 🆕 2026-08-10(PHASE 125, 운영자 요청 — "기타 증가, 사유확인 필요"): "기타" 행 아래에 메모/K열
+      // 기준 자동 세분류(3주 합산)를 바로 붙인다. 클릭해서 원문 하나씩 확인할 필요 없이 여기서 바로 보임.
+      if(c==="기타"){
+        var etcTotals={};
+        reasonWeeks.forEach(function(w){ (w.etc||[]).forEach(function(e){ etcTotals[e.label]=(etcTotals[e.label]||0)+e.count; }); });
+        var etcKeys=Object.keys(etcTotals).sort(function(a,b){return etcTotals[b]-etcTotals[a];});
+        if(etcKeys.length){
+          var etcText=etcKeys.map(function(k){return esc(k)+' '+etcTotals[k]+'건';}).join(' · ');
+          html += '<tr><td colspan="'+(reasonWeeks.length+3)+'" style="font-size:11.5px;color:var(--muted);padding-top:0">└ 세부(메모·K열 기준): '+etcText+'</td></tr>';
+        }
+      }
     });
     html += '</tbody></table>';
   } else {
@@ -4331,6 +4356,13 @@ function openDrill(title){
   document.getElementById("modal-sub").textContent="불러오는 중…";
   document.getElementById("modal-body").innerHTML='<div class="modal-empty">불러오는 중…</div>';
   document.getElementById("modal").classList.add("open");
+}
+// 🐛 2026-08-10(PHASE 125, 실사용 중 발견): openAgingDetail/openCldWeekDetail이 존재하지 않는
+// failLastCallDetail을 참조해 클릭 즉시 ReferenceError로 죽었다(조회 시도 자체가 안 되고 "불러오는
+// 중…"에 멈춤 — 느려서가 아니라 요청이 안 나간 것). openDrill과 짝이 되는 실패 핸들러를 신설.
+function failLastCallDetail(msg){
+  document.getElementById("modal-sub").textContent="조회 실패";
+  document.getElementById("modal-body").innerHTML='<div class="modal-empty" style="color:var(--s-red)">'+esc(msg||"조회 실패")+'</div>';
 }
 function openAgingDetail(idx){
   var def=AGING_DEFS[idx]; if(!def || !LAST_PASS) return;
