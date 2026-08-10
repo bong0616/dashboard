@@ -723,7 +723,8 @@
   <div class="navitem active" data-tab="weeklyboard" id="nav-weeklyboard"><span class="ic">📅</span><div>위클리 현황판<small>출고주 6주 스코어보드</small></div><span class="navcaret" id="weeklyboard-caret">▸</span></div>
   <div class="navitem navchild" data-tab="weeklyaction" id="nav-weeklyaction" style="display:none"><span class="ic">📄</span><div>보고서<small>1만원·야간원격·당일배송 주차별 검토</small></div></div>
   <div class="navitem navchild" data-tab="weeklyreport" id="nav-weeklyreport" style="display:none"><span class="ic">🗒️</span><div>위클리 리포트<small>주차별 요약 게시판</small></div></div>
-  <div class="navitem" data-tab="cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div></div>
+  <div class="navitem" data-tab="cohort" id="nav-cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div><span class="navcaret" id="cohort-caret">▸</span></div>
+  <div class="navitem navchild" data-tab="returned" id="nav-returned" style="display:none"><span class="ic">↩️</span><div>미설치 분석<small>반품·폐업 사유(2026년~)</small></div></div>
   <div class="navitem" data-tab="accel"><span class="ic">🚀</span><div>설치가속화 Action<small>배송반영·통화 당일설치</small></div></div>
   <div class="navitem" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량 · 주간 요약</small></div></div>
   <!-- 하위 '월·주·일 흐름'은 2026-07-28 삭제(주간/일간 비교와 완전 중복) → 성과는 이제 하위메뉴 없음(캐럿 제거) -->
@@ -920,6 +921,18 @@
         <div class="sub">그 주 <b>출고건</b>이 출고 후 며칠 만에 몇 % 설치완료됐는지 (누적) · 최근 18주(약 4개월) · 최신 주가 위 · <b style="color:var(--s-blue-d)">–</b> 는 아직 그 날짜가 지나지 않아 관측 불가(0%가 아님) · 이번 주(진행중)는 <b style="color:var(--s-orange)">집계중</b> 표기 — 출고 마감 전이라 출고건수·설치율 모두 계속 바뀝니다(금요일 출고분은 리스트 반영 지연으로 다음 주 월요일에 늘어날 수 있음)</div>
         <div class="tbl-wrap"><table class="dtable no-grp curve-tbl" id="cohCurveTable"></table></div>
       </div>
+    </div>
+  </section>
+
+  <!-- RETURNED ANALYSIS (미설치 분석 — 반품·폐업 사유, 2026-08-10 PHASE 129 신설) -->
+  <section class="tab-content" id="tab-returned">
+    <div class="grid">
+      <div class="card col-12" data-cid="retHead">
+        <h3>↩️ 미설치 분석 — 반품·폐업 사유</h3>
+        <div class="sub">로우데이터 I열(상태)에 <b>반품·폐업</b>이 포함된 2026년 출고건만 · 출고 <b>주차별</b>·<b>월별</b> 집계 · 사유는 J열 메모 키워드 우선, 없으면 K열(설치지연사유) 코드로 대체 · 셀 클릭 시 주문번호·메모 상세</div>
+      </div>
+      <div class="card col-12" data-cid="retWeeklyTable"><h3>🗓️ 출고 주차별</h3><div class="tbl-wrap"><table class="dtable no-grp" id="retWeeklyTable"></table></div></div>
+      <div class="card col-12" data-cid="retMonthlyTable"><h3>📆 출고 월별 합산</h3><div class="tbl-wrap"><table class="dtable no-grp" id="retMonthlyTable"></table></div></div>
     </div>
   </section>
 
@@ -1259,6 +1272,7 @@ function render(d) {
   renderShipDaily(d.ship);
   renderAccel(d.accel);
   renderReport(d.perf, d.weeklyNotes);
+  renderReturnedAnalysis(d.returnedAnalysis);
 }
 
 function tile(label, ic, val, unit, sub, accent, tip) {
@@ -2163,6 +2177,84 @@ function paintCldWeekDetail(r){
         '<td class="lcd-date">'+esc(x.shipped)+'</td>'+
         '<td class="lcd-st">'+esc(x.status)+'</td>'+
         '<td class="lcd-date">'+(x.installed?esc(x.installed):'<span style="color:var(--muted)">미완료</span>')+'</td>'+
+        '<td class="lcd-memo'+(memo?'':' empty')+'">'+(memo?esc(memo):"(메모 없음)")+'</td></tr>';
+    }).join('')+'</tbody></table>';
+}
+
+// ==================== 출고 코호트 → 미설치 분석(반품·폐업 사유, PHASE 129, 2026-08-10) ====================
+var RET_CATS = [];    // 서버가 준 고정 6개 사유 카테고리(reasons.cats 아니라 returnedAnalysis.cats)
+var RET_LAST = null;  // 마지막 payload(returnedAnalysis 전체) — 클릭 시 etc 세부분류 조회용
+function retRowHTML_(row, keyField, periodType){
+  var cells = RET_CATS.map(function(c){
+    var v = (row.cats && row.cats[c]) || 0;
+    var attrs = v ? ' class="cld-clickable" data-period="'+esc(row[keyField])+'" data-periodtype="'+periodType+'" data-cat="'+esc(c)+'" title="클릭: 주문번호·메모 보기"' : '';
+    var pct = row.total ? Math.round(v/row.total*1000)/10 : 0;
+    return '<td'+attrs+'><span class="cell-main">'+fmt(v)+'</span><span class="cell-pct2">'+pct.toFixed(1)+'%</span></td>';
+  }).join('');
+  var label = periodType==='week' ? (rptWeekLabel(row.week)+'주') : row.month;
+  return '<tr><td>'+esc(label)+'</td><td><span class="cell-main">'+fmt(row.total)+'</span></td>'+cells+'</tr>';
+}
+function retTableHTML_(rows, keyField, periodType){
+  if(!rows || !rows.length) return '<tbody><tr><td style="color:var(--muted)">데이터 없음</td></tr></tbody>';
+  var head = '<thead><tr><th>'+(periodType==='week'?'출고주':'출고월')+'</th><th>건수</th>'
+    + RET_CATS.map(function(c){ return '<th>'+esc(c)+'</th>'; }).join('') + '</tr></thead>';
+  var body = rows.slice().reverse().map(function(r){ return retRowHTML_(r, keyField, periodType); }).join(''); // 최신이 위
+  return head + '<tbody>' + body + '</tbody>';
+}
+function retTableClickHandler_(e){
+  var td = e.target.closest ? e.target.closest('td.cld-clickable') : null;
+  if(!td) return;
+  openReturnedDetail(td.getAttribute('data-periodtype'), td.getAttribute('data-period'), td.getAttribute('data-cat'));
+}
+function renderReturnedAnalysis(ra){
+  if(!ra) return;
+  RET_CATS = ra.cats || [];
+  RET_LAST = ra;
+  var wEl = document.getElementById("retWeeklyTable");
+  if(wEl){ wEl.innerHTML = retTableHTML_(ra.weekly, "week", "week"); wEl.onclick = retTableClickHandler_; }
+  var mEl = document.getElementById("retMonthlyTable");
+  if(mEl){ mEl.innerHTML = retTableHTML_(ra.monthly, "month", "month"); mEl.onclick = retTableClickHandler_; }
+}
+function openReturnedDetail(periodType, period, cat){
+  if(!period || !cat || !LAST_PASS) return;
+  var label = periodType==='week' ? (rptWeekLabel(period)+'주') : period;
+  openDrill(label+' · '+cat);
+  fetchData(LAST_PASS, function(r){
+    if(!r || !r.ok){ failLastCallDetail((r&&r.error)||"조회 실패"); return; }
+    paintReturnedDetail(r);
+  }, failLastCallDetail, { params:{ action:"returneddetail", periodType:periodType, period:period, cat:cat } });
+}
+// "기타" 셀 상세 맨 위에 K열 기준 세부분류(집계)를 먼저 보여준다 — cldEtcSummaryHTML_와 동일 패턴,
+// 이미 payload(RET_LAST)에 있는 값이라 추가 조회 없음.
+function returnedEtcSummaryHTML_(periodType, period, cat){
+  if(cat!=="기타" || !RET_LAST) return "";
+  var rows = periodType==='week' ? RET_LAST.weekly : RET_LAST.monthly;
+  var keyField = periodType==='week' ? 'week' : 'month';
+  var row = (rows||[]).filter(function(r){ return r[keyField]===period; })[0];
+  var etc = (row && row.etc) || [];
+  if(!etc.length) return "";
+  return '<div class="coldef" style="margin:0 0 12px">'
+    +'<span class="cd-row"><span class="cd-k">세부 분류</span> 메모에 상세내용이 없어 K열(설치지연사유) 코드로 대체한 사유 집계:</span>'
+    +'<span class="cd-row">'+etc.map(function(x){return esc(x.label)+' <b>'+fmt(x.count)+'건</b>';}).join(' · ')+'</span>'
+    +'</div>';
+}
+function paintReturnedDetail(r){
+  var rows=r.rows||[];
+  var label = r.periodType==='week' ? (rptWeekLabel(r.period)+'주') : r.period;
+  document.getElementById("modal-title").textContent=label+" · "+r.cat+" ("+fmt(r.count||0)+"건)";
+  document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · J열 메모 원문 · 출고일 오름차순";
+  var summary = returnedEtcSummaryHTML_(r.periodType, r.period, r.cat);
+  if(!rows.length){ document.getElementById("modal-body").innerHTML=summary+'<div class="modal-empty">해당 기간·사유에 건이 없습니다.</div>'; return; }
+  document.getElementById("modal-body").innerHTML=
+    summary+
+    '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
+    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>출고</th><th>상태</th><th>K열 사유</th><th>메모 (J열)</th></tr></thead><tbody>'+
+    rows.map(function(x){
+      var memo=String(x.memo||"").trim();
+      return '<tr><td class="lcd-ord">'+esc(x.order)+'</td>'+
+        '<td class="lcd-date">'+esc(x.shipped)+'</td>'+
+        '<td class="lcd-st">'+esc(x.status)+'</td>'+
+        '<td class="lcd-st">'+(x.reasonCode?esc(x.reasonCode):'<span style="color:var(--muted)">–</span>')+'</td>'+
         '<td class="lcd-memo'+(memo?'':' empty')+'">'+(memo?esc(memo):"(메모 없음)")+'</td></tr>';
     }).join('')+'</tbody></table>';
 }
@@ -4427,7 +4519,8 @@ var TAB_SECTIONS={
   shipweekly:["ship"], shipdaily:["ship"], accel:["accel","perf"],
   weeklyboard:["ship","reasons","weeklyBoard"],
   weeklyaction:["cohort","weeklyBoard","accel"],
-  weeklyreport:["weeklyBoard"]
+  weeklyreport:["weeklyBoard"],
+  returned:["returned"]
 };
 var TAB_LOADED={}; // 탭 → 마지막으로 로드된 기간키("start|end", 전체는 ""). 같은 기간 재조회 방지.
 function periodKey(){ return CUR_PERIOD.start ? (CUR_PERIOD.start+"|"+CUR_PERIOD.end) : ""; }
@@ -4435,7 +4528,7 @@ function markAllLoaded(pk){ Object.keys(TAB_SECTIONS).forEach(function(t){ TAB_L
 // 부분 payload(섹션조회)를 기존 LAST_DATA 위에 덮어쓴다 — null 섹션은 이전값 유지(다른 탭은 안 건드림).
 function mergeData(base, part){
   if(!base) return part;
-  ["meta","ops","perf","cohort","reasons","ship","accel","weeklyBoard","achievement","weeklyNotes","kpiTargets","layout"].forEach(function(k){
+  ["meta","ops","perf","cohort","reasons","ship","accel","weeklyBoard","achievement","weeklyNotes","kpiTargets","layout","returnedAnalysis"].forEach(function(k){
     if(part[k]!=null) base[k]=part[k];
   });
   return base;
@@ -4868,7 +4961,7 @@ function shareTabLayout(){
   if(s) s.addEventListener("click", shareTabLayout);
 })();
 
-var TABMETA={ ops:["운영 대시보드","① 현재 잔여 업무량(콜리스트 기준) + ② 주간 요약(구 현황판) · 두 섹션은 기준 시점이 다릅니다"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(K) 대비 설치예정(D) 병기"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 1만원 이벤트·야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"], weeklyreport:["위클리 리포트","주차별 리포트 게시판 · 주요회의내용 4-5줄 요약(수기 입력, Phase 1)"] };
+var TABMETA={ ops:["운영 대시보드","① 현재 잔여 업무량(콜리스트 기준) + ② 주간 요약(구 현황판) · 두 섹션은 기준 시점이 다릅니다"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(K) 대비 설치예정(D) 병기"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 1만원 이벤트·야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"], weeklyreport:["위클리 리포트","주차별 리포트 게시판 · 주요회의내용 4-5줄 요약(수기 입력, Phase 1)"], returned:["미설치 분석","로우데이터 I열(상태)이 반품·폐업인 2026년 출고건 · 출고 주차·월별 집계 + J열 메모/K열 사유 키워드 분류"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
@@ -4878,7 +4971,7 @@ document.querySelectorAll(".navitem").forEach(function(n){
     // (D+7 지연분석은 2026-07-23 부서별 지연원인 탭으로 통합돼 하위 메뉴에서 빠졌다)
     // perf 는 2026-07-28 하위메뉴(월·주·일 흐름)가 사라져 TOGGLE 에서 뺐다.
     // ⚠️ 여기 남겨두면 getElementById("nav-flow") 가 null 이라 성과 탭 클릭이 통째로 죽는다.
-    var TOGGLE = { shipweekly:{children:["nav-shipdaily"], caret:"shipweekly-caret"}, weeklyboard:{children:["nav-weeklyaction","nav-weeklyreport"], caret:"weeklyboard-caret"} };
+    var TOGGLE = { shipweekly:{children:["nav-shipdaily"], caret:"shipweekly-caret"}, weeklyboard:{children:["nav-weeklyaction","nav-weeklyreport"], caret:"weeklyboard-caret"}, cohort:{children:["nav-returned"], caret:"cohort-caret"} };
     if (TOGGLE[t]) {
       var first = document.getElementById(TOGGLE[t].children[0]);
       var open = (first.style.display === "none");
