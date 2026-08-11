@@ -4690,8 +4690,13 @@ document.getElementById("f-month").addEventListener("change", function(){
 });
 document.getElementById("f-week").addEventListener("change", function(){ /* 선택만, 조회는 버튼에서 */ });
 ["f-start","f-end"].forEach(function(id){
-  document.getElementById(id).addEventListener("change", function(){
+  var dateEl = document.getElementById(id);
+  dateEl.addEventListener("change", function(){
     if(this.value){ document.getElementById("f-month").value=""; populateWeekFilter(""); } // 날짜 선택 시 월/주 비움
+  });
+  // 네이티브 달력 아이콘을 정확히 눌러야만 달력이 뜨는 문제 방지 — 박스 어디를 눌러도 열리게 함
+  dateEl.addEventListener("click", function(){
+    if(typeof this.showPicker === "function"){ try{ this.showPicker(); }catch(e){} }
   });
 });
 
