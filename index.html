@@ -94,13 +94,13 @@
   .badge { display:inline-flex; align-items:center; gap:6px; background: color-mix(in srgb, var(--good) 14%, transparent); color: var(--good); font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
 
   /* Stat tiles */
-  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 14px; margin-bottom: 18px; }
-  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
-  .tile .t-label { font-size: 12.5px; color: var(--text-secondary); font-weight: 500; display:flex; align-items:center; gap:7px; }
-  .tile .t-ic { width: 26px; height: 26px; border-radius: 8px; display:inline-flex; align-items:center; justify-content:center; font-size:14px; background: color-mix(in srgb, var(--s-blue) 12%, transparent); }
-  .tile .t-val { font-size: 30px; font-weight: 700; letter-spacing: -1px; margin-top: 10px; font-variant-numeric: tabular-nums; }
-  .tile .t-val .unit { font-size: 15px; font-weight: 600; color: var(--text-secondary); margin-left: 2px; }
-  .tile .t-sub { font-size: 12px; color: var(--muted); margin-top: 5px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 11px; margin-bottom: 14px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow); }
+  .tile .t-label { font-size: 11.5px; color: var(--text-secondary); font-weight: 500; display:flex; align-items:center; gap:6px; }
+  .tile .t-ic { width: 22px; height: 22px; border-radius: 7px; display:inline-flex; align-items:center; justify-content:center; font-size:12.5px; background: color-mix(in srgb, var(--s-blue) 12%, transparent); }
+  .tile .t-val { font-size: 23px; font-weight: 700; letter-spacing: -0.5px; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .tile .t-val .unit { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-left: 2px; }
+  .tile .t-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
   .tile.accent { background: linear-gradient(135deg, var(--s-blue), var(--s-blue-d)); color:#fff; border: none; }
   .tile.accent .t-label, .tile.accent .t-sub { color: rgba(255,255,255,.85); }
   .tile.accent .t-ic { background: rgba(255,255,255,.2); }
@@ -197,6 +197,16 @@
   .rpt-save:disabled { opacity:.55; cursor:default; }
   .rpt-cnt { font-size:11.5px; color: var(--muted); font-variant-numeric:tabular-nums; }
   .rpt-msg { font-size:12px; font-weight:600; } .rpt-msg.ok { color:#1f9e57; } .rpt-msg.err { color: var(--critical); }
+  /* 산정 기준 토글(2026-08-11, 운영자 요청) — 기본 접힘, "산정기준 보기"는 눈에 띄게 큰 텍스트 */
+  .rpt-methodology { margin: 14px 0; border:1px solid var(--border); border-radius:10px; padding:4px 14px; background: var(--page); }
+  .rpt-methodology summary { cursor:pointer; font-size:15.5px; font-weight:700; color: var(--text-primary); padding:10px 0; list-style:none; }
+  .rpt-methodology summary::-webkit-details-marker { display:none; }
+  .rpt-methodology summary::before { content:"▶"; display:inline-block; font-size:11px; margin-right:8px; color: var(--s-blue); transition: transform .15s; }
+  .rpt-methodology[open] summary::before { transform: rotate(90deg); }
+  .rpt-methodology ul { margin:2px 0 10px; padding-left:20px; }
+  .rpt-methodology li { font-size:13px; line-height:1.7; color: var(--text-secondary); margin-bottom:4px; }
+  .rpt-methodology li b { color: var(--text-primary); }
+  .rpt-methodology-note { font-size:12px; color: var(--muted); padding-bottom:12px; }
   /* 목표 대비 달성/초과 (속도·재컨택) */
   .tgt-ok { color:#1f9e57 !important; } .tgt-over { color: var(--critical) !important; }
   .tgt-badge { font-size:10.5px; font-weight:700; padding:1px 6px; border-radius:6px; white-space:nowrap; }
@@ -281,15 +291,18 @@
   .wa-ai-badge { display:inline-block; font-size:10.5px; font-weight:700; color: var(--s-yellow);
     background: color-mix(in srgb, var(--s-yellow) 16%, transparent); border-radius:99px; padding:2px 9px;
     margin-left:8px; vertical-align:middle; letter-spacing:.01em; }
-  .wa-verdict-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-top:10px; }
-  .wa-vcard { border:1px solid var(--border); border-radius:10px; padding:16px 16px 14px; background: var(--page);
-    display:flex; flex-direction:column; gap:8px; }
-  .wa-vtag { align-self:flex-start; font-size:11px; font-weight:700; padding:3px 9px; border-radius:99px; letter-spacing:.01em; }
+  .wa-verdict-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:11px; margin-top:8px; }
+  .wa-vcard { border:1px solid var(--border); border-radius:10px; padding:12px 13px 11px; background: var(--page);
+    display:flex; flex-direction:column; gap:5px; }
+  .wa-vtag { align-self:flex-start; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:99px; letter-spacing:.01em; }
   .wa-vtag.good { background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good); }
   .wa-vtag.bad { background: color-mix(in srgb, var(--s-red) 16%, transparent); color: var(--s-red); }
   .wa-vtag.warn { background: color-mix(in srgb, var(--s-yellow) 16%, transparent); color: var(--s-yellow); }
-  .wa-vtitle { font-weight:700; font-size:14px; color: var(--text-primary); }
-  .wa-vbody { font-size:13px; line-height:1.6; color: var(--text-secondary); }
+  .wa-vtitle { font-weight:700; font-size:13px; color: var(--text-primary); }
+  /* 가독성 개선(2026-08-11): AI 서술문이 3~4줄로 길어 카드가 커 보이던 것을 3줄로 시각적 말줄임.
+     원문은 title 속성으로 그대로 남겨 hover 시 전문 확인 가능. */
+  .wa-vbody { font-size:12.5px; line-height:1.55; color: var(--text-secondary);
+    display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
   .wa-callout-ai { margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); }
   /* '보고서' 탭(2026-08-04, 옛 라벨 '액션 효과 리포트') — 운영자가 예전에 세션 안에서 봤던 정적
      Artifact 리포트의 "위아래로 읽는 문서" 느낌을 재현. 데이터·JS(WA.*)는 전혀 안 건드리고
@@ -300,12 +313,12 @@
      여백이 넓어 한 줄에 카드 두 개는 들어갈 공간이 있다"고 지적 — `.grid > .card{grid-column:1/-1}`
      전체 강제 규칙을 없애고 폭만 넓혀서, HTML에 이미 있던 col-12/col-6 배치(당일배송·야간원격·
      콜D1·1만원이벤트 4장만 원래부터 col-6 짝)가 자연스럽게 살아나게 했다. */
-  #tab-weeklyaction .grid { max-width: 1240px; margin: 0 auto; gap: 22px; }
-  #tab-weeklyaction .card { padding: 24px 28px 22px; }
-  #tab-weeklyaction [data-cid="waHead"] { padding-bottom: 22px; border-bottom: 1px solid var(--border); }
-  #tab-weeklyaction [data-cid="waHead"] h3 { font-size: 20px; letter-spacing: -.4px; }
+  #tab-weeklyaction .grid { max-width: 1240px; margin: 0 auto; gap: 16px; }
+  #tab-weeklyaction .card { padding: 16px 20px 16px; }
+  #tab-weeklyaction [data-cid="waHead"] { padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+  #tab-weeklyaction [data-cid="waHead"] h3 { font-size: 17px; letter-spacing: -.3px; }
   #tab-weeklyaction [data-cid="waVerdict"] { background: color-mix(in srgb, var(--s-blue) 5%, var(--surface-1)); border-color: color-mix(in srgb, var(--s-blue) 22%, var(--border)); }
-  #tab-weeklyaction .wa-verdict-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  #tab-weeklyaction .wa-verdict-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
   #tab-weeklyaction #waDangtongTable, #tab-weeklyaction #waNightTable, #tab-weeklyaction #waCallD1Table { min-width: 0; width: 100%; }
   /* 운영자 코멘트 서식 툴바(2026-08-04) — 저장은 여전히 일반 텍스트라, 굵게/글머리기호는 슬랙처럼
      "**텍스트**"·"- 항목" 표기를 텍스트에 직접 끼워 넣는 방식이다(별도 렌더링 화면은 아직 없음). */
@@ -973,6 +986,7 @@
 <tr><td class="lg-k">당일통화→당일설치(마지막통화일기준,출고일과거포함)</td><td>배송완료 후 시일이 좀 지났더라도, <b>마지막 통화일</b> 기준으로 그날 <b>당일 설치</b> 완료된 건(자가설치 제외, 참고용).</td></tr>
 <tr><td class="lg-k">반품/폐업</td><td>로우데이터 I열 상태값에 반품·폐업이 포함된 건.</td></tr>
 </tbody></table></div>
+      <div class="card col-12" data-cid="wbCohortCurve"><h3>📈 최근 5주 출고 코호트 누적 설치완료율</h3><div class="sub">출고주 기준 · 각 셀 = 출고 후 그 날짜까지 누적 설치완료율(분모=그 주 출고 전체) · D+0~D+30 전체 추이는 좌측 "출고 코호트" 메뉴 참고</div><div class="tbl-wrap" id="wbCohortMini"></div></div>
       <div class="card col-12" data-cid="wbGap"><h3>📞 주간 통화-설치 갭</h3>
         <div class="sub">그 주 통화건수(실적로그, 자가설치 제외) 대비 설치완료건수(로우데이터 설치일 기준) 격차 · 격차가 클수록 부재·미룸 등으로 재컨택 리소스가 더 들었다는 뜻 · 주요 지연사유는 출고주 기준(지연사유 6주 추세와 동일 집계)이라 이 표의 통화·설치(활동일 기준)와 모집단이 완전히 같지는 않습니다</div>
         <div class="tbl-wrap"><table class="dtable no-grp" id="wbGapTable"></table></div>
@@ -2697,6 +2711,7 @@ function renderWeeklyBoard(d){
   if(!d) return;
   wbPaintTrendCard(d);
   document.getElementById("wbScoreTable").innerHTML = wbScoreTableHTML(wbMergeScoreRows(d));
+  renderRecentCohortMini((d.cohort&&d.cohort.shipCurve)||[], "wbCohortMini", 5);
   if(d.weeklyBoard) document.getElementById("wbGapTable").innerHTML = wbGapTableHTML(d.weeklyBoard.weeklyGap);
   if(d.weeklyBoard) document.getElementById("wbShipDeliveryTable").innerHTML = wbShipDeliveryTableHTML(d.weeklyBoard.shipToDelivery);
   var reasons = d.reasons || {};
@@ -3463,6 +3478,19 @@ function renderReport(perf, notesIn){
     +    '<div class="note-preview-label">미리보기</div><div class="note-preview" id="rptNotePreview"></div>'
     +    '<div class="rpt-note-foot"><button class="rpt-save" id="rptSave">코멘트 저장</button><span class="rpt-cnt" id="rptCnt"></span><span class="rpt-msg" id="rptMsg"></span></div></div>'
     +'</div>'
+    +'<details class="rpt-methodology">'
+    +  '<summary>📐 산정 기준 보기</summary>'
+    +  '<ul>'
+    +    '<li><b>기준 주차</b>: 월요일 시작 1주 단위(위 드롭다운에서 선택) · "전주 대비"는 바로 직전 캘린더 주와 비교</li>'
+    +    '<li><b>✅ 설치완료</b>: 그 주에 설치일이 찍힌 건수</li>'
+    +    '<li><b>📞 통화</b>: 그 주 실적로그에 집계된 통화시도 건수(자가설치 건 제외)</li>'
+    +    '<li><b>📦 출고</b>: 그 주에 출고일이 찍힌 전체 건수 — 설치 진행 여부와 무관한 그 주 출고량 전체</li>'
+    +    '<li><b>🔧 자가설치</b>: 그 주 설치완료 건 중 담당자가 "자가설치"로 분류된 건수</li>'
+    +    '<li><b>⏱️ 평균 설치속도</b>: 그 주 설치완료 건들의 (설치일 − 출고일) 일수 평균 — 낮을수록 좋음(목표 ≤3.4일)</li>'
+    +    '<li><b>🔁 평균 재컨택주기</b>: 그 주 설치완료 건 중 <b>메모에 날짜 기록이 2번 이상</b> 있는 건만 대상 — 건별 날짜 간격 평균을 다시 전체 평균 — 낮을수록 좋음(목표 ≤2.2일)</li>'
+    +  '</ul>'
+    +  '<div class="rpt-methodology-note">※ 메모에 날짜가 1번뿐이거나 없는 건은 간격을 계산할 수 없어 재컨택주기 집계에서 제외됩니다.</div>'
+    +'</details>'
     +'<div class="rpt-tiles" id="rptTiles"></div>'
     +'<div class="rpt-summary"><div class="rs-head">📌 전주 대비 요약</div><ul id="rptSummary"></ul></div>';
   document.getElementById("rptWeek").addEventListener("change", function(){ RPT.week=this.value; paintReport(rows, notes); });
@@ -3840,7 +3868,7 @@ function paintWaVerdict(draft, aiWeek, actionNotes){
     var cls = waVerdictTagClass(v.tag);
     return '<div class="wa-vcard"><span class="wa-vtag '+cls+'">'+esc(v.tag||"")+'</span>'
       +'<div class="wa-vtitle">'+esc(v.action||"")+'</div>'
-      +'<div class="wa-vbody">'+esc(v.summary||"")+'</div></div>';
+      +'<div class="wa-vbody" title="'+esc(v.summary||"")+'">'+esc(v.summary||"")+'</div></div>';
   }).join('');
 }
 // 차트 카드 캘아웃에 AI 문장을 덧붙인다 — 단, **선택주(selWeek)가 AI가 실제로 쓴 주(aiWeek)와 같을
@@ -3860,6 +3888,24 @@ function waAppendAiCallout(elId, calloutKey, draft, aiWeek, selWeek, actionNotes
   }
 }
 
+// 📈 [2026-08-11 신설] "출고 코호트" 탭의 D+0~D+30 누적표(최근 18주 전체)를 '위클리 현황판'
+//   탭에도 최근 N주·핵심 체크포인트(D+7/D+14/D+30)만 간추려 보여준다 — 30개 열짜리 표를
+//   그대로 넣으면 너무 무거워서, 대표 구간만 뽑은 축약판. targetId/weeks를 받으므로 다른
+//   탭에서도 재사용 가능.
+function renderRecentCohortMini(shipCurve, targetId, weeks){
+  var el = document.getElementById(targetId); if(!el) return;
+  var n = weeks || 5;
+  var rows = (shipCurve||[]).slice(-n).slice().reverse(); // 최신이 맨 위
+  if(!rows.length){ el.innerHTML='<div class="rt-l">출고 코호트 데이터가 없습니다.</div>'; return; }
+  function cell(v){ if(v==null) return '<td class="cv-na">–</td>'; return '<td>'+(Math.round(v*1000)/10).toFixed(1)+'%</td>'; }
+  var body = rows.map(function(r){
+    var cum = r.cum||[];
+    var tag = r.partial ? ' <span class="share" style="color:var(--s-orange)">집계중</span>' : '';
+    return '<tr><td>'+rptWeekLabel(r.week)+'주 <span style="color:var(--muted)">('+fmt(r.shipped)+'건)</span>'+tag+'</td>'
+      + cell(cum[7]) + cell(cum[14]) + cell(cum[30]) + '</tr>';
+  }).join("");
+  el.innerHTML = '<table class="dtable no-grp"><thead><tr><th>출고주</th><th>D+7</th><th>D+14</th><th>D+30</th></tr></thead><tbody>'+body+'</tbody></table>';
+}
 function paintWeeklyAction(d){
   var w = WA.week;
   var rangeEl = document.getElementById("waWeekRange");
