@@ -2648,8 +2648,11 @@ function wbRenderSnapTable(){
     });
   }
   var head='<thead><tr><th>분류</th><th>건수'+wbSnapSortArrows('count')+'</th><th>비중'+wbSnapSortArrows('pct')+'</th><th>평균경과일'+wbSnapSortArrows('avgAge')+'</th></tr></thead>';
+  // 🆕 2026-08-12: 분류명 클릭 → 그 분류의 표본(주문번호·출고일·J열메모) 팝업. 이미 조회해둔
+  // WB_SNAP_LAST.samples를 그대로 쓰므로 재조회 없이 즉시 뜬다(0건인 분류는 클릭 비활성).
   var body=rows.map(function(c){
-    return '<tr><td>'+esc(c.cat)+'</td><td>'+fmt(c.count)+'</td><td>'+c.pct+'%</td><td>'+(c.avgAge!=null?c.avgAge:'–')+'</td></tr>';
+    var clickable = c.count>0 ? ' class="wb-snap-cat" data-cat="'+esc(c.cat)+'" style="cursor:pointer;text-decoration:underline dotted;" title="클릭: 주문번호·출고일·메모 세부내역"' : '';
+    return '<tr><td'+clickable+'>'+esc(c.cat)+'</td><td>'+fmt(c.count)+'</td><td>'+c.pct+'%</td><td>'+(c.avgAge!=null?c.avgAge:'–')+'</td></tr>';
   }).join('');
   box.innerHTML = head+'<tbody>'+body+'</tbody>';
   box.querySelectorAll('.sort-btn').forEach(function(btn){
@@ -2660,6 +2663,34 @@ function wbRenderSnapTable(){
       wbRenderSnapTable();
     });
   });
+  box.querySelectorAll('.wb-snap-cat').forEach(function(td){
+    td.addEventListener('click', function(){ openCldSnapDetail(td.getAttribute('data-cat')); });
+  });
+}
+// 분류 클릭 상세팝업 — 재조회 없이 이미 받은 samples[분류]를 그대로 표시(주문번호·출고일·J열메모).
+// 표본은 서버가 분류당 최대 SAMP(요청 시 samples=40)건까지만 담아온다 — 분류 건수가 그보다 많으면 안내문 추가.
+function openCldSnapDetail(catName){
+  var r=WB_SNAP_LAST;
+  if(!r || !catName) return;
+  var samp=(r.samples&&r.samples[catName])||[];
+  var catRow=(r.memoCats||[]).filter(function(c){return c.cat===catName;})[0];
+  var total=catRow?catRow.count:samp.length;
+  document.getElementById("modal-box").classList.add("wide");
+  document.getElementById("modal-title").textContent="콜리스트 지연사유 · "+catName+" ("+fmt(total)+"건)";
+  document.getElementById("modal-sub").textContent="콜리스트 A열 주문번호 · G열 출고일 · J열 메모 원문"
+    +(total>samp.length?" · 표본 "+samp.length+"건만 표시(전체 "+total+"건 중)":"");
+  if(!samp.length){ document.getElementById("modal-body").innerHTML='<div class="modal-empty">표본 데이터가 없습니다.</div>'; document.getElementById("modal").classList.add("open"); return; }
+  document.getElementById("modal-body").innerHTML=
+    '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
+    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>경과</th><th>출고</th><th>메모 (J열)</th></tr></thead><tbody>'+
+    samp.map(function(x){
+      var memo=String(x.memo||"").trim();
+      return '<tr><td class="lcd-ord">'+esc(x.order)+'</td>'+
+        '<td class="lcd-date"><span class="lcd-lead">D+'+x.age+'</span></td>'+
+        '<td class="lcd-date">'+esc(x.shipped||"–")+'</td>'+
+        '<td class="lcd-memo'+(memo?'':' empty')+'">'+(memo?esc(memo):"(메모 없음)")+'</td></tr>';
+    }).join('')+'</tbody></table>';
+  document.getElementById("modal").classList.add("open");
 }
 function wbBindSnapButton(){
   if (WB_SNAP_BOUND) return;
@@ -2670,7 +2701,8 @@ function wbBindSnapButton(){
     if(!LAST_PASS) return;
     var days=Math.max(1, Math.min(60, Number(document.getElementById("wbSnapDays").value)||7));
     document.getElementById("wbSnapTable").innerHTML='<tbody><tr><td style="color:var(--muted)">조회 중…</td></tr></tbody>';
-    fetchData(LAST_PASS, wbRenderSnap, function(msg){ wbRenderSnap({ok:false, error:msg}); }, {params:{action:"cldelay", days:days}});
+    // samples=40(서버 최대치) — 분류 클릭 상세팝업에서 재조회 없이 표본을 보여주려면 넉넉히 받아둬야 한다.
+    fetchData(LAST_PASS, wbRenderSnap, function(msg){ wbRenderSnap({ok:false, error:msg}); }, {params:{action:"cldelay", days:days, samples:40}});
   });
 }
 
