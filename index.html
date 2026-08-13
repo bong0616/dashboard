@@ -1172,7 +1172,7 @@
     </div>
   </section>
 
-  <!-- 당일통화당일설치(2026-08-13, PHASE 146) — 월별/주별/일별 세 탭이 payload.callInstall 하나를
+  <!-- 당일통화당일설치(2026-08-13, PHASE 150) — 월별/주별/일별 세 탭이 payload.callInstall 하나를
        공유한다. 서버는 한 번만 계산해 내려주고(rawVals0/logVals0 시계열 뷰포트), 월/주 집계와
        일별 날짜범위 재슬라이스는 전부 클라이언트에서 처리한다(서버 재호출 없음). -->
   <section class="tab-content" id="tab-c2iMonth">
@@ -3562,7 +3562,7 @@ function saveAchInstall(){
 }
 
 // ===== 📝 주차별 리포트 (전주 대비 자동 요약 + 수기 코멘트) =====
-// ---------- 당일통화당일설치(2026-08-13, PHASE 146) — 월/주/일 3탭이 payload.callInstall 하나를 공유 ----------
+// ---------- 당일통화당일설치(2026-08-13, PHASE 150) — 월/주/일 3탭이 payload.callInstall 하나를 공유 ----------
 var C2I_DATA = null;      // {managers, dayRows, windowStart, windowEnd} — 서버가 한 번만 계산해 내려준 것
 var C2I_DAY_INIT = false; // 날짜입력 기본값은 최초 1회만 세팅(사용자가 고른 값을 데이터 새로고침마다 덮어쓰지 않도록)
 
