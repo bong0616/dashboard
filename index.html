@@ -2407,7 +2407,7 @@ function wrBoardHTML(list){
     return '<div class="card wr-card" style="padding:14px 16px; cursor:pointer" data-wr-week="'+esc(r.week)+'">'
       +'<div style="display:flex; justify-content:space-between; align-items:baseline; gap:10px">'
       +'<b style="font-size:15px">'+esc(wrTitle(r.week))+'</b>'
-      +'<span style="font-size:11px; color:var(--muted)">'+esc(rptWeekLabel(r.week))+(r.updatedAt?' · 수정 '+esc(r.updatedAt):'')+'</span>'
+      +'<span style="font-size:11px; color:var(--muted)">'+esc(wrPeriodLabel(r.week))+(r.updatedAt?' · 수정 '+esc(r.updatedAt):'')+'</span>'
       +'</div>'+body+lock
       +'</div>';
   }).join('');
@@ -3682,6 +3682,16 @@ var RPT = { week:null };
 function rptR1(v){ return v==null?null:Math.round(v*10)/10; }
 function rptFmt(r1){ return r1 ? function(v){ return v==null?"–":rptR1(v); } : fmt; }
 function rptWeekLabel(w){ var s=w.split("-"); var mon=new Date(+s[0],+s[1]-1,+s[2]); var sun=new Date(mon); sun.setDate(mon.getDate()+6); return (mon.getMonth()+1)+"/"+mon.getDate()+"~"+(sun.getMonth()+1)+"/"+sun.getDate(); }
+// 🆕 2026-08-13(월/목 분리): 위클리 리포트 카드의 날짜(d)는 이제 월요일이 아닐 수 있다(목요일 카드).
+// rptWeekLabel(위 함수)은 입력을 무조건 월요일로 가정해 그 날+6일을 "주"로 보여주므로, 목요일
+// 날짜를 그대로 넣으면 "8/13~8/19"처럼 실제로 다루는 주(8/10~8/16)와 다른 기간이 표시된다.
+// 이 함수는 먼저 그 날짜가 속한 주의 월요일을 다시 찾은 뒤 같은 방식으로 범위를 계산한다.
+function wrPeriodLabel(d){
+  var s=d.split("-"); var dt=new Date(+s[0],+s[1]-1,+s[2]);
+  var dow=dt.getDay(); var diff=(dow===0)?-6:(1-dow);
+  var mon=new Date(dt.getFullYear(),dt.getMonth(),dt.getDate()+diff);
+  return rptWeekLabel(mon.getFullYear()+"-"+("0"+(mon.getMonth()+1)).slice(-2)+"-"+("0"+mon.getDate()).slice(-2));
+}
 function rptDelta(cur, prev, low, vf, unit){
   vf=vf||fmt; unit=unit||"";
   if(cur==null||prev==null) return {cls:"muted", arrow:"", pct:null, diff:null, txt:"전주 비교 불가"};
