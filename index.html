@@ -3572,11 +3572,14 @@ function c2iAddDays(ds, n){ var d=new Date(ds+"T00:00:00"); d.setDate(d.getDate(
 function c2iWeekKey(ds){ var d=new Date(ds+"T00:00:00"); var wd=d.getDay(); d.setDate(d.getDate()-((wd+6)%7)); return c2iYmd(d); }
 
 // dayRows를 keyFn 기준으로 묶어 담당자별 소계를 낸다(월/주/일별 뷰가 전부 이 한 함수를 공유).
+// anyReady = 이 묶음에 U열(통화시점상태, 2026-07-21 신설) 이후 날짜가 하나라도 있는지 — 하나도
+// 없으면 sameDayInstall은 "측정된 0"이 아니라 "애초에 잴 수 없음"이라 화면에서 "–"로 갈라 보여줘야 한다.
 function c2iGroupBy(rows, keyFn, labelFn){
   var map = {};
   rows.forEach(function(r){
     var k = keyFn(r);
-    if(!map[k]) map[k] = { key:k, label:labelFn(k), byManager:{} };
+    if(!map[k]) map[k] = { key:k, label:labelFn(k), byManager:{}, anyReady:false };
+    if(r.uReady) map[k].anyReady = true;
     if(!map[k].byManager[r.manager]) map[k].byManager[r.manager] = {calls:0,planned:0,absent:0,sameDayInstall:0};
     var b = map[k].byManager[r.manager];
     b.calls += r.calls; b.planned += r.planned; b.absent += r.absent; b.sameDayInstall += r.sameDayInstall;
@@ -3589,12 +3592,16 @@ function c2iRenderCard(prefix, buckets, managers, periodLabel){
   var grand = {calls:0, planned:0, absent:0, sameDayInstall:0};
   var byMgr = {};
   managers.forEach(function(m){ byMgr[m] = {calls:0, planned:0, absent:0, sameDayInstall:0}; });
+  // 이 뷰(월/주/일 중 하나)에 표시되는 기간 전체에 U열(2026-07-21 신설) 이후 날짜가 하나도 없으면
+  // sameDayInstall은 "측정된 0"이 아니라 "잴 수 없음"이다 — 이때만 화면에서 숫자 대신 "–"로 보여준다.
+  var anyReady = buckets.some(function(b){ return b.anyReady; });
   buckets.forEach(function(b){
     managers.forEach(function(m){
       var s = b.byManager[m] || {calls:0,planned:0,absent:0,sameDayInstall:0};
       ["calls","planned","absent","sameDayInstall"].forEach(function(f){ grand[f]+=s[f]; byMgr[m][f]+=s[f]; });
     });
   });
+  var sdiText = function(n){ return anyReady ? fmt(n) : "–"; };
 
   var kpiEl = document.getElementById(prefix+"-kpi");
   if(kpiEl){
@@ -3602,7 +3609,7 @@ function c2iRenderCard(prefix, buckets, managers, periodLabel){
       tile(periodLabel+" 통화 총계","📞", fmt(grand.calls), "건", managers.map(function(m){return m+" "+fmt(byMgr[m].calls);}).join(" · ")) +
       tile("설치예정 분류","🗓️", fmt(grand.planned), "건", "통화 중 "+pct(grand.calls?grand.planned/grand.calls:null)) +
       tile("부재","📵", fmt(grand.absent), "건", "통화 중 "+pct(grand.calls?grand.absent/grand.calls:null)) +
-      tile("당일설치완료","✅", fmt(grand.sameDayInstall), "건", "설치예정 대비 "+pct(grand.planned?grand.sameDayInstall/grand.planned:null)+" 전환", true);
+      tile("당일설치완료","✅", sdiText(grand.sameDayInstall), "건", anyReady ? ("설치예정 대비 "+pct(grand.planned?grand.sameDayInstall/grand.planned:null)+" 전환") : "U열(통화시점상태) 신설 이전이라 집계 불가(2026-07-21부터)", true);
   }
 
   var gridEl = document.getElementById(prefix+"-mgrgrid");
@@ -3611,17 +3618,19 @@ function c2iRenderCard(prefix, buckets, managers, periodLabel){
     var row = function(k,v){ return '<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px dashed var(--grid)"><span style="color:var(--text-secondary)">'+k+'</span><b>'+v+'</b></div>'; };
     gridEl.innerHTML = managers.map(function(m){
       var t = byMgr[m];
-      var conv = t.planned ? pct(t.sameDayInstall/t.planned) : "–";
+      var conv = (anyReady && t.planned) ? pct(t.sameDayInstall/t.planned) : "–";
       return '<div class="card col-6 fill"><h3><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+palette[managers.indexOf(m)%palette.length]+';margin-right:6px"></span>'+m+'</h3>'+
         row("통화(총계)", fmt(t.calls)) + row("설치예정", fmt(t.planned)) + row("부재", fmt(t.absent)) +
-        '<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span style="color:var(--text-secondary)">당일설치완료</span><b style="color:var(--good)">'+fmt(t.sameDayInstall)+' <small style="color:var(--muted);font-weight:400">('+conv+')</small></b></div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span style="color:var(--text-secondary)">당일설치완료</span><b style="color:var(--good)">'+sdiText(t.sameDayInstall)+' <small style="color:var(--muted);font-weight:400">('+conv+')</small></b></div>'+
         '<div class="chart-wrap ch-m"><canvas id="'+prefix+'-chart-'+managers.indexOf(m)+'"></canvas></div>'+
       '</div>';
     }).join("");
     managers.forEach(function(m, idx){
       var labels = buckets.map(function(b){ return b.label; });
       var plannedData = buckets.map(function(b){ return (b.byManager[m]||{}).planned||0; });
-      var sdData = buckets.map(function(b){ return (b.byManager[m]||{}).sameDayInstall||0; });
+      // U열 신설(2026-07-21) 이전 구간은 null로 내려 Chart.js가 막대 자체를 안 그리게 한다
+      // (0으로 두면 "그 달은 전환 0건이었다"로 오독됨 — anyReady 가드와 동일 이유).
+      var sdData = buckets.map(function(b){ return b.anyReady ? ((b.byManager[m]||{}).sameDayInstall||0) : null; });
       mk(prefix+"-chart-"+idx, { type:"bar",
         data:{ labels:labels, datasets:[
           { label:"설치예정", data:plannedData, backgroundColor:palette[idx%palette.length], borderRadius:5, categoryPercentage:.6, barPercentage:.8 },
