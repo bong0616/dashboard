@@ -859,8 +859,8 @@
         <div class="chart-wrap ch-xl"><canvas id="acDev"></canvas></div>
       </div>
       <div class="card col-12" data-cid="accelDevTable">
-        <h3>📋 배송반영 상세표 <small class="th-tgt" style="display:inline">실적로그 K·D 병기</small></h3>
-        <div class="sub">최신 일이 위 · 콜시도·설치예정·부재건은 <b>실적로그 K·D·F열</b>(상담원만, 토요일은 0 처리) · <b style="color:var(--s-blue-d)">연파랑 행(평균↑)</b>=오후배송이 <b>일평균 이상</b>인 날 · 일자에 요일이 붙어 있어 <b>무슨 요일에 몰리는지</b> 바로 보입니다</div>
+        <h3>📋 배송반영 상세표 <small class="th-tgt" style="display:inline">실적로그 N(구K)·D 병기</small></h3>
+        <div class="sub">최신 일이 위 · 콜시도·설치예정·부재건은 <b>실적로그 N(구K)·D·F열</b>(상담원만, 토요일은 0 처리) · <b style="color:var(--s-blue-d)">연파랑 행(평균↑)</b>=오후배송이 <b>일평균 이상</b>인 날 · 일자에 요일이 붙어 있어 <b>무슨 요일에 몰리는지</b> 바로 보입니다</div>
         <div class="coldef accel-coldef"></div>
         <div class="tbl-wrap"><table class="dtable no-grp" id="accelDevTable"></table></div>
       </div>
@@ -889,7 +889,7 @@
         <div class="chart-wrap ch-xl"><canvas id="acSd"></canvas></div>
       </div>
       <div class="card col-12" data-cid="accelSdTable">
-        <h3>📋 통화 당일설치 상세표 <small class="th-tgt" style="display:inline">실적로그 K·D 병기</small></h3>
+        <h3>📋 통화 당일설치 상세표 <small class="th-tgt" style="display:inline">실적로그 N(구K)·D 병기</small></h3>
         <div class="sub">최신 일이 위 · <b>▲▼</b>는 직전 일 대비 · <b>당일설치율</b>=당일설치 ÷ 통화성공(D열) — 잡은 일정이 그 자리에서 끝난 비율 · <b>오늘 행이 0</b>인 것은 당일 건이 <b>다음날 오전 9시 30분에 갱신</b>되기 때문입니다</div>
         <div class="coldef accel-remote-coldef"></div>
         <div class="tbl-wrap"><table class="dtable no-grp" id="accelSdTable"></table></div>
@@ -2120,7 +2120,7 @@ function wbBuildTrendSummary(d, selWeek){
       // "악화"를 잘못 반환한다 — 두 값이 모두 있을 때만 판정 문구를 붙인다(다른 라인의 우아한 성능저하 패턴과 동일).
       t6 += " — 직전 5주 평균 격차율 " + pct(priorGapRate,1) + " 대비 " + wbTrendJudge((curGap.gapRate-priorGapRate)*100, 5, true);
     }
-    lines.push(t6 + ' <span class="wb-trend-src">(출처: 실적로그 K열 통화건수 · 로우데이터 S열 설치건수)</span>');
+    lines.push(t6 + ' <span class="wb-trend-src">(출처: 실적로그 N열(구K) 통화건수 · 로우데이터 S열 설치건수)</span>');
   }
 
   return { lines: lines.length ? lines : ["집계할 데이터가 부족합니다"], basisWeek: cur.week, immature: immature };
@@ -2953,7 +2953,7 @@ function wbBindMemoButton(){
 //  ① 배송 축 — T열(당일배송반영) 각인일 코호트. 오후 배송반영 자동화가 도는 날부터만 존재한다.
 //     ⚠️ 비어 있는 것이 곧 고장이 아니다 → cohortStart 로 '아직 없음'을 안내한다(빈 화면 금지).
 //  ② 통화 축 — 통화당일설치 탭과 동일 판정(U=설치예정 && R==S).
-//     ⚠️ '당일 통화건'은 R열(마지막통화일) 기준이라 과거일수록 과소집계된다 → 콜 시도량 정본은 실적로그 K열.
+//     ⚠️ '당일 통화건'은 R열(마지막통화일) 기준이라 과거일수록 과소집계된다 → 콜 시도량 정본은 실적로그 N열(구K).
 var ACCEL_LINE_DAYS = 10;   // 한 줄 요약에 노출할 최근 일수(표는 더 길게 본다)
 var ACCEL_TABLE_DAYS = 30;
 
@@ -3133,16 +3133,16 @@ function renderAccel(a){
 
   var sdSum = a.samedaySummary || {days:0};
   document.getElementById("accel-sd-tiles").innerHTML =
-    avgTile("일평균 콜시도","☎️", sdSum, "callsPerDay", {accent:true, totalKey:"calls", tip:"실적로그 <b>K열(총계)</b> — <b>상담원 담당자만</b>(현재 김규리·김봉수). 자가설치·문자발송 행은 통화가 아니라 제외합니다.<br><br>당일 행은 다음날 오전 9시 30분에 채워지므로 '오늘값' 대신 일평균을 봅니다."}) +
+    avgTile("일평균 콜시도","☎️", sdSum, "callsPerDay", {accent:true, totalKey:"calls", tip:"실적로그 <b>N열(총계, 구K)</b> — <b>상담원 담당자만</b>(현재 김규리·김봉수). 자가설치·문자발송 행은 통화가 아니라 제외합니다.<br><br>당일 행은 다음날 오전 9시 30분에 채워지므로 '오늘값' 대신 일평균을 봅니다."}) +
     avgTile("일평균 통화성공","🗓️", sdSum, "plannedPerDay", {totalKey:"planned", tip:"실적로그 <b>D열(설치예정)</b> — 고객과 통화가 되어 <b>설치 일정을 잡은 건</b>."}) +
-    avgTile("일평균 부재·기타","📵", sdSum, "othersPerDay", {totalKey:"others", tip:"실적로그 <b>E~J열 합</b> — 통화성공(설치예정)을 뺀 나머지 전부입니다.<br><br>부재 · 명의변경 · 미설치/보류 · 반품/폐업 · 설치거부/장기지연 · 위약금청구.<br><br>이렇게 합쳐야 <b>총 콜시도 = 통화성공 + 이 칸</b> 이 성립합니다."}) +
+    avgTile("일평균 부재·기타","📵", sdSum, "othersPerDay", {totalKey:"others", tip:"실적로그 <b>E~K열 합</b> — 통화성공(설치예정)을 뺀 나머지 전부입니다.<br><br>부재 · 명의변경 · 미설치/보류 · 반품/폐업 · 설치거부/장기지연 · 위약금청구 · 서류보완중.<br><br>이렇게 합쳐야 <b>총 콜시도 = 통화성공 + 이 칸</b> 이 성립합니다."}) +
     '<div class="tile-combo">' + comboCapTile(sdSum) +
       avgTile("일평균 당일설치","⚡", sdSum, "installsPerDay", {totalKey:"installs", tip:"로우데이터 <b>U열='설치예정'</b> 이면서 <b>마지막통화일(R) = 설치일(S)</b> 인 건.<br><br>U열은 2026-07-21 신설이라 그 이전은 집계 불가입니다."}) +
       avgTile("일평균 D+1일 설치","📆", sdSum, "installsD1PerDay", {totalKey:"installsD1", tip:"로우데이터 <b>U열='설치예정'</b> 이면서 <b>설치일(S) − 마지막통화일(R) = 1일</b> 인 건(통화한 <b>다음날</b> 설치).<br><br>당일설치(S=R)와는 겹치지 않는 별개 집계입니다. U열은 2026-07-21 신설이라 그 이전은 집계 불가입니다."}) +
     '</div>' +
-    avgTile("일평균 원격접수","💻", sdSum, "logRemotePerDay", {totalKey:"logRemote", tip:"실적로그 <b>M열(원격설치 접수)</b> — 원격 접수량의 <b>정본</b>입니다.<br><br>로우데이터 N열은 진행이 안 되면 상담원이 <b>콜리스트에서 지워버려</b> 나중에 값이 사라집니다(미러링 반영)."}) +
+    avgTile("일평균 원격접수","💻", sdSum, "logRemotePerDay", {totalKey:"logRemote", tip:"실적로그 <b>P열(원격설치 접수, 구M)</b> — 원격 접수량의 <b>정본</b>입니다.<br><br>로우데이터 N열은 진행이 안 되면 상담원이 <b>콜리스트에서 지워버려</b> 나중에 값이 사라집니다(미러링 반영)."}) +
     avgTile("일평균 원격완료","✅", sdSum, "remotePerDay", {totalKey:"remote", tip:"접수한 원격 중 <b>그날 설치까지 끝난 건</b>(로우데이터 N열 기준). 시간이 지나면 줄어드니 <b>최근치만 신뢰</b>하세요."}) +
-    avgTile("통화성공률","📊", sdSum, "plannedRate", {valFn:shipPct, unit:"%", basis:"합계 기준", tip:"구간 <b>합계 기준</b> — 실적로그 D열(설치예정) ÷ K열(콜시도)."}) +
+    avgTile("통화성공률","📊", sdSum, "plannedRate", {valFn:shipPct, unit:"%", basis:"합계 기준", tip:"구간 <b>합계 기준</b> — 실적로그 D열(설치예정) ÷ N열(구K, 콜시도)."}) +
     avgTile("당일설치율","📈", sdSum, "ofPlanned", {valFn:shipPct, unit:"%", basis:"합계 기준", tip:"구간 <b>합계 기준</b> — 당일설치 ÷ 통화성공. 잡은 일정이 그 자리에서 끝난 비율."});
 
   var sdLines = document.getElementById("accelSdLines");
@@ -3166,14 +3166,14 @@ function renderAccel(a){
         +   (r.isWeekend?'<span class="wkndtag">주말·평균제외</span>':'')
         +   '<span class="acg-hint" title="당일 통화·당일설치 ÷ 통화성공(실적로그 D열 설치예정) — 통화가 된 건 중 그날 설치까지 끝난 비율">'+instRate+'</span></div>'
         + '<div class="acg-cells">'
-        +   acgCell("당일 총 콜시도", r.calls, "실적로그 K · 상담원만")
+        +   acgCell("당일 총 콜시도", r.calls, "실적로그 N(구K) · 상담원만")
         +   acgCell("통화성공", r.planned, "실적로그 D · 설치예정")
-        +   acgCell("부재/보류/반품 및 기타", r.others, "실적로그 E~J 합")
+        +   acgCell("부재/보류/반품 및 기타", r.others, "실적로그 E~K 합")
         +   acgCell("당일 통화·당일설치", r.installs, "U=설치예정 · R=S", "hi")
         +   acgCell("당일 통화·D+1일 설치", r.installsD1, "U=설치예정 · S−R=1", "hi2")
         // 원격접수는 '당일설치의 하위'가 아니라 그날 원격 접수 총량이다 → '└' 없이 총계로 읽히게 한다.
         // 그 아래 '원격 설치완료'만 이 총량의 하위(그중 당일 끝난 건)라 '└' 를 남긴다.
-        +   acgCell("당일 총 원격접수건", r.logRemote, "실적로그 M · 정본", "sub subtop")
+        +   acgCell("당일 총 원격접수건", r.logRemote, "실적로그 P(구M) · 정본", "sub subtop")
         +   acgCell("원격 설치완료", r.remote, "그중 당일 설치완료", "sub")
         + '</div></div>';
     }).reverse().join("");
@@ -3207,9 +3207,9 @@ var ACCEL_COLDEF_HTML =
   + '<span class="cd-row"><span class="cd-k">전일 출고</span> 그 날짜의 <b>하루 전 출고건수</b>(로우데이터 H열). 배송소요일(T−H)이 평균 1일 안팎이라 <b>어제 출고분이 오늘 배송완료로 전환</b>됩니다 → 오후배송이 적은 날이 <b>물량이 없었던 날인지, 물량은 있었는데 전환이 덜 된 날인지</b> 가릅니다. <b>출고일 코호트 탭의 출고건수와 같은 기준</b>(자가설치 포함)입니다. ⚠️ 배송이 하루 넘게 걸린 건은 그 전 날짜 출고분이라 <b>오후배송 ÷ 전일출고를 전환율로 읽으면 안 됩니다</b>(100%를 넘을 수 있음).</span>'
   + '<span class="cd-row"><span class="cd-k">오후배송</span> 오후 배송반영 자동화(14:45~15:15)가 그 실행에서 <b>배송완료로 전환한 건수</b>(구 '+'&#39;배송업데이트&#39;'+'). 오전 자동화·수동 실행은 T열을 건드리지 않아 여기 안 잡힙니다.</span>'
   + '<span class="cd-row"><span class="cd-k">배송당일설치완료</span> 설치일(S) − 배송반영일(T) = <b>0일</b>(구 '+'&#39;당일설치건&#39;'+'). 물건이 도착한 그날 설치까지 끝난 건 = 가속화의 최종 목표치.</span>'
-  + '<span class="cd-row"><span class="cd-k">콜시도·설치예정·부재건</span> 같은 날짜의 <b>실적로그 K열(총계)·D열(설치예정)·F열(부재)</b>. 배송 코호트와 <b>모수가 다릅니다</b>(콜은 그날 배송분만 거는 게 아님) — 비율이 아니라 <b>그날의 콜 투입량 대비 성과</b>로 읽으세요. 자가설치 담당자는 통화를 하지 않아 제외됩니다. <b>토요일은 콜시도·설치예정을 0으로 표시합니다</b>(상담원이 실제로 통화를 안 하는 날이라 자동화 각인만 남는 노이즈 — 일요일은 이미 자연스럽게 0에 가까워 그대로 둡니다).</span>'
+  + '<span class="cd-row"><span class="cd-k">콜시도·설치예정·부재건</span> 같은 날짜의 <b>실적로그 N열(총계, 구K)·D열(설치예정)·F열(부재)</b>. 배송 코호트와 <b>모수가 다릅니다</b>(콜은 그날 배송분만 거는 게 아님) — 비율이 아니라 <b>그날의 콜 투입량 대비 성과</b>로 읽으세요. 자가설치 담당자는 통화를 하지 않아 제외됩니다. <b>토요일은 콜시도·설치예정을 0으로 표시합니다</b>(상담원이 실제로 통화를 안 하는 날이라 자동화 각인만 남는 노이즈 — 일요일은 이미 자연스럽게 0에 가까워 그대로 둡니다).</span>'
   + '<span class="cd-row"><span class="cd-k">콜당일설치건</span> <b>통화당일설치</b>(마지막통화일 R = 설치일 S, U열='+'&#39;설치예정&#39;'+') — 통화 축(아래 '+'&#39;통화 당일설치 상세표&#39;'+')의 <b>당일 통화·당일설치</b>와 같은 정의를 여기 배송 축 행에 같이 얹은 것입니다. 배송 코호트(T기준)와 통화 코호트(R기준)는 <b>서로 다른 축</b>이라 이 칸만 예외적으로 날짜만 같고 축이 다릅니다.</span>'
-  + '<span class="cd-row"><span class="cd-k">원격접수건</span> 실적로그 <b>M열(원격설치 접수)</b> — 그날 원격으로 접수된 건수의 <b>정본</b>입니다(사후에 변하지 않음).</span>'
+  + '<span class="cd-row"><span class="cd-k">원격접수건</span> 실적로그 <b>P열(원격설치 접수, 구M)</b> — 그날 원격으로 접수된 건수의 <b>정본</b>입니다(사후에 변하지 않음).</span>'
   + '<span class="cd-row"><span class="cd-k">최근 행</span> 아직 설치가 진행중이라 <b>설치완료율·소요일이 계속 올라갑니다</b> → 성숙한 행끼리만 비교하세요.</span>'
   + '<span class="cd-row"><span class="cd-k">오늘 행</span> 당일 건은 업무 종료 후 집계되어 <b>다음날 오전 9시 30분에 갱신</b>됩니다 → 갱신 전에는 오늘의 <b>콜시도·설치예정이 0</b>으로 보입니다. 데이터 누락이 아니라 아직 안 채워진 것이며, <b>해당일 +1일부터 확정값</b>입니다.</span>';
 function paintAccelColdef(){
@@ -3223,7 +3223,7 @@ function paintAccelColdef(){
 // ⚠️ '실적로그가 정본'은 운영자 확인 사실이다(2026-07-22). 진행이 안 되면 상담원이 콜리스트에서
 //    원격 표기를 지우고, 그게 미러링으로 로우데이터까지 넘어가 뒤늦게 값이 사라진다.
 var ACCEL_REMOTE_COLDEF_HTML =
-    '<span class="cd-row"><span class="cd-k">원격접수</span> <b>실적로그 M열(원격설치 접수)</b> = 그날 원격으로 접수된 건수. <b>이 숫자가 정본</b>입니다 — 실적로그는 그날 적재된 스냅샷이라 사후에 변하지 않습니다.</span>'
+    '<span class="cd-row"><span class="cd-k">원격접수</span> <b>실적로그 P열(원격설치 접수, 구M)</b> = 그날 원격으로 접수된 건수. <b>이 숫자가 정본</b>입니다 — 실적로그는 그날 적재된 스냅샷이라 사후에 변하지 않습니다.</span>'
   + '<span class="cd-row"><span class="cd-k">그중 당일완결</span> 접수된 원격 중 <b>그날 통화로 그날 설치까지 끝난 건</b>(로우데이터 N열 기준). <span class="cd-warn">⚠️ 이 칸은 로우데이터라 시간이 지나면 줄어듭니다</span> — 진행이 안 된 건은 상담원이 <b>콜리스트에서 원격 표기를 지우고</b> 그게 로우데이터까지 미러링되기 때문입니다. <b>당일~어제치만 신뢰</b>하세요.</span>'
   + '<span class="cd-row"><span class="cd-k">왜 두 숫자가 다른가</span> 모수가 다릅니다. 원격접수는 <b>접수만 되면</b> 계상되고, 당일완결은 거기에 <b>그날 설치까지 끝났을 것</b>이 더 붙습니다 → <b>당일완결 ≤ 원격접수</b>가 정상입니다. 실측(07/21): 접수 15건 중 12건 당일완결, 판정 예외 0건.</span>'
   + '<span class="cd-row"><span class="cd-k">시작일</span> 통화 축 전체가 <b>U열(통화시점상태)</b>에 의존합니다. <span class="cd-warn">U열은 2026-07-21에 신설된 컬럼이라 그 이전 날짜는 집계가 불가능</span>합니다 — <b>J열(상태)로 대신할 수 없습니다.</b> 설치가 끝나면 J는 \'설치완료\'로 덮여, 그 통화 시점에 설치예정이었는지 되짚을 수 없기 때문입니다. 이전 구간은 0이 아니라 <b>표시에서 제외</b>했습니다.</span>'
@@ -3234,7 +3234,7 @@ var ACCEL_REMOTE_COLDEF_HTML =
 function renderAccelDevTable(rows, avgDelivered){
   var head='<thead><tr>'
     + '<th>일자</th>'
-    + '<th>콜시도<br><small class="th-tgt">실적로그 K</small></th>'
+    + '<th>콜시도<br><small class="th-tgt">실적로그 N(구K)</small></th>'
     + '<th>설치예정<br><small class="th-tgt">실적로그 D</small></th>'
     + '<th>부재건<br><small class="th-tgt">실적로그 F</small></th>'
     + '<th>콜시도 대비<br><small class="th-tgt">설치예정율</small></th>'
@@ -3242,7 +3242,7 @@ function renderAccelDevTable(rows, avgDelivered){
     + '<th title="하루 전 출고건수(G열). 배송소요일이 약 1일이라 그날 배송전환의 모집단으로 봅니다.">전일 출고<br><small class="th-tgt">G열 D−1</small></th>'
     + '<th>오후배송<br><small class="th-tgt">T열 각인</small></th>'
     + '<th>배송당일설치완료<br><small class="th-tgt">S−T=0</small></th>'
-    + '<th>원격접수건<br><small class="th-tgt">실적로그 M</small></th>'
+    + '<th>원격접수건<br><small class="th-tgt">실적로그 P(구M)</small></th>'
     + '<th>설치완료율</th>'
     + '<th>배송소요일<br><small class="th-tgt">T−H</small></th><th>평균설치소요일<br><small class="th-tgt">S−T</small></th>'
     + '</tr></thead>';
@@ -3275,13 +3275,13 @@ function renderAccelDevTable(rows, avgDelivered){
 function renderAccelSdTable(rows){
   var head='<thead><tr>'
     + '<th>일자</th>'
-    + '<th title="실적로그 K열 총계. 상담원 담당자만(자가설치·문자발송 제외).">당일 총 콜시도<br><small class="th-tgt">실적로그 K · 상담원</small></th>'
+    + '<th title="실적로그 N열(구K) 총계. 상담원 담당자만(자가설치·문자발송 제외).">당일 총 콜시도<br><small class="th-tgt">실적로그 N(구K) · 상담원</small></th>'
     + '<th title="실적로그 D열. 고객과 통화가 되어 설치 일정을 잡은 건.">통화성공<br><small class="th-tgt">실적로그 D</small></th>'
-    + '<th title="실적로그 E~J 합(부재·명의변경·미설치/보류·반품폐업·설치거부·위약금). 총 콜시도 = 통화성공 + 이 칸.">부재/보류/반품 및 기타<br><small class="th-tgt">실적로그 E~J</small></th>'
-    + '<th>통화성공률<br><small class="th-tgt">D÷K</small></th>'
+    + '<th title="실적로그 E~K 합(부재·명의변경·미설치/보류·반품폐업·설치거부·위약금·서류보완중). 총 콜시도 = 통화성공 + 이 칸.">부재/보류/반품 및 기타<br><small class="th-tgt">실적로그 E~K</small></th>'
+    + '<th>통화성공률<br><small class="th-tgt">D÷N(구K)</small></th>'
     + '<th title="U열=설치예정 이면서 마지막통화일(R)=설치일(S).">당일 통화·당일설치<br><small class="th-tgt">U=설치예정 · R=S</small></th>'
     + '<th>당일설치율<br><small class="th-tgt">당일설치÷통화성공</small></th>'
-    + '<th class="grp gl" title="실적로그 M열. 원격 접수량의 정본이며 사후에 변하지 않습니다.">원격접수<br><small class="th-tgt">실적로그 M · 정본</small></th>'
+    + '<th class="grp gl" title="실적로그 P열(구M). 원격 접수량의 정본이며 사후에 변하지 않습니다.">원격접수<br><small class="th-tgt">실적로그 P(구M) · 정본</small></th>'
     + '<th class="grp" title="접수한 원격 중 그날 설치까지 끝난 건(로우데이터 N열 기준).">원격 설치완료<br><small class="th-tgt">로우 N열</small></th>'
     + '<th class="grp gr">원격 완결률</th>'
     + '</tr></thead>';
@@ -5275,7 +5275,7 @@ function shareTabLayout(){
   if(s) s.addEventListener("click", shareTabLayout);
 })();
 
-var TABMETA={ ops:["운영 대시보드","① 현재 잔여 업무량(콜리스트 기준) + ② 주간 요약(구 현황판) · 두 섹션은 기준 시점이 다릅니다"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(K) 대비 설치예정(D) 병기"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 1만원 이벤트·야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"], weeklyreport:["위클리 리포트","주차별 리포트 게시판 · 주요회의내용 4-5줄 요약(수기 입력, Phase 1)"], c2iMonth:["당일통화당일설치 · 월별","최근 3개월 월별 집계 · 통화→당일설치 전환(상담원 담당자별 비교)"], c2iWeek:["당일통화당일설치 · 주별","최근 3개월 주단위(월요일 시작) 집계 · 통화→당일설치 전환(상담원 담당자별 비교)"], c2iDay:["당일통화당일설치 · 일별","날짜 범위를 직접 선택해 그 기간 통화→당일설치 전환을 봅니다(최대 6주, 상담원 담당자별 비교)"], returned:["미설치 분석","로우데이터 I열(상태)이 반품·폐업인 2026년 출고건 · 출고 주차·월별 집계 + J열 메모/K열 사유 키워드 분류"] };
+var TABMETA={ ops:["운영 대시보드","① 현재 잔여 업무량(콜리스트 기준) + ② 주간 요약(구 현황판) · 두 섹션은 기준 시점이 다릅니다"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(N, 구K) 대비 설치예정(D) 병기"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 1만원 이벤트·야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"], weeklyreport:["위클리 리포트","주차별 리포트 게시판 · 주요회의내용 4-5줄 요약(수기 입력, Phase 1)"], c2iMonth:["당일통화당일설치 · 월별","최근 3개월 월별 집계 · 통화→당일설치 전환(상담원 담당자별 비교)"], c2iWeek:["당일통화당일설치 · 주별","최근 3개월 주단위(월요일 시작) 집계 · 통화→당일설치 전환(상담원 담당자별 비교)"], c2iDay:["당일통화당일설치 · 일별","날짜 범위를 직접 선택해 그 기간 통화→당일설치 전환을 봅니다(최대 6주, 상담원 담당자별 비교)"], returned:["미설치 분석","로우데이터 I열(상태)이 반품·폐업인 2026년 출고건 · 출고 주차·월별 집계 + J열 메모/K열 사유 키워드 분류"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
