@@ -1321,7 +1321,8 @@ function renderOps(o, reasons) {
     ["미설치·기타", usp.기타||0, "#e87ba4"],
     ["부재", o.status.부재, C["--s-orange"]],
     ["보류", o.status.보류, C["--s-yellow"]],
-    ["명의변경", o.status.명의변경, C["--s-violet"]]
+    ["명의변경", o.status.명의변경, C["--s-violet"]],
+    ["서류보완중", o.status.서류보완중||0, C["--s-aqua"]]
   ].filter(function(x){return x[1]>0;});
   mk("opsStatus", { type:"doughnut",
     data:{ labels:stSegs.map(function(x){return x[0];}),
@@ -1401,6 +1402,7 @@ function renderPerf(p) {
     tile("5일 이내 설치율","🚀", pct(sp.within5Rate,1), "", "빠른 설치 비중") +
     tile("자가설치율","🔧", pct(ins.selfRate,1), "", "무인 자가설치 · "+csLbl) +
     tile("상담원 설치율","📞", pct(ins.agentRate + ins.smsRate,1), "", "상담원+문자발송 · "+csLbl) +
+    tile("방문설치율","🚚", pct(ins.visitRate,1), "", "자동 매칭 방문설치 · "+csLbl) +
     tile("이번주 처리량","📆", fmt(p.thisWeek.calls), "건", "설치완료 "+fmt(p.thisWeek.installs)+"건");
 
   // Gauge
@@ -1423,10 +1425,10 @@ function renderPerf(p) {
   // Channel doughnut + custom legend (relief: visible labels)
   // 채널 비율은 분류 시작(5/6) 이후 출고 완료건만 모수(정합) — 구 캐시 대비 폴백
   var bs=ins.bySourceClassified||ins.bySource, cComp=ins.completedClassified||ins.completed;
-  var ch=[["자가설치",bs.자가설치,C["--s-aqua"]],["상담원",(bs.상담원||0)+(bs.문자발송||0),C["--s-blue"]]];
+  var ch=[["자가설치",bs.자가설치,C["--s-aqua"]],["상담원",(bs.상담원||0)+(bs.문자발송||0),C["--s-blue"]],["방문설치",bs.방문설치||0,C["--s-violet"]]];
   mk("perfChannel", { type:"doughnut",
     data:{ labels:ch.map(function(x){return x[0];}), datasets:[{ data:ch.map(function(x){return x[1];}), backgroundColor:ch.map(function(x){return x[2];}), borderColor:C["--surface-1"], borderWidth:2 }] },
-    options:{ cutout:"64%", plugins:{ datalabels: dl({color:"#fff", formatter:function(v){return Math.round(v/cComp*100)+"%";}}) } } });
+    options:{ cutout:"64%", plugins:{ datalabels: dl({color:"#fff", formatter:function(v){return v>0?Math.round(v/cComp*100)+"%":"";}}) } } });
   document.getElementById("channel-legend").innerHTML = ch.map(function(x){
     return '<span class="li"><span class="dot" style="background:'+x[2]+'"></span>'+x[0]+' <b>'+fmt(x[1])+'</b> ('+Math.round(x[1]/cComp*100)+'%)</span>';
   }).join("");
@@ -3309,7 +3311,7 @@ function renderCohort(c) {
 // 🗂️ 출고월별 현재 상태 — 누적막대 차트 대신 건수+비율 표(2026-07-21, 가독성 요청)
 // 🆕 2026-08-07: 상단 요약 타일(summary)과 동일한 9개 카테고리로 맞춤(보류·설치거부/장기지연·
 // 명의변경·위약금청구진행중이 전부 "기타"로 뭉쳐있던 것을 분리) — 대시보드API.js buildCohort_와 동기화.
-var COH_STATUS_CATS = ["설치완료","설치예정","미설치·보류","명의변경","부재총계","설치거부·장기지연","반품·폐업","위약금청구진행중","기타"];
+var COH_STATUS_CATS = ["설치완료","설치예정","미설치·보류","명의변경","부재총계","설치거부·장기지연","반품·폐업","위약금청구진행중","서류보완중","기타"];
 function renderCohortStatusTable(ms){
   var el=document.getElementById("cohStatusTable"); if(!el) return;
   ms = ms || {};
