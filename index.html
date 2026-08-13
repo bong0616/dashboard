@@ -989,7 +989,7 @@
 <tr><td class="lg-k">당일통화→당일설치(마지막통화일기준,출고일과거포함)</td><td>배송완료 후 시일이 좀 지났더라도, <b>마지막 통화일</b> 기준으로 그날 <b>당일 설치</b> 완료된 건(자가설치 제외, 참고용).</td></tr>
 <tr><td class="lg-k">반품/폐업</td><td>로우데이터 I열 상태값에 반품·폐업이 포함된 건.</td></tr>
 </tbody></table></div>
-      <div class="card col-12" data-cid="wbCohortCurve"><h3>📈 최근 5주 출고 코호트 누적 설치완료율</h3><div class="sub">출고주 기준 · 각 셀 = 출고 후 그 날짜까지 누적 설치완료율(분모=그 주 출고 전체) · D+0~D+30 전체 추이는 좌측 "출고 코호트" 메뉴 참고</div><div class="tbl-wrap" id="wbCohortMini"></div></div>
+      <div class="card col-12" data-cid="wbCohortCurve"><h3>📈 최근 5주 출고 코호트 누적 설치완료율 <small class="th-tgt" style="display:inline">D+0 ~ D+30</small></h3><div class="sub">출고주 기준 · 각 셀 = 출고 후 그 날짜까지 누적 설치완료율(분모=그 주 출고 전체) · 좌측 "출고 코호트" 탭의 같은 표에서 최근 5주만 그대로 미러링한 것입니다(18주 전체는 그쪽에서)</div><div class="tbl-wrap" id="wbCohortMini"></div></div>
       <div class="card col-12" data-cid="wbGap"><h3>📞 주간 통화-설치 갭</h3>
         <div class="sub">그 주 통화건수(실적로그, 자가설치 제외) 대비 설치완료건수(로우데이터 설치일 기준) 격차 · 격차가 클수록 부재·미룸 등으로 재컨택 리소스가 더 들었다는 뜻 · 주요 지연사유는 출고주 기준(지연사유 6주 추세와 동일 집계)이라 이 표의 통화·설치(활동일 기준)와 모집단이 완전히 같지는 않습니다</div>
         <div class="tbl-wrap"><table class="dtable no-grp" id="wbGapTable"></table></div>
@@ -2756,7 +2756,7 @@ function renderWeeklyBoard(d){
   if(!d) return;
   wbPaintTrendCard(d);
   document.getElementById("wbScoreTable").innerHTML = wbScoreTableHTML(wbMergeScoreRows(d));
-  renderRecentCohortMini((d.cohort&&d.cohort.shipCurve)||[], "wbCohortMini", 5);
+  renderRecentCohortMini(d.cohort, "wbCohortMini", 5);
   if(d.weeklyBoard) document.getElementById("wbGapTable").innerHTML = wbGapTableHTML(d.weeklyBoard.weeklyGap);
   if(d.weeklyBoard) document.getElementById("wbShipDeliveryTable").innerHTML = wbShipDeliveryTableHTML(d.weeklyBoard.shipToDelivery);
   var reasons = d.reasons || {};
@@ -3349,11 +3349,12 @@ function curveHeat(p){
   var a = Math.round(Math.max(0, Math.min(100, p)) * 0.42);
   return 'background:color-mix(in srgb, var(--s-blue) '+a+'%, transparent)';
 }
-function renderCohortCurve(c){
-  var el=document.getElementById("cohCurveTable"); if(!el) return;
-  var rows=(c&&c.shipCurve)||[];
-  var maxD=(c&&c.curveMaxD!=null)?c.curveMaxD:30;
-  if(!rows.length){ el.innerHTML='<tbody><tr><td>데이터 없음</td></tr></tbody>'; return; }
+// 🔀 2026-08-13(운영자 요청): 위클리현황판의 "최근 5주" 카드가 D+7/D+14/D+30 3칸짜리 축약표라
+// "출고 코호트" 탭의 D+0~D+30 전체표와 다르게 보인다는 지적 — 같은 표를 그대로 미러링(행만 5개로
+// 슬라이스)하도록 렌더링 로직을 공유 함수로 뺐다. 데이터도 같은 c.shipCurve/c.curveMaxD를 쓰므로
+// 숫자가 어긋날 일도 없다(이미 하나의 payload).
+function cohortCurveTableHTML(rows, maxD){
+  if(!rows.length) return '<tbody><tr><td>데이터 없음</td></tr></tbody>';
   var ds=[]; for(var d=0; d<=maxD; d++) ds.push(d);
   var head='<thead><tr><th>출고주</th><th>출고</th>'
     + ds.map(function(d){ return '<th class="dcol">D+'+d+'</th>'; }).join("")
@@ -3373,7 +3374,13 @@ function renderCohortCurve(c){
       +(tag?' '+tag:'')+'</td>'
       + '<td><span class="cell-main">'+fmt(r.shipped)+'</span></td>' + cells + '</tr>';
   }).reverse().join("");   // 최신 주가 위
-  el.innerHTML = head + '<tbody>' + body + '</tbody>';
+  return head + '<tbody>' + body + '</tbody>';
+}
+function renderCohortCurve(c){
+  var el=document.getElementById("cohCurveTable"); if(!el) return;
+  var rows=(c&&c.shipCurve)||[];
+  var maxD=(c&&c.curveMaxD!=null)?c.curveMaxD:30;
+  el.innerHTML = cohortCurveTableHTML(rows, maxD);
 }
 
 // ===== 🎯 월 목표 달성률 (U열 설치일 기준 월별 설치완료 vs 수기 목표) =====
@@ -3946,19 +3953,15 @@ function waAppendAiCallout(elId, calloutKey, draft, aiWeek, selWeek, actionNotes
 //   탭에도 최근 N주·핵심 체크포인트(D+7/D+14/D+30)만 간추려 보여준다 — 30개 열짜리 표를
 //   그대로 넣으면 너무 무거워서, 대표 구간만 뽑은 축약판. targetId/weeks를 받으므로 다른
 //   탭에서도 재사용 가능.
-function renderRecentCohortMini(shipCurve, targetId, weeks){
+// 🔀 2026-08-13(운영자 요청): D+7/D+14/D+30 3칸 축약표 대신 "출고 코호트" 탭 전체표(D+0~D+30)를
+// 최근 n주만 잘라 그대로 미러링한다 — cohortCurveTableHTML을 공유해서 숫자·서식이 완전히 같다.
+function renderRecentCohortMini(c, targetId, weeks){
   var el = document.getElementById(targetId); if(!el) return;
   var n = weeks || 5;
-  var rows = (shipCurve||[]).slice(-n).slice().reverse(); // 최신이 맨 위
-  if(!rows.length){ el.innerHTML='<div class="rt-l">출고 코호트 데이터가 없습니다.</div>'; return; }
-  function cell(v){ if(v==null) return '<td class="cv-na">–</td>'; return '<td>'+(Math.round(v*1000)/10).toFixed(1)+'%</td>'; }
-  var body = rows.map(function(r){
-    var cum = r.cum||[];
-    var tag = r.partial ? ' <span class="share" style="color:var(--s-orange)">집계중</span>' : '';
-    return '<tr><td>'+rptWeekLabel(r.week)+'주 <span style="color:var(--muted)">('+fmt(r.shipped)+'건)</span>'+tag+'</td>'
-      + cell(cum[7]) + cell(cum[14]) + cell(cum[30]) + '</tr>';
-  }).join("");
-  el.innerHTML = '<table class="dtable no-grp"><thead><tr><th>출고주</th><th>D+7</th><th>D+14</th><th>D+30</th></tr></thead><tbody>'+body+'</tbody></table>';
+  var allRows = (c&&c.shipCurve)||[];
+  var maxD = (c&&c.curveMaxD!=null)?c.curveMaxD:30;
+  var rows = allRows.slice(-n); // cohortCurveTableHTML이 자체적으로 reverse()해 최신을 위로 올린다
+  el.innerHTML = '<table class="dtable no-grp curve-tbl">' + cohortCurveTableHTML(rows, maxD) + '</table>';
 }
 function paintWeeklyAction(d){
   var w = WA.week;
