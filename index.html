@@ -1179,22 +1179,35 @@
     </div>
   </section>
 
-  <!-- 당일통화당일설치(2026-08-14 재설계) — 운영자가 예전에 Claude Artifact로 받아본 정적 리포트
-       (PHASE145) 양식 그대로 라이브 대시보드에 반영해 달라는 요청으로, PHASE150의 월/주/일 3탭
-       (Chart.js 캔버스)을 단일뷰로 교체했다. 데이터는 그대로 payload.callInstall(buildCallInstallLive_)
-       재사용 — 트레일링 14일만 클라이언트에서 잘라 쓴다(날짜범위 선택 UI 없음, Artifact와 동일). -->
+  <!-- 당일통화당일설치(2026-08-14 재설계 → 같은 날 후속 수정) — 운영자가 예전에 Claude Artifact로
+       받아본 정적 리포트(PHASE145) 양식을 라이브 대시보드에 반영해 달라는 요청으로 PHASE150의
+       월/주/일 3탭(Chart.js 캔버스)을 단일뷰로 교체했었는데, 그 교체가 "3탭에서만 보이던 월별·주별
+       집계·30일 범위"까지 같이 없애버렸다는 걸 운영자가 뒤늦게 발견 — "3탭 구조는 되살리지 말고,
+       한 메뉴(한 페이지) 안에서 월/주/일을 다 볼 수 있게" 재요청받아 이 단일 페이지 안에 월별·주별
+       요약 표를 추가하고, 일별 창을 14일→30일로 넓혔다(탭 전환 없이 스크롤로 다 보임).
+       데이터는 여전히 payload.callInstall(buildCallInstallLive_, 최근 3개월치 dayRows) 그대로
+       재사용 — 월/주 표는 dayRows 전체를, 일별 표는 그중 최근 30일만 클라이언트에서 집계한다
+       (서버 재호출 없음, 날짜범위 선택 UI 없음). -->
   <section class="tab-content" id="tab-c2i">
     <div class="grid">
       <div class="card col-12" data-cid="c2iHead">
         <h3>📞 통화한 곳, 얼마나 당일 설치까지 이어졌나</h3>
-        <div class="sub">실적로그 기준 하루 통화 결과(설치예정·부재 등 분류)와, 로우데이터로 확인되는 "그날 통화해서 그날 설치까지 끝난 건"을 담당자별·일별로 대조합니다 · 상담원 담당자만(자가설치·문자발송 제외)</div>
+        <div class="sub">실적로그 기준 하루 통화 결과(설치예정·부재 등 분류)와, 로우데이터로 확인되는 "그날 통화해서 그날 설치까지 끝난 건"을 담당자별·월/주/일별로 대조합니다 · 상담원 담당자만(자가설치·문자발송 제외)</div>
         <div class="sub" id="c2iMeta" style="margin-top:6px"></div>
       </div>
     </div>
     <div class="tiles" id="c2i-kpi"></div>
-    <div class="sec-head">👥 담당자별 비교 (14일 합계) <small>막대 = 설치예정 · 당일설치완료</small></div>
+    <div class="sec-head">👥 담당자별 비교 (30일 합계) <small>막대 = 설치예정 · 당일설치완료</small></div>
     <div class="grid" id="c2i-mgrgrid"></div>
-    <div class="sec-head">📋 일별 상세 <small>최근 날짜가 위 · 주말(토·일)은 통화량이 정상적으로 적거나 0입니다</small></div>
+    <div class="sec-head">📅 월별 요약 <small>최근 3개월</small></div>
+    <div class="grid">
+      <div class="card col-12" data-cid="c2iMonth"><div class="tbl-wrap"><table class="dtable no-grp" id="c2iMonthTable"></table></div></div>
+    </div>
+    <div class="sec-head">📆 주별 요약 <small>최근 3개월 · 월요일 시작</small></div>
+    <div class="grid">
+      <div class="card col-12" data-cid="c2iWeek"><div class="tbl-wrap"><table class="dtable no-grp" id="c2iWeekTable"></table></div></div>
+    </div>
+    <div class="sec-head">📋 일별 상세 (최근 30일) <small>최근 날짜가 위 · 주말(토·일)은 통화량이 정상적으로 적거나 0입니다</small></div>
     <div class="grid">
       <div class="card col-12" data-cid="c2iDetail"><div class="tbl-wrap"><table class="dtable no-grp" id="c2iDetailTable"></table></div></div>
     </div>
@@ -3561,14 +3574,16 @@ function saveAchInstall(){
 }
 
 // ===== 📝 주차별 리포트 (전주 대비 자동 요약 + 수기 코멘트) =====
-// ---------- 당일통화당일설치(2026-08-14 재설계) ----------
+// ---------- 당일통화당일설치(2026-08-14 재설계 → 같은 날 후속 수정) ----------
 // 운영자가 예전에 Claude Artifact로 받아본 "통화→당일설치 전환" 정적 리포트(PHASE145)를 그 양식
-// 그대로 라이브 대시보드에 반영해 달라는 요청. PHASE150이 만든 월/주/일 3탭(Chart.js 캔버스)은
-// 그 Artifact와 레이아웃이 달라 "반영이 안 됐다"는 피드백을 받아 통째로 교체했다.
-// 백엔드(payload.callInstall = buildCallInstallLive_, 대시보드API.js)는 그대로 재사용한다 —
-// 이미 3개월치 일별×담당자 dayRows를 계산해 내려주므로, 프론트는 그중 트레일링 14일만 잘라 쓴다
-// (Artifact처럼 날짜범위 선택 UI는 두지 않는다 — 서버 재호출 없음).
-var C2I_WINDOW_DAYS = 14;
+// 그대로 라이브 대시보드에 반영해 달라는 요청으로, PHASE150이 만든 월/주/일 3탭(Chart.js 캔버스)을
+// 단일뷰로 교체했었다. 그런데 이게 "3탭에서만 보이던 월별·주별 집계와 30일 범위 일별 데이터"까지
+// 같이 없애버려서, 운영자가 "3탭 구조는 되살리지 말고 한 페이지 안에서 월/주/일을 다 보이게 해달라"고
+// 재요청 — 아래 c2iAggregateBy/c2iRenderPeriodTable로 월별·주별 요약 표를 이 페이지 안에 추가하고,
+// 일별 창을 14일→30일로 넓혔다. 백엔드(payload.callInstall = buildCallInstallLive_, 대시보드API.js)는
+// 그대로 재사용한다 — 이미 최근 3개월치 일별×담당자 dayRows를 계산해 내려주므로, 월/주 표는 그
+// 전체를, 일별 표는 그중 트레일링 30일만 클라이언트에서 잘라 쓴다(서버 재호출 없음).
+var C2I_WINDOW_DAYS = 30;
 var C2I_PALETTE = ["var(--s-blue)","var(--s-orange)","var(--s-aqua)","var(--s-violet)","var(--s-yellow)","var(--s-red)"];
 
 function c2iYmd(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
@@ -3577,6 +3592,49 @@ function c2iShort(ds){ var p=ds.split("-"); return p[1]+"/"+p[2]; }
 function c2iWeekend(ds){ var d=new Date(ds+"T00:00:00"); var g=d.getDay(); return g===0||g===6; }
 function c2iPct(n,d){ return d ? Math.round((n/d)*1000)/10 : null; }
 function c2iPctText(n,d){ var p=c2iPct(n,d); return p==null?"–":(p+"%"); }
+// 월요일 시작 주 키 — GAS 쪽 weekKey(buildScoreboards_)와 동일 규칙을 클라이언트에서 재현(PHASE150 원본 로직 복원).
+function c2iWeekKey(ds){ var d=new Date(ds+"T00:00:00"); var wd=d.getDay(); d.setDate(d.getDate()-((wd+6)%7)); return c2iYmd(d); }
+
+// dayRows(전체 최근 3개월치)를 keyFn 기준(월/주)으로 담당자별 소계를 낸다. 월별·주별 요약 표가
+// 이 한 함수를 공유한다 — 일별 상세 표(30일)와 달리 이쪽은 창 제한 없이 dayRows 전체를 쓴다.
+function c2iAggregateBy(rows, keyFn, labelFn){
+  var map = {};
+  rows.forEach(function(r){
+    var k = keyFn(r.date), mk = k+"|"+r.manager;
+    if(!map[mk]) map[mk] = { key:k, label:labelFn(k), manager:r.manager,
+      calls:0, planned:0, absent:0, nameChange:0, notInstalled:0, returned:0, refused:0, penalty:0, sameDayInstall:0, anyReady:false };
+    var b=map[mk];
+    b.calls+=r.calls; b.planned+=r.planned; b.absent+=r.absent; b.nameChange+=r.nameChange;
+    b.notInstalled += r.notInstalled+(r.docPending||0);
+    b.returned+=r.returned; b.refused+=r.refused; b.penalty+=r.penalty; b.sameDayInstall+=r.sameDayInstall;
+    if(r.uReady) b.anyReady=true;
+  });
+  return Object.keys(map).map(function(k){ return map[k]; });
+}
+
+// 월별·주별 요약 표 공용 렌더러 — 일별 상세 표(c2iDetailTable)와 같은 컬럼 구성이되 "날짜"가 "기간"으로
+// 바뀐다. 최근 기간이 위로 오도록 정렬하고, 같은 기간 안에서는 담당자명 오름차순.
+function c2iRenderPeriodTable(tblId, buckets){
+  var tblEl=document.getElementById(tblId);
+  if(!tblEl) return;
+  var head='<thead><tr><th>기간</th><th>담당자</th><th>통화(총계)</th><th>설치예정</th><th>부재</th>'
+    + '<th>명의변경</th><th>미설치/보류</th><th>반품·폐업</th><th>설치거부·지연</th><th>위약금</th><th>당일설치완료</th></tr></thead>';
+  var sorted=buckets.slice().sort(function(a,b){
+    if(a.key!==b.key) return a.key<b.key?1:-1;
+    return a.manager<b.manager?-1:(a.manager>b.manager?1:0);
+  });
+  var body=sorted.map(function(b){
+    var sdi=b.anyReady?fmt(b.sameDayInstall):"–";
+    var sub=(b.anyReady && b.planned)?(" ("+c2iPctText(b.sameDayInstall,b.planned)+")"):"";
+    return '<tr><td>'+b.label+'</td><td>'+b.manager+'</td>'
+      + '<td>'+fmt(b.calls)+'</td><td>'+fmt(b.planned)+'</td><td>'+fmt(b.absent)+'</td>'
+      + '<td>'+fmt(b.nameChange)+'</td><td>'+fmt(b.notInstalled)+'</td><td>'+fmt(b.returned)+'</td>'
+      + '<td>'+fmt(b.refused)+'</td><td>'+fmt(b.penalty)+'</td>'
+      + '<td style="color:var(--good);font-weight:700">'+sdi+'<small class="c2i-pct">'+sub+'</small></td>'
+    + '</tr>';
+  }).join("");
+  tblEl.innerHTML = head+'<tbody>'+body+'</tbody>';
+}
 
 // 담당자 한 명의 최근 N일 설치예정/당일설치완료 그룹 막대 — Artifact 원본과 동일한 인라인 SVG 방식
 // (Chart.js 캔버스 대신 — 카드 안 작은 스파크라인류 차트라 SVG가 더 가볍고 Artifact 원본과 동일하다).
@@ -3622,9 +3680,15 @@ function renderCallToInstall(c){
   var rows = c.dayRows.filter(function(r){ return r.date>=startKey && r.date<=c.windowEnd; });
 
   var metaEl=document.getElementById("c2iMeta");
-  if(metaEl) metaEl.innerHTML = "<b>기간</b> "+startKey+" ~ "+c.windowEnd+" (최근 "+C2I_WINDOW_DAYS+"일) · <b>대상</b> "+managers.join(" · ")+" · <b>원천</b> 실적로그 + 로우데이터 R/S/U열";
+  if(metaEl) metaEl.innerHTML = "<b>일별 창</b> "+startKey+" ~ "+c.windowEnd+" (최근 "+C2I_WINDOW_DAYS+"일) · <b>월/주 요약</b> "+c.windowStart+" ~ "+c.windowEnd+"(최근 3개월) · <b>대상</b> "+managers.join(" · ")+" · <b>원천</b> 실적로그 + 로우데이터 R/S/U열";
 
-  // 담당자별 14일 합계. docPending(서류보완중, PHASE152 신설)은 옛 8버킷 양식을 유지하려고
+  // 📅 월별·📆 주별 요약 — 30일 창과 무관하게 서버가 내려준 dayRows 전체(최근 3개월)를 그대로 집계한다.
+  var monthBuckets = c2iAggregateBy(c.dayRows, function(d){ return d.slice(0,7); }, function(k){ var p=k.split("-"); return p[0]+"년 "+p[1]+"월"; });
+  c2iRenderPeriodTable("c2iMonthTable", monthBuckets);
+  var weekBuckets = c2iAggregateBy(c.dayRows, c2iWeekKey, function(k){ return k.slice(5).replace("-","/")+"주~"; });
+  c2iRenderPeriodTable("c2iWeekTable", weekBuckets);
+
+  // 담당자별 30일 합계. docPending(서류보완중, PHASE152 신설)은 옛 8버킷 양식을 유지하려고
   // '미설치/보류'에 합산한다 — calls(총계)엔 이미 포함돼 있으므로 합계 검산은 그대로 맞는다.
   var totals={};
   managers.forEach(function(m){ totals[m]={calls:0,planned:0,absent:0,nameChange:0,notInstalled:0,returned:0,refused:0,penalty:0,sameDayInstall:0}; });
@@ -5314,7 +5378,7 @@ function shareTabLayout(){
   if(s) s.addEventListener("click", shareTabLayout);
 })();
 
-var TABMETA={ ops:["운영 대시보드","① 현재 잔여 업무량(콜리스트 기준) + ② 주간 요약(구 현황판) · 두 섹션은 기준 시점이 다릅니다"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(N, 구K) 대비 설치예정(D) 병기"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 1만원 이벤트·야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"], weeklyreport:["위클리 리포트","주차별 리포트 게시판 · 주요회의내용 4-5줄 요약(수기 입력, Phase 1)"], c2i:["당일통화당일설치","최근 14일 · 통화→당일설치 전환(상담원 담당자별 비교)"],returned:["미설치 분석","로우데이터 I열(상태)이 반품·폐업인 2026년 출고건 · 출고 주차·월별 집계 + J열 메모/K열 사유 키워드 분류"] };
+var TABMETA={ ops:["운영 대시보드","① 현재 잔여 업무량(콜리스트 기준) + ② 주간 요약(구 현황판) · 두 섹션은 기준 시점이 다릅니다"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(N, 구K) 대비 설치예정(D) 병기"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 1만원 이벤트·야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"], weeklyreport:["위클리 리포트","주차별 리포트 게시판 · 주요회의내용 4-5줄 요약(수기 입력, Phase 1)"], c2i:["당일통화당일설치","월별·주별 요약(최근 3개월) + 일별 상세(최근 30일) 한 페이지 · 통화→당일설치 전환(상담원 담당자별 비교)"],returned:["미설치 분석","로우데이터 I열(상태)이 반품·폐업인 2026년 출고건 · 출고 주차·월별 집계 + J열 메모/K열 사유 키워드 분류"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
