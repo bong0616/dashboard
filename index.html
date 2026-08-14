@@ -3612,13 +3612,27 @@ function c2iAggregateBy(rows, keyFn, labelFn){
   return Object.keys(map).map(function(k){ return map[k]; });
 }
 
+// 날짜별 출고완료 건수(c.shipRows, 담당자 무관)를 월/주 키로 합산한다 — 월별·주별 요약 표에
+// "출고완료" 열로 병기하기 위함(2026-08-14 운영자 요청).
+function c2iAggregateShipBy(shipRows, keyFn){
+  var map={};
+  (shipRows||[]).forEach(function(r){
+    var k=keyFn(r.date);
+    map[k]=(map[k]||0)+(r.shipped||0);
+  });
+  return map;
+}
+
 // 월별·주별 요약 표 공용 렌더러 — 일별 상세 표(c2iDetailTable)와 같은 컬럼 구성이되 "날짜"가 "기간"으로
 // 바뀐다. 최근 기간이 위로 오도록 정렬하고, 같은 기간 안에서는 담당자명 오름차순.
-function c2iRenderPeriodTable(tblId, buckets){
+// shipMap(선택): 기간키 → 출고완료 건수. 담당자별 값이 아니라 그 기간 전체 값이라, 같은 기간의
+// 모든 담당자 행에 동일하게 표시된다(합계 열처럼 반복 — 통화·설치 지표와 성격이 다른 값임을
+// 표 헤더 "출고완료"로 구분).
+function c2iRenderPeriodTable(tblId, buckets, shipMap){
   var tblEl=document.getElementById(tblId);
   if(!tblEl) return;
   var head='<thead><tr><th>기간</th><th>담당자</th><th>통화(총계)</th><th>설치예정</th><th>부재</th>'
-    + '<th>명의변경</th><th>미설치/보류</th><th>반품·폐업</th><th>설치거부·지연</th><th>위약금</th><th>당일설치완료</th></tr></thead>';
+    + '<th>명의변경</th><th>미설치/보류</th><th>반품·폐업</th><th>설치거부·지연</th><th>위약금</th><th>당일설치완료</th><th>출고완료</th></tr></thead>';
   var sorted=buckets.slice().sort(function(a,b){
     if(a.key!==b.key) return a.key<b.key?1:-1;
     return a.manager<b.manager?-1:(a.manager>b.manager?1:0);
@@ -3626,11 +3640,13 @@ function c2iRenderPeriodTable(tblId, buckets){
   var body=sorted.map(function(b){
     var sdi=b.anyReady?fmt(b.sameDayInstall):"–";
     var sub=(b.anyReady && b.planned)?(" ("+c2iPctText(b.sameDayInstall,b.planned)+")"):"";
+    var shipVal = shipMap ? fmt(shipMap[b.key]||0) : "–";
     return '<tr><td>'+b.label+'</td><td>'+b.manager+'</td>'
       + '<td>'+fmt(b.calls)+'</td><td>'+fmt(b.planned)+'</td><td>'+fmt(b.absent)+'</td>'
       + '<td>'+fmt(b.nameChange)+'</td><td>'+fmt(b.notInstalled)+'</td><td>'+fmt(b.returned)+'</td>'
       + '<td>'+fmt(b.refused)+'</td><td>'+fmt(b.penalty)+'</td>'
       + '<td style="color:var(--good);font-weight:700">'+sdi+'<small class="c2i-pct">'+sub+'</small></td>'
+      + '<td>'+shipVal+'</td>'
     + '</tr>';
   }).join("");
   tblEl.innerHTML = head+'<tbody>'+body+'</tbody>';
@@ -3684,9 +3700,11 @@ function renderCallToInstall(c){
 
   // 📅 월별·📆 주별 요약 — 30일 창과 무관하게 서버가 내려준 dayRows 전체(최근 3개월)를 그대로 집계한다.
   var monthBuckets = c2iAggregateBy(c.dayRows, function(d){ return d.slice(0,7); }, function(k){ var p=k.split("-"); return p[0]+"년 "+p[1]+"월"; });
-  c2iRenderPeriodTable("c2iMonthTable", monthBuckets);
+  var monthShip = c2iAggregateShipBy(c.shipRows, function(d){ return d.slice(0,7); });
+  c2iRenderPeriodTable("c2iMonthTable", monthBuckets, monthShip);
   var weekBuckets = c2iAggregateBy(c.dayRows, c2iWeekKey, function(k){ return k.slice(5).replace("-","/")+"주~"; });
-  c2iRenderPeriodTable("c2iWeekTable", weekBuckets);
+  var weekShip = c2iAggregateShipBy(c.shipRows, c2iWeekKey);
+  c2iRenderPeriodTable("c2iWeekTable", weekBuckets, weekShip);
 
   // 담당자별 30일 합계. docPending(서류보완중, PHASE152 신설)은 카드에 별도 행으로 보여줄 것이라
   // 여기서는 notInstalled(미설치/보류 원본 컬럼)와 합치지 않고 각각 따로 쌓는다 — 단, 아래 detail
