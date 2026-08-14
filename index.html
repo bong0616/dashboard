@@ -744,12 +744,13 @@
   <div class="navitem navchild" data-tab="c2iDay" id="nav-c2iDay" style="display:none"><span class="ic">📅</span><div>일별<small>기간 직접 선택</small></div></div>
   <div class="navitem" data-tab="cohort" id="nav-cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div><span class="navcaret" id="cohort-caret">▸</span></div>
   <div class="navitem navchild" data-tab="returned" id="nav-returned" style="display:none"><span class="ic">↩️</span><div>미설치 분석<small>반품·폐업 사유(2026년~)</small></div></div>
+  <!-- 2026-08-14: 출고코호트 바로 밑으로 이동(운영자 요청, 성격이 비슷한 코호트 계열 메뉴끼리 묶음) -->
+  <div class="navitem" data-tab="shipweekly" id="nav-shipweekly"><span class="ic">🚚</span><div>출고주 비교<small>출고 물량 처리현황</small></div><span class="navcaret" id="shipweekly-caret">▸</span></div>
+  <div class="navitem navchild" data-tab="shipdaily" id="nav-shipdaily" style="display:none"><span class="ic">📬</span><div>출고일 비교<small>출고 물량 처리현황</small></div></div>
   <div class="navitem" data-tab="accel"><span class="ic">🚀</span><div>설치가속화 Action<small>배송반영·통화 당일설치</small></div></div>
   <div class="navitem" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량 · 주간 요약</small></div></div>
   <!-- 하위 '월·주·일 흐름'은 2026-07-28 삭제(주간/일간 비교와 완전 중복) → 성과는 이제 하위메뉴 없음(캐럿 제거) -->
   <div class="navitem" data-tab="perf" id="nav-perf"><span class="ic">⚡</span><div>성과<small>설치속도·작업량</small></div></div>
-  <div class="navitem" data-tab="shipweekly" id="nav-shipweekly"><span class="ic">🚚</span><div>출고주 비교<small>출고 물량 처리현황</small></div><span class="navcaret" id="shipweekly-caret">▸</span></div>
-  <div class="navitem navchild" data-tab="shipdaily" id="nav-shipdaily" style="display:none"><span class="ic">📬</span><div>출고일 비교<small>출고 물량 처리현황</small></div></div>
   <div class="navitem" data-tab="report"><span class="ic">📝</span><div>주차별 리포트<small>전주 대비 요약·코멘트</small></div></div>
   <div class="side-foot">
     <button class="refresh-btn" id="edit-toggle" style="margin-bottom:8px">🔧 카드 배치 편집</button>
@@ -959,7 +960,7 @@
   <section class="tab-content" id="tab-shipweekly">
     <div class="tiles" id="shipweekly-tiles"></div>
     <div class="grid">
-      <div class="card col-12" data-cid="swConv"><h3>📦 출고 물량 대비 처리·전환율</h3><div class="sub">막대=출고·설치완료 건수(<b>출고주 기준 코호트</b>) · 초록선=완료율(오른쪽축). 최근 16주 · <b>맨 오른쪽 진행중 주는 아직 설치 중</b>이라 완료율이 낮게 나옵니다</div><div class="chart-wrap ch-xl"><canvas id="swConv"></canvas></div></div>
+      <div class="card col-12" data-cid="swConv"><h3>📦 출고 물량 대비 처리·전환율</h3><div class="sub">막대=출고·설치완료 건수(<b>출고주 기준 코호트</b>) · 초록선=완료율(오른쪽축) · <b>파란 점선=평균 설치소요일, 주황 점선=평균 배송소요일</b>(맨 오른쪽 일축, 배송소요일은 <b>8/11부터</b> 반영). 최근 16주 · <b>맨 오른쪽 진행중 주는 아직 설치 중</b>이라 완료율이 낮게 나옵니다</div><div class="chart-wrap ch-xl"><canvas id="swConv"></canvas></div></div>
       <div class="card col-12" data-cid="swSpeed"><h3>⏱️ 설치 소요일 · 미완료 잔량</h3><div class="sub">막대=미완료 잔량(출고했지만 아직 미설치), 점선=평균 설치소요일(완료건, 낮을수록 빠름) · <b>진행중 주는 소요일이 과소평가</b>(빠른 건만 먼저 완료)</div><div class="chart-wrap ch-m"><canvas id="swSpeed"></canvas></div></div>
       <div class="card col-12" data-cid="shipWeeklyTable"><h3>🗓️ 출고주별 상세 비교표</h3><div class="sub">최근 12주 · 최신 주가 위 · <b>출고주 기준 코호트</b> · <b>▲▼</b>는 직전 주 대비 · <span style="color:var(--muted)">회색 '진행중'</span> 주는 완료율·소요일·건당컨택이 아직 안 굳음</div><div class="coldef ship-coldef"></div><div class="tbl-wrap"><table class="dtable" id="shipWeeklyTable"></table></div></div>
     </div>
@@ -969,9 +970,9 @@
   <section class="tab-content" id="tab-shipdaily">
     <div class="tiles" id="shipdaily-tiles"></div>
     <div class="grid">
-      <div class="card col-12" data-cid="sdConv"><h3>📦 출고 물량 대비 처리·전환율</h3><div class="sub">막대=출고·설치완료 건수(<b>출고일 기준 코호트</b>) · 초록선=완료율. 최근 21일 · <b>최근 며칠은 아직 설치 중</b>이라 완료율이 낮게 나옵니다</div><div class="chart-wrap ch-xl"><canvas id="sdConv"></canvas></div></div>
+      <div class="card col-12" data-cid="sdConv"><h3>📦 출고 물량 대비 처리·전환율</h3><div class="sub">막대=출고·설치완료 건수(<b>출고일 기준 코호트</b>) · 초록선=완료율 · <b>파란 점선=평균 설치소요일, 주황 점선=평균 배송소요일</b>(맨 오른쪽 일축, 배송소요일은 <b>8/11부터</b> 반영). 최근 30일 · <b>최근 며칠은 아직 설치 중</b>이라 완료율이 낮게 나옵니다</div><div class="chart-wrap ch-xl"><canvas id="sdConv"></canvas></div></div>
       <div class="card col-12" data-cid="sdSpeed"><h3>⏱️ 설치 소요일 · 미완료 잔량</h3><div class="sub">막대=미완료 잔량, 점선=평균 설치소요일(완료건) · <b>최근 며칠은 소요일 과소평가</b></div><div class="chart-wrap ch-m"><canvas id="sdSpeed"></canvas></div></div>
-      <div class="card col-12" data-cid="shipDailyTable"><h3>📆 출고일별 상세 비교표</h3><div class="sub">최근 14일 · 최신 일이 위 · <b>출고일 기준 코호트</b> · <b>▲▼</b>는 직전 일 대비 · <span style="color:var(--muted)">회색 '진행중'</span> 일은 완료율·소요일·건당컨택 미성숙</div><div class="coldef ship-coldef"></div><div class="tbl-wrap"><table class="dtable" id="shipDailyTable"></table></div></div>
+      <div class="card col-12" data-cid="shipDailyTable"><h3>📆 출고일별 상세 비교표</h3><div class="sub">최근 30일 · 최신 일이 위 · <b>출고일 기준 코호트</b> · <b>▲▼</b>는 직전 일 대비 · <span style="color:var(--muted)">회색 '진행중'</span> 일은 완료율·소요일·건당컨택 미성숙</div><div class="coldef ship-coldef"></div><div class="tbl-wrap"><table class="dtable" id="shipDailyTable"></table></div></div>
     </div>
   </section>
 
@@ -1787,21 +1788,25 @@ function neutralCell(cur, prev, valFn, unit){
   return '<td>'+main+'<span class="wow flat">'+(up?"▲":"▼")+pv+'%</span></td>';
 }
 
-// 출고 vs 설치완료(막대) + 완료율(선, 오른쪽 %축)
+// 출고 vs 설치완료(막대) + 완료율(선, 오른쪽 %축) + 배송·설치소요일(선, 맨 오른쪽 일축, 2026-08-14 추가)
 function shipConvChart(cid, rows, labels, maxTicks){
+  var r1=function(v){return v==null?null:Math.round(v*10)/10;};
   mk(cid,{ type:"bar",
     data:{ labels:labels, datasets:[
       { type:"bar", label:"출고건수", data:rows.map(function(x){return x.shipped;}), backgroundColor:C["--s-blue-l"], yAxisID:"y", borderRadius:3, categoryPercentage:.7, barPercentage:.9, datalabels:dlBarTop({font:{weight:"600",size:9}}) },
       { type:"bar", label:"설치완료", data:rows.map(function(x){return x.installs;}), backgroundColor:C["--s-aqua"], yAxisID:"y", borderRadius:3, categoryPercentage:.7, barPercentage:.9, datalabels:dlBarTop({font:{weight:"600",size:9}}) },
-      { type:"line", label:"완료율(%)", data:rows.map(function(x){return x.doneRate==null?null:Math.round(x.doneRate*100);}), borderColor:C["--good"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2.4, tension:.3, pointRadius:2, pointBackgroundColor:C["--good"], spanGaps:true }
+      { type:"line", label:"완료율(%)", data:rows.map(function(x){return x.doneRate==null?null:Math.round(x.doneRate*100);}), borderColor:C["--good"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2.4, tension:.3, pointRadius:2, pointBackgroundColor:C["--good"], spanGaps:true },
+      { type:"line", label:"평균 설치소요일(일)", data:rows.map(function(x){return r1(x.avgSpeed);}), borderColor:C["--s-blue-d"], backgroundColor:"transparent", yAxisID:"y2", borderWidth:2.2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--s-blue-d"], spanGaps:true },
+      { type:"line", label:"평균 배송소요일(일)", data:rows.map(function(x){return r1(x.avgDeliverySpeed);}), borderColor:C["--s-orange"], backgroundColor:"transparent", yAxisID:"y2", borderWidth:2.2, borderDash:[5,3], tension:.3, pointRadius:2, pointBackgroundColor:C["--s-orange"], spanGaps:true }
     ]},
     options:{ scales:{
       x:{grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:maxTicks}},
       y:{position:"left",beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]},title:{display:true,text:"건수",color:C["--muted"],font:{size:11}}},
-      y1:{position:"right",beginAtZero:true,max:100,grid:{drawOnChartArea:false},ticks:{color:C["--muted"],callback:function(v){return v+"%";}},title:{display:true,text:"완료율",color:C["--muted"],font:{size:11}}}
+      y1:{position:"right",beginAtZero:true,max:100,grid:{drawOnChartArea:false},ticks:{color:C["--muted"],callback:function(v){return v+"%";}},title:{display:true,text:"완료율",color:C["--muted"],font:{size:11}}},
+      y2:{position:"right",beginAtZero:true,offset:true,grid:{drawOnChartArea:false},ticks:{color:C["--muted"],callback:function(v){return v+"일";}},title:{display:true,text:"소요일",color:C["--muted"],font:{size:11}}}
     },
       plugins:{ legend:{display:true,labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false},
-        tooltip:{callbacks:{label:function(ct){var v=ct.parsed.y;if(v==null)return ct.dataset.label+": –";return ct.dataset.label+": "+(ct.dataset.yAxisID==="y1"?v+"%":fmt(v)+"건");}}} },
+        tooltip:{callbacks:{label:function(ct){var v=ct.parsed.y;if(v==null)return ct.dataset.label+": –";if(ct.dataset.yAxisID==="y1")return ct.dataset.label+": "+v+"%";if(ct.dataset.yAxisID==="y2")return ct.dataset.label+": "+v+"일";return ct.dataset.label+": "+fmt(v)+"건";}}} },
       interaction:{mode:"index",intersect:false} } });
 }
 // 미완료 잔량(막대) + 평균 설치소요일(점선, 오른쪽 일축)
@@ -1898,9 +1903,9 @@ function renderShipDaily(ship){
     dayTile("평균 설치소요일","⏱️",rows,"avgSpeed",{valFn:round1,unit:"일",lowerBetter:true,target:SPD_TGT}) +
     dayTile("건당 컨택수","📞",rows,"touchPerUnit",{valFn:round1,unit:"회",neutral:true});
   var labels=rows.map(function(x){return dyLabel(x.date);});
-  shipConvChart("sdConv",rows,labels,21);
-  shipSpeedChart("sdSpeed",rows,labels,21);
-  document.getElementById("shipDailyTable").innerHTML = shipTableHTML(rows, {dateHead:"출고일", recent:14, label:function(w){return dyLabelW(w.date);}});
+  shipConvChart("sdConv",rows,labels,30);
+  shipSpeedChart("sdSpeed",rows,labels,30);
+  document.getElementById("shipDailyTable").innerHTML = shipTableHTML(rows, {dateHead:"출고일", recent:30, label:function(w){return dyLabelW(w.date);}});
   paintShipColdef();
 }
 
