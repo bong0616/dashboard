@@ -3579,7 +3579,7 @@ function saveAchInstall(){
 // 그대로 라이브 대시보드에 반영해 달라는 요청으로, PHASE150이 만든 월/주/일 3탭(Chart.js 캔버스)을
 // 단일뷰로 교체했었다. 그런데 이게 "3탭에서만 보이던 월별·주별 집계와 30일 범위 일별 데이터"까지
 // 같이 없애버려서, 운영자가 "3탭 구조는 되살리지 말고 한 페이지 안에서 월/주/일을 다 보이게 해달라"고
-// 재요청 — 아래 c2iAggregateBy/c2iRenderPeriodTable로 월별·주별 요약 표를 이 페이지 안에 추가하고,
+// 재요청 — 아래 c2iAggregateBy/c2iRenderGroupedTable로 월별·주별 요약 표를 이 페이지 안에 추가하고,
 // 일별 창을 14일→30일로 넓혔다. 백엔드(payload.callInstall = buildCallInstallLive_, 대시보드API.js)는
 // 그대로 재사용한다 — 이미 최근 3개월치 일별×담당자 dayRows를 계산해 내려주므로, 월/주 표는 그
 // 전체를, 일별 표는 그중 트레일링 30일만 클라이언트에서 잘라 쓴다(서버 재호출 없음).
@@ -3623,33 +3623,98 @@ function c2iAggregateShipBy(shipRows, keyFn){
   return map;
 }
 
-// 월별·주별 요약 표 공용 렌더러 — 일별 상세 표(c2iDetailTable)와 같은 컬럼 구성이되 "날짜"가 "기간"으로
-// 바뀐다. 최근 기간이 위로 오도록 정렬하고, 같은 기간 안에서는 담당자명 오름차순.
-// shipMap(선택): 기간키 → 출고완료 건수. 담당자별 값이 아니라 그 기간 전체 값이라, 같은 기간의
-// 모든 담당자 행에 동일하게 표시된다(합계 열처럼 반복 — 통화·설치 지표와 성격이 다른 값임을
-// 표 헤더 "출고완료"로 구분).
-function c2iRenderPeriodTable(tblId, buckets, shipMap){
+// 📅📆📋 월별·주별·일별 표 공용 렌더러(2026-08-14 재작성) — 기본은 "상담원"(담당자 합산) 한 줄만
+// 보이고, 그 줄을 클릭하면 담당자별 세부 행이 아래로 펼쳐진다(운영자 요청: "기본은 합산값,
+// 기간 클릭 시 담당자별로 나뉘어 보이게"). buckets는 c2iAggregateBy 결과(기간+담당자별 행) —
+// 이 함수가 기간(key) 기준으로 다시 묶어 합계 행을 만든다.
+// opts.shipMap(선택): 기간키 → 출고완료 건수(담당자 무관값이라 세부 행에는 "—"로 표시).
+// opts.weekendFn(선택): 그 키가 주말인지 판정 → 합계 행에 음영 + "(주말)" 표기(일별 표 전용).
+// opts.footerLabel(선택): 있으면 전체 기간 합계 tfoot을 추가(일별 표 전용, 기존 동작 유지).
+function c2iRenderGroupedTable(tblId, buckets, opts){
+  opts = opts || {};
   var tblEl=document.getElementById(tblId);
   if(!tblEl) return;
+  var shipMap = opts.shipMap;
   var head='<thead><tr><th>기간</th><th>담당자</th><th>통화(총계)</th><th>설치예정</th><th>부재</th>'
-    + '<th>명의변경</th><th>미설치/보류</th><th>반품·폐업</th><th>설치거부·지연</th><th>위약금</th><th>당일설치완료</th><th>출고완료</th></tr></thead>';
-  var sorted=buckets.slice().sort(function(a,b){
-    if(a.key!==b.key) return a.key<b.key?1:-1;
-    return a.manager<b.manager?-1:(a.manager>b.manager?1:0);
+    + '<th>명의변경</th><th>미설치/보류</th><th>반품·폐업</th><th>설치거부·지연</th><th>위약금</th><th>당일설치완료</th>'
+    + (shipMap ? '<th>출고완료</th>' : '') + '</tr></thead>';
+
+  // 기간(key) 기준으로 담당자 행들을 묶어 합계를 낸다.
+  var groups = {}, order = [];
+  buckets.forEach(function(b){
+    if(!groups[b.key]){
+      groups[b.key] = { key:b.key, label:b.label, items:[],
+        calls:0, planned:0, absent:0, nameChange:0, notInstalled:0, returned:0, refused:0, penalty:0, sameDayInstall:0, anyReady:false };
+      order.push(b.key);
+    }
+    var g=groups[b.key];
+    g.items.push(b);
+    g.calls+=b.calls; g.planned+=b.planned; g.absent+=b.absent; g.nameChange+=b.nameChange;
+    g.notInstalled+=b.notInstalled; g.returned+=b.returned; g.refused+=b.refused; g.penalty+=b.penalty;
+    g.sameDayInstall+=b.sameDayInstall;
+    if(b.anyReady) g.anyReady=true;
   });
-  var body=sorted.map(function(b){
-    var sdi=b.anyReady?fmt(b.sameDayInstall):"–";
-    var sub=(b.anyReady && b.planned)?(" ("+c2iPctText(b.sameDayInstall,b.planned)+")"):"";
-    var shipVal = shipMap ? fmt(shipMap[b.key]||0) : "–";
-    return '<tr><td>'+b.label+'</td><td>'+b.manager+'</td>'
-      + '<td>'+fmt(b.calls)+'</td><td>'+fmt(b.planned)+'</td><td>'+fmt(b.absent)+'</td>'
-      + '<td>'+fmt(b.nameChange)+'</td><td>'+fmt(b.notInstalled)+'</td><td>'+fmt(b.returned)+'</td>'
-      + '<td>'+fmt(b.refused)+'</td><td>'+fmt(b.penalty)+'</td>'
+  order.sort(function(a,b){ return a<b?1:-1; }); // 최근 기간이 위로
+
+  function statCells(o, isSub){
+    var sdi=o.anyReady?fmt(o.sameDayInstall):"–";
+    var sub=(o.anyReady && o.planned)?(" ("+c2iPctText(o.sameDayInstall,o.planned)+")"):"";
+    return '<td>'+fmt(o.calls)+'</td><td>'+fmt(o.planned)+'</td><td>'+fmt(o.absent)+'</td>'
+      + '<td>'+fmt(o.nameChange)+'</td><td>'+fmt(o.notInstalled)+'</td><td>'+fmt(o.returned)+'</td>'
+      + '<td>'+fmt(o.refused)+'</td><td>'+fmt(o.penalty)+'</td>'
       + '<td style="color:var(--good);font-weight:700">'+sdi+'<small class="c2i-pct">'+sub+'</small></td>'
-      + '<td>'+shipVal+'</td>'
-    + '</tr>';
+      + (shipMap ? ('<td>'+(isSub?'—':fmt(shipMap[o.key]||0))+'</td>') : '');
+  }
+
+  var body = order.map(function(k, idx){
+    var g=groups[k];
+    var canExpand = g.items.length > 1;
+    var rid = tblId+"-g"+idx;
+    var isWeekend = opts.weekendFn && opts.weekendFn(k);
+    var caret = canExpand ? '<span class="c2i-caret" id="'+rid+'-caret">▸</span> ' : '';
+    var parentRow = '<tr class="'+(canExpand?'c2i-grouprow':'')+(isWeekend?' c2i-weekend':'')+'"'
+      + (canExpand ? (' data-target="'+rid+'" style="cursor:pointer"') : '') + '>'
+      + '<td>'+caret+g.label+(isWeekend?' <small style="color:var(--muted)">(주말)</small>':'')+'</td>'
+      + '<td>상담원</td>'
+      + statCells(g, false)
+      + '</tr>';
+    if(!canExpand) return parentRow;
+    var subRows = g.items.slice().sort(function(a,b){ return a.manager<b.manager?-1:(a.manager>b.manager?1:0); }).map(function(it){
+      return '<tr class="c2i-subrow" data-parent="'+rid+'" style="display:none">'
+        + '<td></td><td style="padding-left:18px;color:var(--text-secondary)">└ '+it.manager+'</td>'
+        + statCells(it, true)
+        + '</tr>';
+    }).join("");
+    return parentRow + subRows;
   }).join("");
-  tblEl.innerHTML = head+'<tbody>'+body+'</tbody>';
+
+  var foot = "";
+  if(opts.footerLabel){
+    var sumAll={calls:0,planned:0,absent:0,nameChange:0,notInstalled:0,returned:0,refused:0,penalty:0,sameDayInstall:0};
+    var anyReadyAll=false;
+    buckets.forEach(function(b){
+      sumAll.calls+=b.calls; sumAll.planned+=b.planned; sumAll.absent+=b.absent; sumAll.nameChange+=b.nameChange;
+      sumAll.notInstalled+=b.notInstalled; sumAll.returned+=b.returned; sumAll.refused+=b.refused; sumAll.penalty+=b.penalty;
+      sumAll.sameDayInstall+=b.sameDayInstall;
+      if(b.anyReady) anyReadyAll=true;
+    });
+    sumAll.anyReady=anyReadyAll;
+    foot = '<tfoot><tr><td colspan="2">'+opts.footerLabel+'</td>'+statCells(sumAll,false)+'</tr></tfoot>';
+  }
+
+  tblEl.innerHTML = head + '<tbody>' + body + '</tbody>' + foot;
+
+  // 접기/펼치기 — 매 렌더마다 tbody를 새로 만들므로 리스너도 다시 붙인다.
+  tblEl.querySelectorAll(".c2i-grouprow").forEach(function(tr){
+    tr.addEventListener("click", function(){
+      var rid = tr.getAttribute("data-target");
+      var caretEl = document.getElementById(rid+"-caret");
+      var subs = tblEl.querySelectorAll('.c2i-subrow[data-parent="'+rid+'"]');
+      var willOpen = subs.length>0 && subs[0].style.display==="none";
+      subs.forEach(function(sr){ sr.style.display = willOpen?"":"none"; });
+      if(caretEl) caretEl.textContent = willOpen?"▾":"▸";
+    });
+  });
 }
 
 // 담당자 한 명의 최근 N일 설치예정/당일설치완료 그룹 막대 — Artifact 원본과 동일한 인라인 SVG 방식
@@ -3701,10 +3766,10 @@ function renderCallToInstall(c){
   // 📅 월별·📆 주별 요약 — 30일 창과 무관하게 서버가 내려준 dayRows 전체(최근 3개월)를 그대로 집계한다.
   var monthBuckets = c2iAggregateBy(c.dayRows, function(d){ return d.slice(0,7); }, function(k){ var p=k.split("-"); return p[0]+"년 "+p[1]+"월"; });
   var monthShip = c2iAggregateShipBy(c.shipRows, function(d){ return d.slice(0,7); });
-  c2iRenderPeriodTable("c2iMonthTable", monthBuckets, monthShip);
+  c2iRenderGroupedTable("c2iMonthTable", monthBuckets, {shipMap: monthShip});
   var weekBuckets = c2iAggregateBy(c.dayRows, c2iWeekKey, function(k){ return k.slice(5).replace("-","/")+"주~"; });
   var weekShip = c2iAggregateShipBy(c.shipRows, c2iWeekKey);
-  c2iRenderPeriodTable("c2iWeekTable", weekBuckets, weekShip);
+  c2iRenderGroupedTable("c2iWeekTable", weekBuckets, {shipMap: weekShip});
 
   // 담당자별 30일 합계. docPending(서류보완중, PHASE152 신설)은 카드에 별도 행으로 보여줄 것이라
   // 여기서는 notInstalled(미설치/보류 원본 컬럼)와 합치지 않고 각각 따로 쌓는다 — 단, 아래 detail
@@ -3757,39 +3822,10 @@ function renderCallToInstall(c){
     }).join("");
   }
 
-  var tblEl=document.getElementById("c2iDetailTable");
-  if(tblEl){
-    var head='<thead><tr><th>날짜</th><th>담당자</th><th>통화(총계)</th><th>설치예정</th><th>부재</th>'
-      + '<th>명의변경</th><th>미설치/보류</th><th>반품·폐업</th><th>설치거부·지연</th><th>위약금</th><th>당일설치완료</th></tr></thead>';
-    var sorted=rows.slice().sort(function(a,b){ return a.date===b.date?0:(a.date<b.date?1:-1); });
-    var body=sorted.map(function(r){
-      var noInstall=r.notInstalled+(r.docPending||0);
-      var sdi=r.uReady?fmt(r.sameDayInstall):"–";
-      var sub=(r.uReady && r.planned)?(" ("+c2iPctText(r.sameDayInstall, r.planned)+")"):"";
-      return '<tr'+(c2iWeekend(r.date)?' class="c2i-weekend"':'')+'>'
-        + '<td>'+r.date+(c2iWeekend(r.date)?' <small style="color:var(--muted)">(주말)</small>':'')+'</td>'
-        + '<td>'+r.manager+'</td>'
-        + '<td>'+fmt(r.calls)+'</td><td>'+fmt(r.planned)+'</td><td>'+fmt(r.absent)+'</td>'
-        + '<td>'+fmt(r.nameChange)+'</td><td>'+fmt(noInstall)+'</td><td>'+fmt(r.returned)+'</td>'
-        + '<td>'+fmt(r.refused)+'</td><td>'+fmt(r.penalty)+'</td>'
-        + '<td style="color:var(--good);font-weight:700">'+sdi+'<small class="c2i-pct">'+sub+'</small></td>'
-      + '</tr>';
-    }).join("");
-    var sumAll={calls:0,planned:0,absent:0,nameChange:0,notInstalled:0,returned:0,refused:0,penalty:0,sameDayInstall:0};
-    rows.forEach(function(r){
-      sumAll.calls+=r.calls; sumAll.planned+=r.planned; sumAll.absent+=r.absent; sumAll.nameChange+=r.nameChange;
-      sumAll.notInstalled += r.notInstalled+(r.docPending||0);
-      sumAll.returned+=r.returned; sumAll.refused+=r.refused; sumAll.penalty+=r.penalty; sumAll.sameDayInstall+=r.sameDayInstall;
-    });
-    var footSub=(anyReady && sumAll.planned)?(" ("+c2iPctText(sumAll.sameDayInstall, sumAll.planned)+")"):"";
-    var foot='<tfoot><tr><td colspan="2">'+C2I_WINDOW_DAYS+'일 합계</td>'
-      + '<td>'+fmt(sumAll.calls)+'</td><td>'+fmt(sumAll.planned)+'</td><td>'+fmt(sumAll.absent)+'</td>'
-      + '<td>'+fmt(sumAll.nameChange)+'</td><td>'+fmt(sumAll.notInstalled)+'</td><td>'+fmt(sumAll.returned)+'</td>'
-      + '<td>'+fmt(sumAll.refused)+'</td><td>'+fmt(sumAll.penalty)+'</td>'
-      + '<td style="color:var(--good);font-weight:700">'+(anyReady?fmt(sumAll.sameDayInstall):"–")+'<small class="c2i-pct">'+footSub+'</small></td>'
-      + '</tr></tfoot>';
-    tblEl.innerHTML = head + '<tbody>' + body + '</tbody>' + foot;
-  }
+  // 일별 상세(30일)도 월/주와 같은 접기 방식 — 날짜별로 "상담원" 합산 한 줄, 클릭 시 담당자별로 펼침.
+  // rows는 이미 (date, manager) 쌍이라 c2iAggregateBy에 keyFn=그대로, labelFn=그대로만 주면 된다.
+  var dayBuckets = c2iAggregateBy(rows, function(d){ return d; }, function(k){ return k; });
+  c2iRenderGroupedTable("c2iDetailTable", dayBuckets, { weekendFn: c2iWeekend, footerLabel: C2I_WINDOW_DAYS+"일 합계" });
 
   var calloutEl=document.getElementById("c2iCallout");
   if(calloutEl){
