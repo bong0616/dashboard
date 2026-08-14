@@ -701,6 +701,14 @@
   .spinner { width: 34px; height: 34px; border: 3px solid var(--grid); border-top-color: var(--s-blue); border-radius: 50%; animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* 당일통화당일설치 — 담당자 비교 카드 + 상세표 보조 스타일 (2026-08-14, Artifact 양식 이식) */
+  .c2i-dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  .c2i-stat-row { display:flex; justify-content:space-between; font-size:13px; padding:4px 0; border-bottom:1px dashed var(--grid); }
+  .c2i-legend { display:flex; gap:14px; font-size:11.5px; color:var(--text-secondary); margin-bottom:6px; }
+  .c2i-legend i { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:5px; vertical-align:middle; }
+  tr.c2i-weekend { background: color-mix(in srgb, var(--muted) 6%, transparent); }
+  .c2i-pct { color: var(--muted); font-weight:500; font-size:11px; margin-left:4px; }
+
   /* Mobile */
   @media (max-width: 860px) {
     body { flex-direction: column; }
@@ -739,9 +747,7 @@
   <div class="navitem active" data-tab="weeklyboard" id="nav-weeklyboard"><span class="ic">📅</span><div>위클리 현황판<small>출고주 6주 스코어보드</small></div><span class="navcaret" id="weeklyboard-caret">▸</span></div>
   <div class="navitem navchild" data-tab="weeklyaction" id="nav-weeklyaction" style="display:none"><span class="ic">📄</span><div>보고서<small>1만원·야간원격·당일배송 주차별 검토</small></div></div>
   <div class="navitem navchild" data-tab="weeklyreport" id="nav-weeklyreport" style="display:none"><span class="ic">🗒️</span><div>위클리 리포트<small>주차별 요약 게시판</small></div></div>
-  <div class="navitem" data-tab="c2iMonth" id="nav-c2iMonth"><span class="ic">📞</span><div>당일통화당일설치<small>월별 · 최근 3개월</small></div><span class="navcaret" id="c2i-caret">▸</span></div>
-  <div class="navitem navchild" data-tab="c2iWeek" id="nav-c2iWeek" style="display:none"><span class="ic">📆</span><div>주별<small>최근 3개월 · 주단위</small></div></div>
-  <div class="navitem navchild" data-tab="c2iDay" id="nav-c2iDay" style="display:none"><span class="ic">📅</span><div>일별<small>기간 직접 선택</small></div></div>
+  <div class="navitem" data-tab="c2i" id="nav-c2i"><span class="ic">📞</span><div>당일통화당일설치<small>최근 14일 · 담당자별 비교</small></div></div>
   <div class="navitem" data-tab="cohort" id="nav-cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div><span class="navcaret" id="cohort-caret">▸</span></div>
   <div class="navitem navchild" data-tab="returned" id="nav-returned" style="display:none"><span class="ic">↩️</span><div>미설치 분석<small>반품·폐업 사유(2026년~)</small></div></div>
   <!-- 2026-08-14: 출고코호트 바로 밑으로 이동(운영자 요청, 성격이 비슷한 코호트 계열 메뉴끼리 묶음) -->
@@ -1173,50 +1179,38 @@
     </div>
   </section>
 
-  <!-- 당일통화당일설치(2026-08-13, PHASE 150) — 월별/주별/일별 세 탭이 payload.callInstall 하나를
-       공유한다. 서버는 한 번만 계산해 내려주고(rawVals0/logVals0 시계열 뷰포트), 월/주 집계와
-       일별 날짜범위 재슬라이스는 전부 클라이언트에서 처리한다(서버 재호출 없음). -->
-  <section class="tab-content" id="tab-c2iMonth">
+  <!-- 당일통화당일설치(2026-08-14 재설계) — 운영자가 예전에 Claude Artifact로 받아본 정적 리포트
+       (PHASE145) 양식 그대로 라이브 대시보드에 반영해 달라는 요청으로, PHASE150의 월/주/일 3탭
+       (Chart.js 캔버스)을 단일뷰로 교체했다. 데이터는 그대로 payload.callInstall(buildCallInstallLive_)
+       재사용 — 트레일링 14일만 클라이언트에서 잘라 쓴다(날짜범위 선택 UI 없음, Artifact와 동일). -->
+  <section class="tab-content" id="tab-c2i">
     <div class="grid">
-      <div class="card col-12" data-cid="c2iMHead">
-        <h3>📞 통화 → 당일설치 전환 (월별)</h3>
-        <div class="sub">실적로그 통화 분류(설치예정·부재 등) + 로우데이터 R(마지막통화일)=S(설치일) 판정 · 상담원 담당자만(자가설치·문자발송 제외) · 최근 3개월</div>
+      <div class="card col-12" data-cid="c2iHead">
+        <h3>📞 통화한 곳, 얼마나 당일 설치까지 이어졌나</h3>
+        <div class="sub">실적로그 기준 하루 통화 결과(설치예정·부재 등 분류)와, 로우데이터로 확인되는 "그날 통화해서 그날 설치까지 끝난 건"을 담당자별·일별로 대조합니다 · 상담원 담당자만(자가설치·문자발송 제외)</div>
+        <div class="sub" id="c2iMeta" style="margin-top:6px"></div>
       </div>
     </div>
-    <div class="tiles" id="c2iM-kpi"></div>
-    <div class="sec-head">👥 담당자별 비교 <small>월별 막대 = 설치예정 · 당일설치완료</small></div>
-    <div class="grid" id="c2iM-mgrgrid"></div>
-  </section>
-
-  <section class="tab-content" id="tab-c2iWeek">
+    <div class="tiles" id="c2i-kpi"></div>
+    <div class="sec-head">👥 담당자별 비교 (14일 합계) <small>막대 = 설치예정 · 당일설치완료</small></div>
+    <div class="grid" id="c2i-mgrgrid"></div>
+    <div class="sec-head">📋 일별 상세 <small>최근 날짜가 위 · 주말(토·일)은 통화량이 정상적으로 적거나 0입니다</small></div>
     <div class="grid">
-      <div class="card col-12" data-cid="c2iWHead">
-        <h3>📞 통화 → 당일설치 전환 (주별)</h3>
-        <div class="sub">주 시작=월요일 · 최근 3개월을 주 단위로 묶은 흐름 · 상담원 담당자만</div>
+      <div class="card col-12" data-cid="c2iDetail"><div class="tbl-wrap"><table class="dtable no-grp" id="c2iDetailTable"></table></div></div>
+    </div>
+    <div class="grid">
+      <div class="card col-12"><div class="rpt-summary" id="c2iCallout"></div></div>
+    </div>
+    <div class="grid">
+      <div class="card col-12">
+        <h3>용어 정의</h3>
+        <div class="coldef">
+          <span class="cd-row"><span class="cd-k">통화(총계)</span>실적로그 N열(구K) — 설치예정+명의변경+부재+미설치/보류+서류보완중+반품폐업+설치거부+위약금 합. 설치완료는 별도 날짜(로우저장일) 귀속이라 제외됩니다.</span>
+          <span class="cd-row"><span class="cd-k">당일설치완료</span>로우데이터 U열(통화시점상태)='설치예정' AND R(마지막통화일)=S(설치일)인 행 수. 통화당일설치 탭·samedayaudit과 동일 정의입니다.</span>
+          <span class="cd-row"><span class="cd-k">전환율</span>당일설치완료 ÷ 설치예정. 부재·기타 결과는 애초에 당일 설치로 이어질 수 없어 분모에서 제외했습니다.</span>
+        </div>
       </div>
     </div>
-    <div class="tiles" id="c2iW-kpi"></div>
-    <div class="sec-head">👥 담당자별 비교 <small>주별 막대 = 설치예정 · 당일설치완료</small></div>
-    <div class="grid" id="c2iW-mgrgrid"></div>
-  </section>
-
-  <section class="tab-content" id="tab-c2iDay">
-    <div class="grid">
-      <div class="card col-12" data-cid="c2iDHead">
-        <h3>📞 통화 → 당일설치 전환 (일별)</h3>
-        <div class="sub">날짜 범위를 직접 선택해서 봅니다(최대 6주) · 상담원 담당자만</div>
-      </div>
-    </div>
-    <div class="filters" style="margin-bottom:14px">
-      <span class="flab">📅 기간(최대 6주)</span>
-      <input type="date" id="c2iD-start" class="fdate" title="시작일">
-      <span class="fdash">~</span>
-      <input type="date" id="c2iD-end" class="fdate" title="종료일">
-      <button id="c2iD-apply" class="fbtn fbtn-go">조회</button>
-    </div>
-    <div class="tiles" id="c2iD-kpi"></div>
-    <div class="sec-head">👥 담당자별 비교 <small>일별 막대 = 설치예정 · 당일설치완료(주말은 통화량이 정상적으로 적거나 0)</small></div>
-    <div class="grid" id="c2iD-mgrgrid"></div>
   </section>
 
   <!-- REPORT (주차별 리포트) -->
@@ -3567,121 +3561,161 @@ function saveAchInstall(){
 }
 
 // ===== 📝 주차별 리포트 (전주 대비 자동 요약 + 수기 코멘트) =====
-// ---------- 당일통화당일설치(2026-08-13, PHASE 150) — 월/주/일 3탭이 payload.callInstall 하나를 공유 ----------
-var C2I_DATA = null;      // {managers, dayRows, windowStart, windowEnd} — 서버가 한 번만 계산해 내려준 것
-var C2I_DAY_INIT = false; // 날짜입력 기본값은 최초 1회만 세팅(사용자가 고른 값을 데이터 새로고침마다 덮어쓰지 않도록)
+// ---------- 당일통화당일설치(2026-08-14 재설계) ----------
+// 운영자가 예전에 Claude Artifact로 받아본 "통화→당일설치 전환" 정적 리포트(PHASE145)를 그 양식
+// 그대로 라이브 대시보드에 반영해 달라는 요청. PHASE150이 만든 월/주/일 3탭(Chart.js 캔버스)은
+// 그 Artifact와 레이아웃이 달라 "반영이 안 됐다"는 피드백을 받아 통째로 교체했다.
+// 백엔드(payload.callInstall = buildCallInstallLive_, 대시보드API.js)는 그대로 재사용한다 —
+// 이미 3개월치 일별×담당자 dayRows를 계산해 내려주므로, 프론트는 그중 트레일링 14일만 잘라 쓴다
+// (Artifact처럼 날짜범위 선택 UI는 두지 않는다 — 서버 재호출 없음).
+var C2I_WINDOW_DAYS = 14;
+var C2I_PALETTE = ["var(--s-blue)","var(--s-orange)","var(--s-aqua)","var(--s-violet)","var(--s-yellow)","var(--s-red)"];
 
 function c2iYmd(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function c2iAddDays(ds, n){ var d=new Date(ds+"T00:00:00"); d.setDate(d.getDate()+n); return c2iYmd(d); }
-// 월요일 시작 주 키 — GAS 쪽 weekKey(buildScoreboards_)와 동일 규칙을 클라이언트에서 재현.
-function c2iWeekKey(ds){ var d=new Date(ds+"T00:00:00"); var wd=d.getDay(); d.setDate(d.getDate()-((wd+6)%7)); return c2iYmd(d); }
+function c2iShort(ds){ var p=ds.split("-"); return p[1]+"/"+p[2]; }
+function c2iWeekend(ds){ var d=new Date(ds+"T00:00:00"); var g=d.getDay(); return g===0||g===6; }
+function c2iPct(n,d){ return d ? Math.round((n/d)*1000)/10 : null; }
+function c2iPctText(n,d){ var p=c2iPct(n,d); return p==null?"–":(p+"%"); }
 
-// dayRows를 keyFn 기준으로 묶어 담당자별 소계를 낸다(월/주/일별 뷰가 전부 이 한 함수를 공유).
-// anyReady = 이 묶음에 U열(통화시점상태, 2026-07-21 신설) 이후 날짜가 하나라도 있는지 — 하나도
-// 없으면 sameDayInstall은 "측정된 0"이 아니라 "애초에 잴 수 없음"이라 화면에서 "–"로 갈라 보여줘야 한다.
-function c2iGroupBy(rows, keyFn, labelFn){
-  var map = {};
-  rows.forEach(function(r){
-    var k = keyFn(r);
-    if(!map[k]) map[k] = { key:k, label:labelFn(k), byManager:{}, anyReady:false };
-    if(r.uReady) map[k].anyReady = true;
-    if(!map[k].byManager[r.manager]) map[k].byManager[r.manager] = {calls:0,planned:0,absent:0,sameDayInstall:0};
-    var b = map[k].byManager[r.manager];
-    b.calls += r.calls; b.planned += r.planned; b.absent += r.absent; b.sameDayInstall += r.sameDayInstall;
+// 담당자 한 명의 최근 N일 설치예정/당일설치완료 그룹 막대 — Artifact 원본과 동일한 인라인 SVG 방식
+// (Chart.js 캔버스 대신 — 카드 안 작은 스파크라인류 차트라 SVG가 더 가볍고 Artifact 원본과 동일하다).
+function c2iRenderChart(rows, color){
+  var w=380, h=150, padL=4, padB=20, padT=6, padR=4;
+  var plotW=w-padL-padR, plotH=h-padT-padB;
+  var n=rows.length||1, slot=plotW/n, barW=Math.max(3, slot*0.32);
+  var maxV=1; rows.forEach(function(r){ if(r.planned>maxV) maxV=r.planned; });
+  function yOf(v){ return padT + plotH - (v/maxV)*plotH; }
+  var gridLines=[0,0.5,1].map(function(f){
+    var y=padT+plotH*(1-f);
+    return '<line x1="'+padL+'" y1="'+y+'" x2="'+(w-padR)+'" y2="'+y+'" stroke="var(--grid)" stroke-width="1"/>';
+  }).join("");
+  var bars="";
+  rows.forEach(function(r,i){
+    var cx=padL+slot*i+slot/2;
+    if(c2iWeekend(r.date)) bars += '<rect x="'+(padL+slot*i)+'" y="'+padT+'" width="'+slot+'" height="'+plotH+'" fill="color-mix(in srgb, var(--muted) 8%, transparent)"/>';
+    var yPlanned=yOf(r.planned), yGood=r.uReady?yOf(r.sameDayInstall):null;
+    var label=c2iShort(r.date)+" · 설치예정 "+r.planned+" · 당일설치완료 "+(r.uReady?r.sameDayInstall:"–");
+    bars += '<g>'
+      + '<rect x="'+(cx-barW-1)+'" y="'+yPlanned+'" width="'+barW+'" height="'+Math.max(0,padT+plotH-yPlanned)+'" rx="2" fill="'+color+'"/>'
+      + (yGood!=null ? ('<rect x="'+(cx+1)+'" y="'+yGood+'" width="'+barW+'" height="'+Math.max(0,padT+plotH-yGood)+'" rx="2" fill="var(--good)"/>') : '')
+      + '<rect x="'+(padL+slot*i)+'" y="'+padT+'" width="'+slot+'" height="'+plotH+'" fill="transparent"><title>'+label+'</title></rect>'
+    + '</g>';
   });
-  return Object.keys(map).sort().map(function(k){ return map[k]; });
-}
-
-// KPI 스트립 + 담당자별 비교 카드(막대차트 포함)를 그리는 공유 렌더러. prefix로 월/주/일 3탭의 DOM을 구분한다.
-function c2iRenderCard(prefix, buckets, managers, periodLabel){
-  var grand = {calls:0, planned:0, absent:0, sameDayInstall:0};
-  var byMgr = {};
-  managers.forEach(function(m){ byMgr[m] = {calls:0, planned:0, absent:0, sameDayInstall:0}; });
-  // 이 뷰(월/주/일 중 하나)에 표시되는 기간 전체에 U열(2026-07-21 신설) 이후 날짜가 하나도 없으면
-  // sameDayInstall은 "측정된 0"이 아니라 "잴 수 없음"이다 — 이때만 화면에서 숫자 대신 "–"로 보여준다.
-  var anyReady = buckets.some(function(b){ return b.anyReady; });
-  buckets.forEach(function(b){
-    managers.forEach(function(m){
-      var s = b.byManager[m] || {calls:0,planned:0,absent:0,sameDayInstall:0};
-      ["calls","planned","absent","sameDayInstall"].forEach(function(f){ grand[f]+=s[f]; byMgr[m][f]+=s[f]; });
-    });
+  var labelEvery = n>10?2:1, labels="";
+  rows.forEach(function(r,i){
+    if(i%labelEvery!==0) return;
+    var cx=padL+slot*i+slot/2;
+    labels += '<text x="'+cx+'" y="'+(h-5)+'" font-size="8.5" fill="var(--muted)" text-anchor="middle">'+c2iShort(r.date)+'</text>';
   });
-  var sdiText = function(n){ return anyReady ? fmt(n) : "–"; };
-
-  var kpiEl = document.getElementById(prefix+"-kpi");
-  if(kpiEl){
-    kpiEl.innerHTML =
-      tile(periodLabel+" 통화 총계","📞", fmt(grand.calls), "건", managers.map(function(m){return m+" "+fmt(byMgr[m].calls);}).join(" · ")) +
-      tile("설치예정 분류","🗓️", fmt(grand.planned), "건", "통화 중 "+pct(grand.calls?grand.planned/grand.calls:null)) +
-      tile("부재","📵", fmt(grand.absent), "건", "통화 중 "+pct(grand.calls?grand.absent/grand.calls:null)) +
-      tile("당일설치완료","✅", sdiText(grand.sameDayInstall), "건", anyReady ? ("설치예정 대비 "+pct(grand.planned?grand.sameDayInstall/grand.planned:null)+" 전환") : "U열(통화시점상태) 신설 이전이라 집계 불가(2026-07-21부터)", true);
-  }
-
-  var gridEl = document.getElementById(prefix+"-mgrgrid");
-  if(gridEl){
-    var palette = [C["--s-blue"], C["--s-orange"], C["--s-aqua"], C["--s-violet"], C["--s-yellow"], C["--s-red"]];
-    var row = function(k,v){ return '<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px dashed var(--grid)"><span style="color:var(--text-secondary)">'+k+'</span><b>'+v+'</b></div>'; };
-    gridEl.innerHTML = managers.map(function(m){
-      var t = byMgr[m];
-      var conv = (anyReady && t.planned) ? pct(t.sameDayInstall/t.planned) : "–";
-      return '<div class="card col-6 fill"><h3><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+palette[managers.indexOf(m)%palette.length]+';margin-right:6px"></span>'+m+'</h3>'+
-        row("통화(총계)", fmt(t.calls)) + row("설치예정", fmt(t.planned)) + row("부재", fmt(t.absent)) +
-        '<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span style="color:var(--text-secondary)">당일설치완료</span><b style="color:var(--good)">'+sdiText(t.sameDayInstall)+' <small style="color:var(--muted);font-weight:400">('+conv+')</small></b></div>'+
-        '<div class="chart-wrap ch-m"><canvas id="'+prefix+'-chart-'+managers.indexOf(m)+'"></canvas></div>'+
-      '</div>';
-    }).join("");
-    managers.forEach(function(m, idx){
-      var labels = buckets.map(function(b){ return b.label; });
-      var plannedData = buckets.map(function(b){ return (b.byManager[m]||{}).planned||0; });
-      // U열 신설(2026-07-21) 이전 구간은 null로 내려 Chart.js가 막대 자체를 안 그리게 한다
-      // (0으로 두면 "그 달은 전환 0건이었다"로 오독됨 — anyReady 가드와 동일 이유).
-      var sdData = buckets.map(function(b){ return b.anyReady ? ((b.byManager[m]||{}).sameDayInstall||0) : null; });
-      mk(prefix+"-chart-"+idx, { type:"bar",
-        data:{ labels:labels, datasets:[
-          { label:"설치예정", data:plannedData, backgroundColor:palette[idx%palette.length], borderRadius:5, categoryPercentage:.6, barPercentage:.8 },
-          { label:"당일설치완료", data:sdData, backgroundColor:C["--good"], borderRadius:5, categoryPercentage:.6, barPercentage:.8 }
-        ] },
-        options:{ scales:axes(), plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels: dlBarTop() } } });
-    });
-  }
-}
-
-// 일별 탭 날짜범위 재조회 — 서버 재호출 없이 C2I_DATA.dayRows를 클라이언트에서 다시 잘라 그린다.
-function c2iRenderDay(){
-  if(!C2I_DATA) return;
-  var sEl=document.getElementById("c2iD-start"), eEl=document.getElementById("c2iD-end");
-  var s=sEl.value, e=eEl.value;
-  if(!s||!e) return;
-  if(s>e){ var t=s; s=e; e=t; }
-  if(s<C2I_DATA.windowStart){ s=C2I_DATA.windowStart; }
-  var maxEnd = c2iAddDays(s, 41); // 최대 6주(42일)
-  if(e>maxEnd) e=maxEnd;
-  if(e>C2I_DATA.windowEnd) e=C2I_DATA.windowEnd;
-  sEl.value=s; eEl.value=e;
-  var rows = C2I_DATA.dayRows.filter(function(r){ return r.date>=s && r.date<=e; });
-  var buckets = c2iGroupBy(rows, function(r){return r.date;}, function(k){ return k.slice(5).replace("-","/"); });
-  c2iRenderCard("c2iD", buckets, C2I_DATA.managers, s+"~"+e);
+  return '<svg viewBox="0 0 '+w+' '+h+'" width="100%" height="150" role="img" aria-label="일별 설치예정 대비 당일설치완료">'
+    + gridLines
+    + '<line x1="'+padL+'" y1="'+(padT+plotH)+'" x2="'+(w-padR)+'" y2="'+(padT+plotH)+'" stroke="var(--baseline)" stroke-width="1"/>'
+    + bars + labels
+    + '</svg>';
 }
 
 function renderCallToInstall(c){
-  if(!c) return;
-  C2I_DATA = c;
-  var monthBuckets = c2iGroupBy(c.dayRows, function(r){return r.date.slice(0,7);}, function(k){ var p=k.split("-"); return p[0]+"/"+p[1]; });
-  var weekBuckets = c2iGroupBy(c.dayRows, function(r){return c2iWeekKey(r.date);}, function(k){ return k.slice(5).replace("-","/"); });
-  c2iRenderCard("c2iM", monthBuckets, c.managers, "최근 3개월");
-  c2iRenderCard("c2iW", weekBuckets, c.managers, "최근 "+weekBuckets.length+"주");
+  if(!c || !c.dayRows) return;
+  var managers = c.managers||[];
+  var startKey = c2iAddDays(c.windowEnd, -(C2I_WINDOW_DAYS-1));
+  var rows = c.dayRows.filter(function(r){ return r.date>=startKey && r.date<=c.windowEnd; });
 
-  if(!C2I_DAY_INIT){
-    C2I_DAY_INIT = true;
-    var endD = c.windowEnd, startD = c2iAddDays(endD, -20); // 기본값: 최근 21일(3주)
-    if(startD < c.windowStart) startD = c.windowStart;
-    var sEl=document.getElementById("c2iD-start"), eEl=document.getElementById("c2iD-end");
-    sEl.value=startD; eEl.value=endD;
-    sEl.min=c.windowStart; sEl.max=c.windowEnd; eEl.min=c.windowStart; eEl.max=c.windowEnd;
+  var metaEl=document.getElementById("c2iMeta");
+  if(metaEl) metaEl.innerHTML = "<b>기간</b> "+startKey+" ~ "+c.windowEnd+" (최근 "+C2I_WINDOW_DAYS+"일) · <b>대상</b> "+managers.join(" · ")+" · <b>원천</b> 실적로그 + 로우데이터 R/S/U열";
+
+  // 담당자별 14일 합계. docPending(서류보완중, PHASE152 신설)은 옛 8버킷 양식을 유지하려고
+  // '미설치/보류'에 합산한다 — calls(총계)엔 이미 포함돼 있으므로 합계 검산은 그대로 맞는다.
+  var totals={};
+  managers.forEach(function(m){ totals[m]={calls:0,planned:0,absent:0,nameChange:0,notInstalled:0,returned:0,refused:0,penalty:0,sameDayInstall:0}; });
+  var anyReady=false;
+  rows.forEach(function(r){
+    if(r.uReady) anyReady=true;
+    var t=totals[r.manager]; if(!t) return;
+    t.calls+=r.calls; t.planned+=r.planned; t.absent+=r.absent; t.nameChange+=r.nameChange;
+    t.notInstalled += r.notInstalled + (r.docPending||0);
+    t.returned+=r.returned; t.refused+=r.refused; t.penalty+=r.penalty; t.sameDayInstall+=r.sameDayInstall;
+  });
+  var grand={calls:0,planned:0,absent:0,sameDayInstall:0};
+  managers.forEach(function(m){ ["calls","planned","absent","sameDayInstall"].forEach(function(k){ grand[k]+=totals[m][k]; }); });
+  var sdiText=function(n){ return anyReady?fmt(n):"–"; };
+
+  var kpiEl=document.getElementById("c2i-kpi");
+  if(kpiEl){
+    kpiEl.innerHTML =
+      tile(C2I_WINDOW_DAYS+"일 통화 총계","📞", fmt(grand.calls), "건", managers.map(function(m){return m+" "+fmt(totals[m].calls);}).join(" · ")) +
+      tile("설치예정 분류","🗓️", fmt(grand.planned), "건", "통화 중 "+c2iPctText(grand.planned, grand.calls)) +
+      tile("부재","📵", fmt(grand.absent), "건", "통화 중 "+c2iPctText(grand.absent, grand.calls)) +
+      tile("당일설치완료","✅", sdiText(grand.sameDayInstall), "건",
+        anyReady ? ("설치예정 대비 "+c2iPctText(grand.sameDayInstall, grand.planned)+" 전환")
+                 : "U열(통화시점상태) 신설 이전이라 집계 불가(2026-07-21부터)", true);
   }
-  c2iRenderDay();
+
+  var gridEl=document.getElementById("c2i-mgrgrid");
+  if(gridEl){
+    gridEl.innerHTML = managers.map(function(m, idx){
+      var t=totals[m], color=C2I_PALETTE[idx%C2I_PALETTE.length];
+      var conv=(anyReady && t.planned) ? c2iPctText(t.sameDayInstall, t.planned) : "–";
+      var mrows=rows.filter(function(r){ return r.manager===m; }).sort(function(a,b){ return a.date<b.date?-1:(a.date>b.date?1:0); });
+      return '<div class="card col-6 fill"><h3><span class="c2i-dot" style="background:'+color+'"></span>'+m+'</h3>'
+        + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">통화(총계)</span><b>'+fmt(t.calls)+'</b></div>'
+        + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">설치예정</span><b>'+fmt(t.planned)+'</b></div>'
+        + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">부재</span><b>'+fmt(t.absent)+'</b></div>'
+        + '<div class="c2i-stat-row" style="border-bottom:none"><span style="color:var(--text-secondary)">당일설치완료</span><b style="color:var(--good)">'+sdiText(t.sameDayInstall)+' <small style="color:var(--muted);font-weight:400">('+conv+')</small></b></div>'
+        + '<div class="chart-wrap">'
+        +   '<div class="c2i-legend"><span><i style="background:'+color+'"></i>설치예정</span><span><i style="background:var(--good)"></i>당일설치완료</span></div>'
+        +   c2iRenderChart(mrows, color)
+        + '</div></div>';
+    }).join("");
+  }
+
+  var tblEl=document.getElementById("c2iDetailTable");
+  if(tblEl){
+    var head='<thead><tr><th>날짜</th><th>담당자</th><th>통화(총계)</th><th>설치예정</th><th>부재</th>'
+      + '<th>명의변경</th><th>미설치/보류</th><th>반품·폐업</th><th>설치거부·지연</th><th>위약금</th><th>당일설치완료</th></tr></thead>';
+    var sorted=rows.slice().sort(function(a,b){ return a.date===b.date?0:(a.date<b.date?1:-1); });
+    var body=sorted.map(function(r){
+      var noInstall=r.notInstalled+(r.docPending||0);
+      var sdi=r.uReady?fmt(r.sameDayInstall):"–";
+      var sub=(r.uReady && r.planned)?(" ("+c2iPctText(r.sameDayInstall, r.planned)+")"):"";
+      return '<tr'+(c2iWeekend(r.date)?' class="c2i-weekend"':'')+'>'
+        + '<td>'+r.date+(c2iWeekend(r.date)?' <small style="color:var(--muted)">(주말)</small>':'')+'</td>'
+        + '<td>'+r.manager+'</td>'
+        + '<td>'+fmt(r.calls)+'</td><td>'+fmt(r.planned)+'</td><td>'+fmt(r.absent)+'</td>'
+        + '<td>'+fmt(r.nameChange)+'</td><td>'+fmt(noInstall)+'</td><td>'+fmt(r.returned)+'</td>'
+        + '<td>'+fmt(r.refused)+'</td><td>'+fmt(r.penalty)+'</td>'
+        + '<td style="color:var(--good);font-weight:700">'+sdi+'<small class="c2i-pct">'+sub+'</small></td>'
+      + '</tr>';
+    }).join("");
+    var sumAll={calls:0,planned:0,absent:0,nameChange:0,notInstalled:0,returned:0,refused:0,penalty:0,sameDayInstall:0};
+    rows.forEach(function(r){
+      sumAll.calls+=r.calls; sumAll.planned+=r.planned; sumAll.absent+=r.absent; sumAll.nameChange+=r.nameChange;
+      sumAll.notInstalled += r.notInstalled+(r.docPending||0);
+      sumAll.returned+=r.returned; sumAll.refused+=r.refused; sumAll.penalty+=r.penalty; sumAll.sameDayInstall+=r.sameDayInstall;
+    });
+    var footSub=(anyReady && sumAll.planned)?(" ("+c2iPctText(sumAll.sameDayInstall, sumAll.planned)+")"):"";
+    var foot='<tfoot><tr><td colspan="2">'+C2I_WINDOW_DAYS+'일 합계</td>'
+      + '<td>'+fmt(sumAll.calls)+'</td><td>'+fmt(sumAll.planned)+'</td><td>'+fmt(sumAll.absent)+'</td>'
+      + '<td>'+fmt(sumAll.nameChange)+'</td><td>'+fmt(sumAll.notInstalled)+'</td><td>'+fmt(sumAll.returned)+'</td>'
+      + '<td>'+fmt(sumAll.refused)+'</td><td>'+fmt(sumAll.penalty)+'</td>'
+      + '<td style="color:var(--good);font-weight:700">'+(anyReady?fmt(sumAll.sameDayInstall):"–")+'<small class="c2i-pct">'+footSub+'</small></td>'
+      + '</tr></tfoot>';
+    tblEl.innerHTML = head + '<tbody>' + body + '</tbody>' + foot;
+  }
+
+  var calloutEl=document.getElementById("c2iCallout");
+  if(calloutEl){
+    if(anyReady){
+      var gConv=c2iPctText(grand.sameDayInstall, grand.planned);
+      var perMgr=managers.map(function(m){ return m+" "+c2iPctText(totals[m].sameDayInstall, totals[m].planned); }).join(", ");
+      calloutEl.innerHTML='<div class="rs-head">📌 요약</div><ul><li>최근 '+C2I_WINDOW_DAYS+'일간 담당자가 분류한 \'설치예정\' 콜 <b>'+fmt(grand.planned)+'건</b> 중 '
+        + '<b>'+fmt(grand.sameDayInstall)+'건('+gConv+')</b>이 그날 안에 설치까지 끝났습니다('+perMgr+'). '
+        + '주말은 통화량이 정상적으로 적거나 0입니다 — 지연이나 오류가 아닙니다.</li></ul>';
+    } else {
+      calloutEl.innerHTML='<div class="rs-head">📌 요약</div><ul><li>U열(통화시점상태) 신설(2026-07-21) 이전 구간이 포함돼 있어 당일설치완료 집계가 불가합니다.</li></ul>';
+    }
+  }
 }
-(function(){ var b=document.getElementById("c2iD-apply"); if(b) b.addEventListener("click", c2iRenderDay); })();
 
 var RPT = { week:null };
 function rptR1(v){ return v==null?null:Math.round(v*10)/10; }
@@ -4833,7 +4867,7 @@ var TAB_SECTIONS={
   weeklyboard:["ship","reasons","weeklyBoard"],
   weeklyaction:["cohort","weeklyBoard","accel"],
   weeklyreport:["weeklyBoard"],
-  c2iMonth:["callInstall"], c2iWeek:["callInstall"], c2iDay:["callInstall"],
+  c2i:["callInstall"],
   returned:["returned"]
 };
 var TAB_LOADED={}; // 탭 → 마지막으로 로드된 기간키("start|end", 전체는 ""). 같은 기간 재조회 방지.
@@ -5280,7 +5314,7 @@ function shareTabLayout(){
   if(s) s.addEventListener("click", shareTabLayout);
 })();
 
-var TABMETA={ ops:["운영 대시보드","① 현재 잔여 업무량(콜리스트 기준) + ② 주간 요약(구 현황판) · 두 섹션은 기준 시점이 다릅니다"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(N, 구K) 대비 설치예정(D) 병기"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 1만원 이벤트·야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"], weeklyreport:["위클리 리포트","주차별 리포트 게시판 · 주요회의내용 4-5줄 요약(수기 입력, Phase 1)"], c2iMonth:["당일통화당일설치 · 월별","최근 3개월 월별 집계 · 통화→당일설치 전환(상담원 담당자별 비교)"], c2iWeek:["당일통화당일설치 · 주별","최근 3개월 주단위(월요일 시작) 집계 · 통화→당일설치 전환(상담원 담당자별 비교)"], c2iDay:["당일통화당일설치 · 일별","날짜 범위를 직접 선택해 그 기간 통화→당일설치 전환을 봅니다(최대 6주, 상담원 담당자별 비교)"], returned:["미설치 분석","로우데이터 I열(상태)이 반품·폐업인 2026년 출고건 · 출고 주차·월별 집계 + J열 메모/K열 사유 키워드 분류"] };
+var TABMETA={ ops:["운영 대시보드","① 현재 잔여 업무량(콜리스트 기준) + ② 주간 요약(구 현황판) · 두 섹션은 기준 시점이 다릅니다"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(N, 구K) 대비 설치예정(D) 병기"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 1만원 이벤트·야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"], weeklyreport:["위클리 리포트","주차별 리포트 게시판 · 주요회의내용 4-5줄 요약(수기 입력, Phase 1)"], c2i:["당일통화당일설치","최근 14일 · 통화→당일설치 전환(상담원 담당자별 비교)"],returned:["미설치 분석","로우데이터 I열(상태)이 반품·폐업인 2026년 출고건 · 출고 주차·월별 집계 + J열 메모/K열 사유 키워드 분류"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
@@ -5290,7 +5324,7 @@ document.querySelectorAll(".navitem").forEach(function(n){
     // (D+7 지연분석은 2026-07-23 부서별 지연원인 탭으로 통합돼 하위 메뉴에서 빠졌다)
     // perf 는 2026-07-28 하위메뉴(월·주·일 흐름)가 사라져 TOGGLE 에서 뺐다.
     // ⚠️ 여기 남겨두면 getElementById("nav-flow") 가 null 이라 성과 탭 클릭이 통째로 죽는다.
-    var TOGGLE = { shipweekly:{children:["nav-shipdaily"], caret:"shipweekly-caret"}, weeklyboard:{children:["nav-weeklyaction","nav-weeklyreport"], caret:"weeklyboard-caret"}, cohort:{children:["nav-returned"], caret:"cohort-caret"}, c2iMonth:{children:["nav-c2iWeek","nav-c2iDay"], caret:"c2i-caret"} };
+    var TOGGLE = { shipweekly:{children:["nav-shipdaily"], caret:"shipweekly-caret"}, weeklyboard:{children:["nav-weeklyaction","nav-weeklyreport"], caret:"weeklyboard-caret"}, cohort:{children:["nav-returned"], caret:"cohort-caret"} };
     if (TOGGLE[t]) {
       var first = document.getElementById(TOGGLE[t].children[0]);
       var open = (first.style.display === "none");
