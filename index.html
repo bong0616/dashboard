@@ -3688,16 +3688,18 @@ function renderCallToInstall(c){
   var weekBuckets = c2iAggregateBy(c.dayRows, c2iWeekKey, function(k){ return k.slice(5).replace("-","/")+"주~"; });
   c2iRenderPeriodTable("c2iWeekTable", weekBuckets);
 
-  // 담당자별 30일 합계. docPending(서류보완중, PHASE152 신설)은 옛 8버킷 양식을 유지하려고
-  // '미설치/보류'에 합산한다 — calls(총계)엔 이미 포함돼 있으므로 합계 검산은 그대로 맞는다.
+  // 담당자별 30일 합계. docPending(서류보완중, PHASE152 신설)은 카드에 별도 행으로 보여줄 것이라
+  // 여기서는 notInstalled(미설치/보류 원본 컬럼)와 합치지 않고 각각 따로 쌓는다 — 단, 아래 detail
+  // 테이블(sumAll)은 옛 8버킷 양식을 유지해야 하므로 그쪽은 여전히 별도로 합산한다(이 totals는
+  // 카드 전용, sumAll과 다른 값이라도 서로 영향 없음).
   var totals={};
-  managers.forEach(function(m){ totals[m]={calls:0,planned:0,absent:0,nameChange:0,notInstalled:0,returned:0,refused:0,penalty:0,sameDayInstall:0}; });
+  managers.forEach(function(m){ totals[m]={calls:0,planned:0,absent:0,nameChange:0,notInstalled:0,docPending:0,returned:0,refused:0,penalty:0,sameDayInstall:0}; });
   var anyReady=false;
   rows.forEach(function(r){
     if(r.uReady) anyReady=true;
     var t=totals[r.manager]; if(!t) return;
     t.calls+=r.calls; t.planned+=r.planned; t.absent+=r.absent; t.nameChange+=r.nameChange;
-    t.notInstalled += r.notInstalled + (r.docPending||0);
+    t.notInstalled += r.notInstalled; t.docPending += (r.docPending||0);
     t.returned+=r.returned; t.refused+=r.refused; t.penalty+=r.penalty; t.sameDayInstall+=r.sameDayInstall;
   });
   var grand={calls:0,planned:0,absent:0,sameDayInstall:0};
@@ -3725,6 +3727,10 @@ function renderCallToInstall(c){
         + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">통화(총계)</span><b>'+fmt(t.calls)+'</b></div>'
         + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">설치예정</span><b>'+fmt(t.planned)+'</b></div>'
         + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">부재</span><b>'+fmt(t.absent)+'</b></div>'
+        + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">명의변경</span><b>'+fmt(t.nameChange)+' <small class="c2i-pct">('+c2iPctText(t.nameChange, t.calls)+')</small></b></div>'
+        + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">반품·폐업</span><b>'+fmt(t.returned)+' <small class="c2i-pct">('+c2iPctText(t.returned, t.calls)+')</small></b></div>'
+        + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">서류보완중</span><b>'+fmt(t.docPending)+' <small class="c2i-pct">('+c2iPctText(t.docPending, t.calls)+')</small></b></div>'
+        + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">미설치/보류</span><b>'+fmt(t.notInstalled)+' <small class="c2i-pct">('+c2iPctText(t.notInstalled, t.calls)+')</small></b></div>'
         + '<div class="c2i-stat-row" style="border-bottom:none"><span style="color:var(--text-secondary)">당일설치완료</span><b style="color:var(--good)">'+sdiText(t.sameDayInstall)+' <small style="color:var(--muted);font-weight:400">('+conv+')</small></b></div>'
         + '<div class="chart-wrap">'
         +   '<div class="c2i-legend"><span><i style="background:'+color+'"></i>설치예정</span><span><i style="background:var(--good)"></i>당일설치완료</span></div>'
