@@ -1855,6 +1855,7 @@ function shipTableHTML(rows, opts){
     + '<th rowspan="2" title="컨택 시도 ÷ (출고 − 자가설치완료). 자가설치는 상담원 컨택이 없어 분모에서 뺍니다 — 메모공란 때문에 1회 미만은 여전히 정상입니다.">건당 컨택<br><small class="th-tgt">시도÷(출고−자가설치)</small></th>'
     + '<th colspan="3" class="grp grp-top gl gr">설치완료 <small>합계 = 자가설치 + 상담원</small></th>'
     + '<th rowspan="2">완료율</th><th rowspan="2">미완료<br><small class="th-tgt">잔량</small></th>'
+    + '<th rowspan="2" title="출고일→배송완료일(T열) 평균 소요일. 2026-08-13 이후 출고분부터 집계(그 전 T값은 신뢰도 낮아 제외).">평균 배송완료일<br><small class="th-tgt">출고→배송완료<br>8/13부터 집계</small></th>'
     + '<th rowspan="2">평균 설치소요일<br><small class="th-tgt">목표 ≤'+SPD_TGT+'일</small></th><th rowspan="2">평균 재컨택주기<br><small class="th-tgt">목표 ≤'+RTC_TGT+'일</small></th>'
     + '</tr><tr><th class="grp gl">합계</th><th class="grp">자가설치</th><th class="grp gr">상담원</th></tr></thead>';
   var recent=rows.slice(-opts.recent);
@@ -1866,6 +1867,10 @@ function shipTableHTML(rows, opts){
     var im=w.immature;
     var tag=im?'<span class="curtag" style="background:var(--muted)">진행중</span>':(isCur?'<span class="curtag">최신</span>':'');
     var rateCell=im?grayCell(shipPct(w.doneRate),"%"):wowCell(w.doneRate, prev?prev.doneRate:null, {valFn:shipPct, unit:"%"});
+    // 🆕 2026-08-18(운영자 요청): 평균 배송완료일(출고→T, avgDeliverySpeed) — 2026-08-13 이전 출고
+    // 코호트는 백엔드(SHIP_DELIVERY_SPEED_FLOOR)가 null을 내려보내므로 grayCell/wowCell의 기존
+    // null 처리(–)가 그대로 "데이터 없음"으로 보여준다. immature 여부와 무관하게 값이 없으면 –.
+    var dlvCell=im?grayCell(w.avgDeliverySpeed==null?null:round1(w.avgDeliverySpeed),"일"):wowCell(w.avgDeliverySpeed, prev?prev.avgDeliverySpeed:null, {valFn:round1, unit:"일", lowerBetter:true});
     var spdCell=im?grayCell(w.avgSpeed==null?null:round1(w.avgSpeed),"일"):wowCell(w.avgSpeed, prev?prev.avgSpeed:null, {valFn:round1, unit:"일", lowerBetter:true, target:SPD_TGT});
     var rtcCell=im?grayCell(w.avgRetouch==null?null:round1(w.avgRetouch),"일"):wowCell(w.avgRetouch, prev?prev.avgRetouch:null, {valFn:round1, unit:"일", lowerBetter:true, target:RTC_TGT});
     return '<tr'+(isCur?' class="cur"':'')+'>'
@@ -1879,6 +1884,7 @@ function shipTableHTML(rows, opts){
       + wowCell((w.agent||0)+(w.sms||0), prev&&((prev.agent||0)+(prev.sms||0)), {share: w.installs>0?Math.round(((w.agent||0)+(w.sms||0))/w.installs*100):null})
       + rateCell
       + wowCell(w.open, prev?prev.open:null, {lowerBetter:true})
+      + dlvCell
       + spdCell
       + rtcCell
       + '</tr>';
