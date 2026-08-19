@@ -131,8 +131,8 @@
   .stack { display: grid; gap: 16px; grid-auto-rows: 1fr; }
   .stack > .card { display: flex; flex-direction: column; }
   .stack > .card > .chart-wrap { flex: 1 1 auto; height: auto; min-height: 150px; }
-  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 18px 16px; box-shadow: var(--shadow); min-width: 0; }
-  .card h3 { font-size: 14.5px; letter-spacing: -.3px; display:flex; align-items:center; gap:8px; }
+  .card { position: relative; background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 18px 16px; box-shadow: var(--shadow); min-width: 0; }
+  .card h3 { font-size: 14.5px; letter-spacing: -.3px; display:flex; align-items:center; gap:8px; padding-right: 24px; }
   .card .sub { font-size: 12px; color: var(--muted); margin-top: 3px; margin-bottom: 8px; }
   /* 월 목표 달성률 카드 */
   .ach { margin-top: 4px; }
@@ -377,6 +377,21 @@
   .card.cd-off { display:none; }
   body.edit-on .card.cd-off { display:block; opacity:.42; filter:grayscale(.7); }
   body.edit-on .grid { min-height:40px; }
+  /* ===== ⭐ 즐겨찾기 =====
+     별표는 항상 보이는 카드 우상단 버튼(내 브라우저 localStorage에만 저장, 배치편집과 무관).
+     편집모드 중엔 cd-tools 툴바와 자리가 겹쳐 숨긴다. */
+  .fav-star { position:absolute; top:12px; right:12px; z-index:5; font-size:17px; line-height:1;
+    background:none; border:none; padding:2px 4px; cursor:pointer; color: var(--muted); }
+  .fav-star:hover { color:#f0a020; }
+  .fav-star.on { color:#f0a020; }
+  body.edit-on .fav-star { display:none; }
+  /* 즐겨찾기 탭 안 복제 카드 — 탭 진입 시마다 원본을 다시 캡처한 읽기전용 스냅샷이다.
+     원본과 똑같이 보여야 하므로 카드 자체 스타일은 건드리지 않고, 안의 조작 요소만 죽인다. */
+  .fav-snapshot .fav-badge { display:block; font-size:11px; font-weight:700; color: var(--s-blue); margin-bottom:6px; cursor:pointer; }
+  .fav-snapshot select, .fav-snapshot textarea, .fav-snapshot input, .fav-snapshot button:not(.fav-star) { opacity:.5; cursor:not-allowed; }
+  .fav-empty { font-size:13px; color: var(--muted); }
+  @keyframes favFlash { 0%,100% { box-shadow:0 0 0 0 transparent; } 30% { box-shadow:0 0 0 4px color-mix(in srgb, var(--s-blue) 55%, transparent); } }
+  .fav-flash { animation: favFlash 1.4s ease-out; }
   .col-4 { grid-column: span 4; } .col-5 { grid-column: span 5; } .col-6 { grid-column: span 6; }
   .col-7 { grid-column: span 7; } .col-8 { grid-column: span 8; } .col-12 { grid-column: span 12; }
   .chart-wrap { position: relative; width: 100%; }
@@ -744,6 +759,7 @@
     <div class="logo">📊</div>
     <div><b>아이샵케어</b><span>설치 운영 대시보드</span></div>
   </div>
+  <div class="navitem" data-tab="favorites" id="nav-favorites"><span class="ic">⭐</span><div>즐겨찾기<small>내가 표시한 카드 모아보기</small></div></div>
   <div class="navitem active" data-tab="weeklyboard" id="nav-weeklyboard"><span class="ic">📅</span><div>위클리 현황판<small>출고주 6주 스코어보드</small></div><span class="navcaret" id="weeklyboard-caret">▸</span></div>
   <div class="navitem navchild" data-tab="weeklyaction" id="nav-weeklyaction" style="display:none"><span class="ic">📄</span><div>보고서<small>1만원·야간원격·당일배송 주차별 검토</small></div></div>
   <div class="navitem navchild" data-tab="weeklyreport" id="nav-weeklyreport" style="display:none"><span class="ic">🗒️</span><div>위클리 리포트<small>주차별 요약 게시판</small></div></div>
@@ -803,6 +819,11 @@
   <!-- OPS — ① 현재 잔여(지금 이 순간 기준) + ② 주간 요약(구 '현황판' 전량 이관, 2026-07-23)
        ⚠️ 두 섹션은 기준 시점이 다르다. ①은 조회 시점의 잔여, ②는 드롭다운으로 고른 '기준 주'.
           섞이면 운영자가 같은 화면의 두 숫자를 같은 기간으로 오해한다 — .sec-head 로 반드시 갈라 둘 것. -->
+  <section class="tab-content" id="tab-favorites">
+    <div class="sec-head">⭐ 즐겨찾기 <small>이 탭에 들어올 때마다 원본 카드를 다시 불러옵니다(스냅샷) · 실시간 동기화가 아니며 안의 입력/버튼은 비활성화됩니다</small></div>
+    <div class="grid" id="favorites-grid"></div>
+  </section>
+
   <section class="tab-content" id="tab-ops">
     <div class="sec-head">📋 현재 잔여 <small>조회 시점 기준 · 지금 처리해야 할 업무량</small></div>
     <div class="tiles" id="ops-tiles"></div>
@@ -5047,6 +5068,7 @@ function boot(passcode) {
     applyData(d);
     // 카드 배치는 렌더가 끝난 뒤 한 번만 얹는다(코드 기본값을 먼저 떠 놔야 '원래대로'가 가능하다)
     initLayout(d.layout);
+    loadFavorites(d.favorites); buildFavStars();
   }, function(msg){ setLoading(false); showGate(msg); });
 }
 // 기존 호출부 호환용 얇은 래퍼 — 항상 '현재 탭' 기준으로 조회한다.
@@ -5198,6 +5220,9 @@ var LAYOUT_SHARED = {};   // 서버 공유분(payload.layout)
 var LAYOUT_DEFAULT = {};  // 코드 기본값 — 첫 apply 이전의 DOM 상태. '원래대로'의 복원 기준.
 var EDIT_ON = false;
 
+// favorites 탭도 다른 탭과 똑같이 배치편집 대상이다(순서·폭·숨김 편집 + '전원 적용' 공유 가능).
+// 스냅샷 복제 카드도 원본과 같은 data-cid 를 그대로 유지하기 때문에 가능하다 — captureLayout/applyLayout이
+// 전부 그 탭 섹션(#tab-favorites) 안으로 스코프돼 있어 다른 탭의 같은 data-cid 원본과 충돌하지 않는다.
 function layoutTabs(){ return Object.keys(TABMETA); }
 function layoutSection(tab){ return document.getElementById("tab-"+tab); }
 function layoutContainers(tab){
@@ -5381,6 +5406,140 @@ function syncCardTools(card){
 }
 function syncAllCardTools(){ Array.prototype.forEach.call(document.querySelectorAll(".card[data-cid]"), syncCardTools); }
 
+// ===================== ⭐ 즐겨찾기 =====================
+// 팀 전체가 보는 단일 목록(개별 계정이 없어 "내 즐겨찾기"가 아니라 이 대시보드를 보는 모두의 즐겨찾기다).
+// 로컬(localStorage)은 통신 실패 대비 백업일 뿐, 서버(대시보드설정 시트 kind=favorites)가 정본이다.
+// ⚠️ 배치편집(LAYOUT_*)과는 별개 저장소다 — 이건 "무엇을 별표했나", 배치편집은 "즐겨찾기 탭 안 카드를
+//    어떻게 배열했나"(탭 키 "favorites"로 layoutTabs()에 이미 포함돼 있음).
+var FAVORITES_LS_KEY = "dashFavorites_v1";
+var FAVORITES = [];
+
+function loadFavorites(shared){
+  if (Array.isArray(shared)) { FAVORITES = shared.slice(); saveFavoritesLocal(); return; }
+  try { var raw = localStorage.getItem(FAVORITES_LS_KEY); if (raw) FAVORITES = JSON.parse(raw) || []; }
+  catch (e) { FAVORITES = []; }
+}
+function saveFavoritesLocal(){ try { localStorage.setItem(FAVORITES_LS_KEY, JSON.stringify(FAVORITES)); } catch (e) {} }
+function isFavorite(cid){ return FAVORITES.indexOf(cid) >= 0; }
+
+function toggleFavorite(cid){
+  var i = FAVORITES.indexOf(cid);
+  if (i >= 0) FAVORITES.splice(i, 1); else FAVORITES.push(cid);
+  saveFavoritesLocal();
+  syncAllFavStars();
+  if (CUR_TAB === "favorites") renderFavoritesSnapshot();
+  syncFavoritesToServer();
+}
+
+var FAV_SYNC_T = null;
+// 별표 연타 시 매번 서버왕복이 생기지 않도록 살짝 디바운스 — 마지막 상태만 보낸다.
+function syncFavoritesToServer(){
+  if (!LAST_PASS) return;
+  if (FAV_SYNC_T) clearTimeout(FAV_SYNC_T);
+  FAV_SYNC_T = setTimeout(function(){
+    FAV_SYNC_T = null;
+    var snap = FAVORITES.slice();
+    fetchData(LAST_PASS, function(res){
+      if (res && res.ok && LAST_DATA) LAST_DATA.favorites = res.favorites || snap;
+      // 실패해도 조용히 넘어간다 — 내 화면은 로컬로 이미 반영돼 있고, 팀 공유만 다음 별표 조작 때 재시도된다.
+    }, function(){}, { params: { action: "setfavorites", favorites: JSON.stringify(snap) } });
+  }, 400);
+}
+
+function attachFavStar(card, cid){
+  var btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "fav-star" + (isFavorite(cid) ? " on" : "");
+  btn.title = "즐겨찾기";
+  btn.textContent = isFavorite(cid) ? "★" : "☆";
+  btn.addEventListener("click", function(ev){ ev.stopPropagation(); toggleFavorite(cid); });
+  card.appendChild(btn);
+  return btn;
+}
+function buildFavStars(){
+  Array.prototype.forEach.call(document.querySelectorAll(".card[data-cid]"), function(card){
+    if (card.classList.contains("fav-snapshot")) return; // 즐겨찾기 탭 복제본은 snapshotCard가 별도로 붙인다
+    if (card.querySelector(".fav-star")) return;
+    attachFavStar(card, card.getAttribute("data-cid"));
+  });
+}
+function syncAllFavStars(){
+  Array.prototype.forEach.call(document.querySelectorAll(".card[data-cid] > .fav-star"), function(btn){
+    var card = btn.parentNode, cid = card && card.getAttribute("data-cid");
+    var on = !!(cid && isFavorite(cid));
+    btn.classList.toggle("on", on);
+    btn.textContent = on ? "★" : "☆";
+  });
+}
+
+// 원본 카드의 id 속성을 전부 지운다(문서 전체에서 유일해야 하는 id들 — table id, textarea id 등).
+// data-cid는 배치편집이 쓰므로 남긴다.
+function stripCloneIds_(el){
+  if (el.id) el.removeAttribute("id");
+  Array.prototype.forEach.call(el.querySelectorAll("[id]"), function(x){ x.removeAttribute("id"); });
+}
+// 원본을 즐겨찾기 탭에 안 넣고 오직 이 cid를 가진 실제 카드가 어느 탭에 있는지만 찾는다(즐겨찾기 탭 자기 자신 제외).
+function findSourceCard_(cid){ return document.querySelector('.tab-content:not(#tab-favorites) .card[data-cid="' + cid + '"]'); }
+function sourceTabIdOf_(cid){
+  var el = findSourceCard_(cid), sec = el && el.closest(".tab-content");
+  return sec && sec.id ? sec.id.replace(/^tab-/, "") : "";
+}
+function jumpToFavoriteSource(cid){
+  var tabId = sourceTabIdOf_(cid); if (!tabId) return;
+  var nav = document.querySelector('.navitem[data-tab="' + tabId + '"]');
+  if (nav) nav.click();
+  setTimeout(function(){
+    var target = document.querySelector('#tab-' + tabId + ' .card[data-cid="' + cid + '"]');
+    if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.classList.add("fav-flash");
+    setTimeout(function(){ target.classList.remove("fav-flash"); }, 1600);
+  }, 60);
+}
+// 원본 카드 하나를 즐겨찾기 탭에 넣을 읽기전용 스냅샷으로 복제. 실시간 동기화가 아니라
+// "즐겨찾기 탭에 들어올 때마다 그 순간 상태를 다시 캡처"하는 방식(차트 캔버스는 이미지로 고정).
+function snapshotCard(cid){
+  var src = findSourceCard_(cid); if (!src) return null;
+  var clone = src.cloneNode(true);
+  clone.classList.add("fav-snapshot");
+  // cloneNode는 이벤트리스너를 복제하지 않는다 — 원본에 이미 붙어있던(먹통이 될) 편집툴바·별표는 지우고 새로 만든다.
+  var oldTools = clone.querySelector(".cd-tools"); if (oldTools) oldTools.remove();
+  var oldStar = clone.querySelector(".fav-star"); if (oldStar) oldStar.remove();
+  // 차트 캔버스 → 그 순간 이미지로 고정(캔버스를 그대로 복제하면 빈 화면이 된다, id도 원본과 중복된다)
+  var srcCanvases = src.querySelectorAll("canvas"), cloneCanvases = clone.querySelectorAll("canvas");
+  for (var i = 0; i < cloneCanvases.length; i++) {
+    var oc = srcCanvases[i], cc = cloneCanvases[i], img = document.createElement("img");
+    try { img.src = oc.toDataURL("image/png"); } catch (e) { img.alt = "(차트를 불러올 수 없습니다)"; }
+    img.style.width = "100%"; img.style.display = "block";
+    cc.parentNode.replaceChild(img, cc);
+  }
+  stripCloneIds_(clone);
+  // 스냅샷 안 조작요소는 동작하지 않는다 — 명확히 비활성화(별표는 이 다음에 새로 붙여서 살아있게 함)
+  Array.prototype.forEach.call(clone.querySelectorAll("select, textarea, input, button"), function(el){ el.disabled = true; });
+  var badge = document.createElement("div");
+  badge.className = "fav-badge";
+  badge.textContent = "🗂️ " + (TABMETA[sourceTabIdOf_(cid)] ? TABMETA[sourceTabIdOf_(cid)][0] : "") + " 탭 스냅샷 · 클릭 시 이동";
+  badge.addEventListener("click", function(){ jumpToFavoriteSource(cid); });
+  clone.insertBefore(badge, clone.firstChild);
+  attachFavStar(clone, cid);
+  return clone;
+}
+function renderFavoritesSnapshot(){
+  var grid = document.getElementById("favorites-grid");
+  grid.innerHTML = "";
+  if (!FAVORITES.length) {
+    grid.innerHTML = '<div class="card col-12"><div class="fav-empty">⭐ 아직 즐겨찾기한 카드가 없습니다. 각 카드 오른쪽 위 ☆ 를 눌러 추가하세요.</div></div>';
+    return;
+  }
+  FAVORITES.forEach(function(cid){
+    var clone = snapshotCard(cid); if (!clone) return;
+    grid.appendChild(clone);
+    ensureWidth(clone, grid); // .stack 출신(폭 클래스 없음) 카드가 12칸 그리드에서 찌그러지지 않도록
+  });
+  applyLayout("favorites", effectiveLayout("favorites")); // 저장된 배치(순서·폭·숨김)가 있으면 재적용
+  if (EDIT_ON) { buildEditTools(); syncAllCardTools(); }
+}
+
 // ---- 툴바 버튼 ----
 function setEditMode(on){
   EDIT_ON=!!on;
@@ -5444,7 +5603,7 @@ function shareTabLayout(){
   if(s) s.addEventListener("click", shareTabLayout);
 })();
 
-var TABMETA={ ops:["운영 대시보드","① 현재 잔여 업무량(콜리스트 기준) + ② 주간 요약(구 현황판) · 두 섹션은 기준 시점이 다릅니다"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(N, 구K) 대비 설치예정(D) 병기"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 1만원 이벤트·야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"], weeklyreport:["위클리 리포트","주차별 리포트 게시판 · 주요회의내용 4-5줄 요약(수기 입력, Phase 1)"], c2i:["당일통화당일설치","월별·주별 요약(최근 3개월) + 일별 상세(최근 30일) 한 페이지 · 통화→당일설치 전환(상담원 담당자별 비교)"],returned:["미설치 분석","로우데이터 I열(상태)이 반품·폐업인 2026년 출고건 · 출고 주차·월별 집계 + J열 메모/K열 사유 키워드 분류"] };
+var TABMETA={ favorites:["즐겨찾기","내가 ⭐ 표시한 카드를 모아봅니다 · 탭에 들어올 때마다 원본을 다시 캡처합니다(실시간 동기화 아님)"], ops:["운영 대시보드","① 현재 잔여 업무량(콜리스트 기준) + ② 주간 요약(구 현황판) · 두 섹션은 기준 시점이 다릅니다"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(N, 구K) 대비 설치예정(D) 병기"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 1만원 이벤트·야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"], weeklyreport:["위클리 리포트","주차별 리포트 게시판 · 주요회의내용 4-5줄 요약(수기 입력, Phase 1)"], c2i:["당일통화당일설치","월별·주별 요약(최근 3개월) + 일별 상세(최근 30일) 한 페이지 · 통화→당일설치 전환(상담원 담당자별 비교)"],returned:["미설치 분석","로우데이터 I열(상태)이 반품·폐업인 2026년 출고건 · 출고 주차·월별 집계 + J열 메모/K열 사유 키워드 분류"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
@@ -5466,8 +5625,9 @@ document.querySelectorAll(".navitem").forEach(function(n){
     document.getElementById("page-title").textContent=TABMETA[t][0];
     document.getElementById("page-desc").textContent=TABMETA[t][1];
     CUR_TAB=t;
+    if(t==="favorites") renderFavoritesSnapshot(); // 즐겨찾기 탭은 서버 재조회 없이 매번 원본을 재캡처한다
     // 커스텀 기간이 걸려 있는데 이 탭이 아직 그 기간으로 안 불러와졌으면 지금 이 탭 섹션만 조회(다른 탭 재집계 없음)
-    if(CUR_PERIOD.start && TAB_LOADED[t]!==periodKey()){
+    if(t!=="favorites" && CUR_PERIOD.start && TAB_LOADED[t]!==periodKey()){
       loadTabPeriod(t, CUR_PERIOD.start, CUR_PERIOD.end, CUR_PERIOD.label);
     }
     // resize charts in newly shown tab
