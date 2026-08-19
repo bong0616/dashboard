@@ -3665,11 +3665,16 @@ function c2iAggregateBy(rows, keyFn, labelFn){
 
 // 날짜별 출고완료 건수(c.shipRows, 담당자 무관)를 월/주 키로 합산한다 — 월별·주별 요약 표에
 // "출고완료" 열로 병기하기 위함(2026-08-14 운영자 요청).
+// 🆕 2026-08-19: completed(설치완료건)·contactD1(그중 P→S D+1이내) 도 같이 합산 — "최초컨택D+1설치"
+// 열이 이 값을 쓴다. 반환 타입이 숫자→객체로 바뀜(호출부 c2iRenderGroupedTable도 같이 수정됨).
 function c2iAggregateShipBy(shipRows, keyFn){
   var map={};
   (shipRows||[]).forEach(function(r){
     var k=keyFn(r.date);
-    map[k]=(map[k]||0)+(r.shipped||0);
+    if(!map[k]) map[k]={shipped:0, completed:0, contactD1:0};
+    map[k].shipped+=(r.shipped||0);
+    map[k].completed+=(r.completed||0);
+    map[k].contactD1+=(r.contactD1||0);
   });
   return map;
 }
@@ -3688,7 +3693,7 @@ function c2iRenderGroupedTable(tblId, buckets, opts){
   var shipMap = opts.shipMap;
   var head='<thead><tr><th>기간</th><th>담당자</th><th>통화(총계)</th><th>설치예정</th><th>부재</th>'
     + '<th>명의변경</th><th>미설치/보류</th><th>반품·폐업</th><th>설치거부·지연</th><th>위약금</th><th>당일설치완료</th>'
-    + (shipMap ? '<th>출고완료</th>' : '') + '</tr></thead>';
+    + (shipMap ? '<th>출고완료</th><th>최초컨택D+1설치<br><small class="th-tgt">P→S≤1</small></th>' : '') + '</tr></thead>';
 
   // 기간(key) 기준으로 담당자 행들을 묶어 합계를 낸다.
   var groups = {}, order = [];
@@ -3710,11 +3715,23 @@ function c2iRenderGroupedTable(tblId, buckets, opts){
   function statCells(o, isSub){
     var sdi=o.anyReady?fmt(o.sameDayInstall):"–";
     var sub=(o.anyReady && o.planned)?(" ("+c2iPctText(o.sameDayInstall,o.planned)+")"):"";
+    var shipCell = "", contactCell = "";
+    if(shipMap){
+      var sm = shipMap[o.key];
+      if(isSub){
+        shipCell = '<td>—</td>';
+        contactCell = '<td>—</td>';
+      } else {
+        shipCell = '<td>'+fmt(sm ? sm.shipped : 0)+'</td>';
+        var cd1 = sm ? sm.contactD1 : 0, comp = sm ? sm.completed : 0;
+        contactCell = '<td>'+fmt(cd1)+'<small class="c2i-pct"> ('+c2iPctText(cd1, comp)+')</small></td>';
+      }
+    }
     return '<td>'+fmt(o.calls)+'</td><td>'+fmt(o.planned)+'</td><td>'+fmt(o.absent)+'</td>'
       + '<td>'+fmt(o.nameChange)+'</td><td>'+fmt(o.notInstalled)+'</td><td>'+fmt(o.returned)+'</td>'
       + '<td>'+fmt(o.refused)+'</td><td>'+fmt(o.penalty)+'</td>'
       + '<td style="color:var(--good);font-weight:700">'+sdi+'<small class="c2i-pct">'+sub+'</small></td>'
-      + (shipMap ? ('<td>'+(isSub?'—':fmt(shipMap[o.key]||0))+'</td>') : '');
+      + shipCell + contactCell;
   }
 
   var body = order.map(function(k, idx){
