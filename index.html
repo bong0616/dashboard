@@ -332,6 +332,14 @@
   .note-preview ul, .note-preview ol { margin:4px 0 4px 20px; padding:0; }
   .note-preview li { margin-bottom:2px; }
   .memo-text { font-size:13px; line-height:1.6; color: var(--text-secondary); white-space:pre-wrap; word-break:break-word; flex:1; }
+  /* 긴 메모 접기/펼치기(2026-08-19) — .memo-body-col이 .memo-text를 감싸 flex:1을 물려받는다. */
+  .memo-body-col { flex:1; min-width:0; }
+  .memo-entry-collapsed .memo-text { max-height:4.9em; overflow:hidden; position:relative; }
+  .memo-entry-collapsed .memo-text::after { content:""; position:absolute; left:0; right:0; bottom:0; height:1.6em;
+    background:linear-gradient(to bottom, transparent, var(--page)); }
+  .memo-toggle-btn { display:block; margin-top:4px; border:none; background:transparent; color: var(--s-blue);
+    font-size:11.5px; font-weight:600; cursor:pointer; padding:2px 0; font-family:var(--font); }
+  .memo-toggle-btn:hover { text-decoration:underline; }
   /* 기존 메모 편집(2026-08-03) — 클릭 시 memo-entry 내부를 textarea+저장/취소로 바꿔치기한다(전체 재렌더 없이). */
   .memo-edit-btn { flex-shrink:0; border:none; background:transparent; cursor:pointer; font-size:12px; padding:0 2px; opacity:.5; border-radius:6px; line-height:1.6; }
   .memo-edit-btn:hover { opacity:1; background: color-mix(in srgb, var(--text-primary) 10%, transparent); }
@@ -1035,9 +1043,10 @@
       <div class="card col-8" data-cid="wbMemo"><h3>📝 주차별 메모장</h3><div class="sub">자유롭게 메모를 남기세요 · 지우지 않는 한 계속 누적됩니다(이번 주 기준으로 쌓임)</div>
         <div style="margin:8px 0">
           <div class="wa-note-toolbar"><button type="button" class="wa-fmt-btn" data-fmt="bold" title="굵게"><b>B</b> 굵게</button><button type="button" class="wa-fmt-btn" data-fmt="bullet" title="글머리 기호">• 글머리기호</button><button type="button" class="wa-fmt-btn" data-fmt="number" title="번호 매기기">1. 번호매기기</button></div>
-          <textarea id="wbMemoInput" rows="2" placeholder="메모를 입력하세요…" style="width:100%;box-sizing:border-box;resize:vertical;font-family:var(--font);font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--page);color:var(--text-primary)"></textarea>
+          <textarea id="wbMemoInput" maxlength="2000" rows="4" placeholder="메모를 입력하세요…" style="width:100%;box-sizing:border-box;resize:vertical;font-family:var(--font);font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--page);color:var(--text-primary)"></textarea>
           <div class="note-preview-label">미리보기</div><div class="note-preview" id="wbMemoPreview"></div>
           <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:6px">
+            <span id="wbMemoCnt" style="font-size:11.5px;color:var(--muted)"></span>
             <span id="wbMemoMsg" style="font-size:11.5px;color:var(--muted)"></span>
             <button class="fbtn fbtn-go" id="wbMemoAddBtn">메모 추가</button>
           </div>
@@ -2871,6 +2880,9 @@ function renderWeeklyBoard(d){
 // 여긴 클릭할 때마다 새 항목이 쌓인다 — memo-item(주 단위 박스) 안에 memo-entry(건별)를 여러 개 넣는다.
 var WB_MEMOS_LAST = {};
 var WB_MEMO_ROWS = {}; // row(시트 행번호) -> {text} — 편집 시작 시 원문을 다시 찾는 용도
+// 🆕 2026-08-19(운영자 요청): 200자 넘는 메모는 기본 접어서 로그가 긴 글 하나로 뒤덮이지 않게 하고,
+//   "더보기" 클릭 시 전문을 펼친다(원문은 항상 완전히 저장·전달되며, 접기는 화면 표시만 줄인다).
+var WB_MEMO_COLLAPSE_THRESHOLD = 200;
 function wbMemoLogHTML(memos){
   var weeks = Object.keys(memos||{}).sort().reverse();
   WB_MEMO_ROWS = {};
@@ -2881,10 +2893,15 @@ function wbMemoLogHTML(memos){
       +'<div class="memo-h"><span class="memo-wk">'+rptWeekLabel(w)+' 주</span><span class="memo-cnt">'+items.length+'건</span></div>'
       +items.map(function(it){
         if(it.row!=null) WB_MEMO_ROWS[it.row] = { text: it.text||"" };
-        return '<div class="memo-entry" data-row="'+(it.row!=null?it.row:"")+'">'
+        var raw = it.text||"";
+        var isLong = raw.length > WB_MEMO_COLLAPSE_THRESHOLD;
+        return '<div class="memo-entry'+(isLong?' memo-entry-collapsed':'')+'" data-row="'+(it.row!=null?it.row:"")+'">'
           +'<div class="memo-time-col"><span class="memo-time">'+esc(it.time||"")+'</span>'
           +(it.editTime?'<span class="memo-edited">수정 '+esc(it.editTime)+'</span>':"")+'</div>'
-          +'<div class="memo-text">'+mdRender_(it.text||"")+'</div>'
+          +'<div class="memo-body-col">'
+          +'<div class="memo-text">'+mdRender_(raw)+'</div>'
+          +(isLong ? '<button type="button" class="memo-toggle-btn">더보기 ▾</button>' : '')
+          +'</div>'
           +(it.row!=null ? '<button type="button" class="memo-edit-btn" data-row="'+it.row+'" title="수정">✏️</button>' : '')
           +'</div>';
       }).join('')
@@ -2903,7 +2920,7 @@ function wbMemoEnterEdit(row){
   if(!el || !data) return;
   el.classList.add("memo-entry-editing");
   el.innerHTML = '<div class="wa-note-toolbar"><button type="button" class="wa-fmt-btn" data-fmt="bold" title="굵게"><b>B</b> 굵게</button><button type="button" class="wa-fmt-btn" data-fmt="bullet" title="글머리 기호">• 글머리기호</button><button type="button" class="wa-fmt-btn" data-fmt="number" title="번호 매기기">1. 번호매기기</button></div>'
-    +'<textarea class="memo-edit-ta" rows="2">'+esc(data.text)+'</textarea>'
+    +'<textarea class="memo-edit-ta" maxlength="2000" rows="4">'+esc(data.text)+'</textarea>'
     +'<div class="note-preview-label">미리보기</div><div class="note-preview memo-edit-preview"></div>'
     +'<div class="memo-edit-row">'
     +'<span class="memo-edit-msg"></span>'
@@ -2956,6 +2973,13 @@ function wbBindMemoLog(){
     if(t.classList.contains("memo-edit-btn")) wbMemoEnterEdit(t.getAttribute("data-row"));
     else if(t.classList.contains("memo-edit-cancel")) wbRenderMemoLog();
     else if(t.classList.contains("memo-edit-save")) wbMemoSaveEdit(t.getAttribute("data-row"));
+    else if(t.classList.contains("memo-toggle-btn")){
+      var entry = t.closest(".memo-entry");
+      if(entry){
+        var collapsed = entry.classList.toggle("memo-entry-collapsed");
+        t.textContent = collapsed ? "더보기 ▾" : "접기 ▴";
+      }
+    }
   });
 }
 var WB_MEMO_BOUND=false;
@@ -2964,7 +2988,7 @@ function wbBindMemoButton(){
   var btn=document.getElementById("wbMemoAddBtn");
   if(!btn) return;
   WB_MEMO_BOUND=true;
-  bindNoteEditor_(document.getElementById("wbMemoInput"), {previewId:"wbMemoPreview"});
+  bindNoteEditor_(document.getElementById("wbMemoInput"), {previewId:"wbMemoPreview", cntId:"wbMemoCnt"});
   btn.addEventListener("click", function(){
     if(!LAST_PASS) return;
     var ta=document.getElementById("wbMemoInput"), msg=document.getElementById("wbMemoMsg");
