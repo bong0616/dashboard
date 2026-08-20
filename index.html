@@ -501,6 +501,12 @@
   /* 🆕 2026-08-06(운영자 요청): 사유×주차 셀 클릭 → 주문번호·메모 상세 */
   #wbDelayTable td.cld-clickable { cursor: pointer; }
   #wbDelayTable td.cld-clickable:hover { background: color-mix(in srgb, var(--s-blue) 12%, transparent); }
+  /* 🆕 2026-08-20(운영자 요청): 미설치 분석(반품·폐업) 표 — 사유 칸 클릭(기존)에 이어 주/월 라벨
+     칸 클릭(신규, 전체 사유 정렬 보기)도 같은 방식으로 클릭 가능함을 보여준다. */
+  #retWeeklyTable td.cld-clickable, #retMonthlyTable td.cld-clickable,
+  #retWeeklyTable td.ret-week-clickable, #retMonthlyTable td.ret-week-clickable { cursor: pointer; }
+  #retWeeklyTable td.cld-clickable:hover, #retMonthlyTable td.cld-clickable:hover,
+  #retWeeklyTable td.ret-week-clickable:hover, #retMonthlyTable td.ret-week-clickable:hover { background: color-mix(in srgb, var(--s-blue) 12%, transparent); }
   /* 야간원격접수 — 6주(넓은 표) → 일자별 축소 카드(col-4)로 전환. 열이 3개뿐이라 전역 min-width가 불필요.
      width:auto로 카드 전체폭에 억지로 늘어나지 않게 해 '일자'~'상담원 접수' 사이 공백을 줄인다
      (열이 3개뿐인데 width:100%면 짧은 값 사이 여백이 카드 폭만큼 벌어져 보였다, 운영자 지적). */
@@ -2338,7 +2344,10 @@ function retRowHTML_(row, keyField, periodType){
   }).join('');
   var label = periodType==='week' ? (rptWeekLabel(row.week)+'주') : row.month;
   var pctTxt = row.pct==null ? '<span style="color:var(--muted)">–</span>' : row.pct+'%';
-  return '<tr><td>'+esc(label)+'</td><td>'+fmt(row.shipped||0)+'</td><td><span class="cell-main">'+fmt(row.total)+'</span></td><td>'+pctTxt+'</td>'+cells+'</tr>';
+  // 🆕 2026-08-20(운영자 요청): 주/월 라벨 칸을 누르면 사유 구분 없이 그 기간 전체 반품·폐업을
+  // 사유별 정렬 요약 + 전체 상세 리스트로 본다(개별 사유 칸 클릭=그 사유만, 라벨 클릭=전체).
+  var labelAttrs = row.total>0 ? ' class="ret-week-clickable" data-period="'+esc(row[keyField])+'" data-periodtype="'+periodType+'" title="클릭: 전체 사유 상세 보기(정렬 가능)"' : '';
+  return '<tr><td'+labelAttrs+'>'+esc(label)+'</td><td>'+fmt(row.shipped||0)+'</td><td><span class="cell-main">'+fmt(row.total)+'</span></td><td>'+pctTxt+'</td>'+cells+'</tr>';
 }
 function retTableHTML_(rows, keyField, periodType){
   if(!rows || !rows.length) return '<tbody><tr><td style="color:var(--muted)">데이터 없음</td></tr></tbody>';
@@ -2348,6 +2357,8 @@ function retTableHTML_(rows, keyField, periodType){
   return head + '<tbody>' + body + '</tbody>';
 }
 function retTableClickHandler_(e){
+  var wtd = e.target.closest ? e.target.closest('td.ret-week-clickable') : null;
+  if(wtd){ openReturnedDetail(wtd.getAttribute('data-periodtype'), wtd.getAttribute('data-period'), ""); return; }
   var td = e.target.closest ? e.target.closest('td.cld-clickable') : null;
   if(!td) return;
   openReturnedDetail(td.getAttribute('data-periodtype'), td.getAttribute('data-period'), td.getAttribute('data-cat'));
@@ -2362,9 +2373,10 @@ function renderReturnedAnalysis(ra){
   if(mEl){ mEl.innerHTML = retTableHTML_(ra.monthly, "month", "month"); mEl.onclick = retTableClickHandler_; }
 }
 function openReturnedDetail(periodType, period, cat){
-  if(!period || !cat || !LAST_PASS) return;
+  if(!period || !LAST_PASS) return;
+  cat = cat || ""; // 빈 문자열 = 전체 사유(라벨 클릭)
   var label = periodType==='week' ? (rptWeekLabel(period)+'주') : period;
-  openDrill(label+' · '+cat);
+  openDrill(label+(cat ? (' · '+cat) : ' · 전체 사유'));
   fetchData(LAST_PASS, function(r){
     if(!r || !r.ok){ failLastCallDetail((r&&r.error)||"조회 실패"); return; }
     paintReturnedDetail(r);
@@ -2384,25 +2396,47 @@ function returnedEtcSummaryHTML_(periodType, period, cat){
     +'<span class="cd-row">'+etc.map(function(x){return esc(x.label)+' <b>'+fmt(x.count)+'건</b>';}).join(' · ')+'</span>'
     +'</div>';
 }
+// 🆕 2026-08-20(운영자 요청): 주/월 라벨 클릭("전체 사유") 모달 전용 — 사유별 건수 요약을
+// 오름/내림차순 토글해서 본다. 기본은 내림차순(가장 많은 사유가 위). 재조회 없이 이미 받은
+// r.catSummary를 클라이언트에서 정렬만 다시 한다.
+var RET_ALL_SORT_DIR = -1;
+function retCatSummaryTableHTML_(catSummary){
+  var list = (catSummary||[]).slice().sort(function(a,b){ return (a.count-b.count)*RET_ALL_SORT_DIR; });
+  var total = list.reduce(function(s,x){ return s+x.count; }, 0);
+  if(!list.length) return "";
+  return '<table class="lcd-tbl" style="margin-bottom:14px">'
+    +'<thead><tr><th>사유</th><th class="ret-sort-cnt" style="cursor:pointer" title="클릭: 오름/내림차순 전환">건수'+(RET_ALL_SORT_DIR===-1?' ▼':' ▲')+'</th><th>비율</th></tr></thead>'
+    +'<tbody>'+list.map(function(x){
+      var pct = total ? Math.round(x.count/total*1000)/10 : 0;
+      return '<tr><td>'+esc(x.cat)+'</td><td><span class="cell-main">'+fmt(x.count)+'</span></td><td>'+pct.toFixed(1)+'%</td></tr>';
+    }).join('')+'</tbody></table>';
+}
 function paintReturnedDetail(r){
   var rows=r.rows||[];
   var label = r.periodType==='week' ? (rptWeekLabel(r.period)+'주') : r.period;
-  document.getElementById("modal-title").textContent=label+" · "+r.cat+" ("+fmt(r.count||0)+"건)";
-  document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · J열 메모 원문 · 출고일 오름차순";
-  var summary = returnedEtcSummaryHTML_(r.periodType, r.period, r.cat);
+  var isAll = !r.cat; // cat 없이 호출 = 라벨 클릭 = 전체 사유
+  document.getElementById("modal-title").textContent=label+" · "+(isAll?"전체 사유":r.cat)+" ("+fmt(r.count||0)+"건)";
+  document.getElementById("modal-sub").textContent="로우데이터 A열 주문번호 · J열 메모 원문 · 출고일 오름차순"+(isAll?" · 사유별 건수 열 클릭 시 오름/내림차순 전환":"");
+  var summary = isAll ? "" : returnedEtcSummaryHTML_(r.periodType, r.period, r.cat);
   if(!rows.length){ document.getElementById("modal-body").innerHTML=summary+'<div class="modal-empty">해당 기간·사유에 건이 없습니다.</div>'; return; }
+  var catTbl = isAll ? retCatSummaryTableHTML_(r.catSummary) : "";
   document.getElementById("modal-body").innerHTML=
-    summary+
+    catTbl+summary+
     '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'+
-    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>출고</th><th>상태</th><th>K열 사유</th><th>메모 (J열)</th></tr></thead><tbody>'+
+    '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>출고</th><th>상태</th><th>'+(isAll?'사유':'K열 사유')+'</th><th>메모 (J열)</th></tr></thead><tbody>'+
     rows.map(function(x){
       var memo=String(x.memo||"").trim();
+      var reasonCell = isAll ? esc(x.cat) : (x.reasonCode?esc(x.reasonCode):'<span style="color:var(--muted)">–</span>');
       return '<tr><td class="lcd-ord">'+esc(x.order)+'</td>'+
         '<td class="lcd-date">'+esc(x.shipped)+'</td>'+
         '<td class="lcd-st">'+esc(x.status)+'</td>'+
-        '<td class="lcd-st">'+(x.reasonCode?esc(x.reasonCode):'<span style="color:var(--muted)">–</span>')+'</td>'+
+        '<td class="lcd-st">'+reasonCell+'</td>'+
         '<td class="lcd-memo'+(memo?'':' empty')+'">'+(memo?esc(memo):"(메모 없음)")+'</td></tr>';
     }).join('')+'</tbody></table>';
+  if(isAll){
+    var sortTh = document.querySelector('.ret-sort-cnt');
+    if(sortTh) sortTh.onclick = function(){ RET_ALL_SORT_DIR *= -1; paintReturnedDetail(r); };
+  }
 }
 
 // ==================== 위클리 리포트 게시판(Phase 1~2, 2026-08-06 / Phase 3, PHASE 115) ====================
