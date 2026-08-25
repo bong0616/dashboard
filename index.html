@@ -1712,10 +1712,10 @@ function renderWeeklyTable(rows){
       + '<td>'+wl+tag+'</td>'
       + wowCell(w.shipped, prev&&prev.shipped)
       + wowCell(w.calls, prev&&prev.calls)
-      + wowCell(w.firstContacts, prev&&prev.firstContacts)
-      + wowCell(w.installs, prev&&prev.installs)
-      + wowCell(w.self, prev&&prev.self, {share: w.installs>0 ? Math.round(w.self/w.installs*100) : null})
-      + wowCell((w.agent||0)+(w.sms||0), prev&&((prev.agent||0)+(prev.sms||0)), {share: w.installs>0 ? Math.round(((w.agent||0)+(w.sms||0))/w.installs*100) : null})
+      + plainCell(w.firstContacts)
+      + plainCell(w.installs)
+      + plainCell(w.self, {share: w.installs>0 ? Math.round(w.self/w.installs*100) : null})
+      + plainCell((w.agent||0)+(w.sms||0), {share: w.installs>0 ? Math.round(((w.agent||0)+(w.sms||0))/w.installs*100) : null})
       + wowCell(w.avgSpeed, prev?prev.avgSpeed:null, {valFn:round1, unit:"일", lowerBetter:true, target:SPD_TGT})
       + wowCell(w.avgRetouch, prev?prev.avgRetouch:null, {valFn:round1, unit:"일", lowerBetter:true, target:RTC_TGT})
       + '</tr>';
@@ -1805,10 +1805,10 @@ function renderDailyTable(rows){
       + '<td>'+dyLabelW(w.date)+tag+'</td>'
       + wowCell(w.shipped, prev&&prev.shipped)
       + wowCell(w.calls, prev&&prev.calls)
-      + wowCell(w.firstContacts, prev&&prev.firstContacts)
-      + wowCell(w.installs, prev&&prev.installs)
-      + wowCell(w.self, prev&&prev.self, {share: w.installs>0 ? Math.round(w.self/w.installs*100) : null})
-      + wowCell((w.agent||0)+(w.sms||0), prev&&((prev.agent||0)+(prev.sms||0)), {share: w.installs>0 ? Math.round(((w.agent||0)+(w.sms||0))/w.installs*100) : null})
+      + plainCell(w.firstContacts)
+      + plainCell(w.installs)
+      + plainCell(w.self, {share: w.installs>0 ? Math.round(w.self/w.installs*100) : null})
+      + plainCell((w.agent||0)+(w.sms||0), {share: w.installs>0 ? Math.round(((w.agent||0)+(w.sms||0))/w.installs*100) : null})
       + wowCell(w.avgSpeed, prev?prev.avgSpeed:null, {valFn:round1, unit:"일", lowerBetter:true, target:SPD_TGT})
       + wowCell(w.avgRetouch, prev?prev.avgRetouch:null, {valFn:round1, unit:"일", lowerBetter:true, target:RTC_TGT})
       + '</tr>';
@@ -1912,14 +1912,14 @@ function shipTableHTML(rows, opts){
     return '<tr'+(isCur?' class="cur"':'')+'>'
       + '<td>'+opts.label(w)+tag+'</td>'
       + wowCell(w.shipped, prev&&prev.shipped)
-      + wowCell(w.firstContacts, prev&&prev.firstContacts)
+      + plainCell(w.firstContacts)
       + neutralCell(w.touchTotal, prev?prev.touchTotal:null)
       + (im?grayCell(w.touchPerUnit==null?null:round1(w.touchPerUnit),"회"):neutralCell(w.touchPerUnit, prev?prev.touchPerUnit:null, round1, "회"))
-      + wowCell(w.installs, prev&&prev.installs)
-      + wowCell(w.self, prev&&prev.self, {share: w.installs>0?Math.round(w.self/w.installs*100):null})
-      + wowCell((w.agent||0)+(w.sms||0), prev&&((prev.agent||0)+(prev.sms||0)), {share: w.installs>0?Math.round(((w.agent||0)+(w.sms||0))/w.installs*100):null})
+      + plainCell(w.installs)
+      + plainCell(w.self, {share: w.installs>0?Math.round(w.self/w.installs*100):null})
+      + plainCell((w.agent||0)+(w.sms||0), {share: w.installs>0?Math.round(((w.agent||0)+(w.sms||0))/w.installs*100):null})
       + rateCell
-      + wowCell(w.open, prev?prev.open:null, {lowerBetter:true})
+      + plainCell(w.open)
       + dlvCell
       + spdCell
       + rtcCell
