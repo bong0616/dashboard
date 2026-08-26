@@ -839,6 +839,19 @@
   </section>
 
   <section class="tab-content" id="tab-ops">
+    <!-- 🆕 2026-08-26 [테스트] 리소스 계산기 — 월목표설치갯수(수기) 대비 필요 상담원 인원 진단.
+         기준선은 buildShipCohortScore_(대시보드API.js)의 주간 코호트 중 목표D+7완료율을 실제로
+         달성한 주들의 실측 평균(자가설치율·건당컨택횟수·배송소요일)을 쓴다 — 신뢰도가 검증 안 된
+         상태라 '[테스트]' 라벨을 붙여둔다. 정식 지표로 확정되면 라벨과 이 주석을 정리할 것. -->
+    <div class="sec-head">🧮 [테스트] 리소스 계산기 <small>월목표설치갯수 대비 필요 상담원 인원 · 시험 운영 중</small></div>
+    <div class="grid">
+      <div class="card col-12" data-cid="opsResourceCalc">
+        <h3>🧮 [테스트] 리소스 계산기</h3>
+        <div class="sub">월목표설치갯수(전사 대시보드 참조, 수기)를 넣으면 목표 D+7 완료율을 달성하기 위한 월 필요 통화량·필요 인원을 계산합니다. 기준선(자가설치율·건당 컨택횟수·배송소요일)은 목표완료율을 실제로 달성했던 주차들의 실측 평균 · 저장 시 모든 사용자에게 공유됩니다</div>
+        <div id="rcBox" class="ach"></div>
+      </div>
+    </div>
+
     <div class="sec-head">📋 현재 잔여 <small>조회 시점 기준 · 지금 처리해야 할 업무량</small></div>
     <div class="tiles" id="ops-tiles"></div>
     <div class="grid">
@@ -3658,6 +3671,160 @@ function saveAchInstall(){
   { params:{ action:"setinstall", month:m, total:raw } });
 }
 
+// ===== 🧮 [테스트] 리소스 계산기 (월목표설치갯수 대비 필요 상담원 인원) =====
+// d.ship.weekly(buildShipCohortScore_) 중 목표D+7완료율을 실제 달성한 주들만 골라 그 주들의 실측
+// 평균(자가설치율·건당컨택횟수·배송소요일)을 "달성 가능 기준선"으로 쓴다. 단순 최근 N주 평균보다
+// "그 완료율을 냈을 때 실제 콜 강도가 얼마였는지"를 더 정확히 반영한다(2026-08-26 운영자 설계).
+var RC = { ship:null, cfg:{}, month:null, today:"" };
+function rcMonthList(ship, cfg, todayYm){
+  var seen={}, list=[];
+  ((ship&&ship.weekly)||[]).forEach(function(w){ var m=w.week.slice(0,7); if(m && !seen[m]){ seen[m]=1; list.push(m); } });
+  Object.keys(cfg||{}).forEach(function(m){ if(m && !seen[m]){ seen[m]=1; list.push(m); } });
+  if(todayYm && !seen[todayYm]){ seen[todayYm]=1; list.push(todayYm); }
+  list.sort();
+  return list;
+}
+// 목표완료율 달성 주 우선, 없으면 최근 마감(성숙) 4주로 폴백
+function rcBaselineWeeks(ship, targetRate){
+  var mature=((ship&&ship.weekly)||[]).filter(function(w){ return !w.immature; });
+  var hit=mature.filter(function(w){ return w.doneRate!=null && w.doneRate>=targetRate; });
+  return hit.length ? hit : mature.slice(-4);
+}
+function rcAvgOf(arr,key){
+  var vals=arr.map(function(w){ return w[key]; }).filter(function(v){ return v!=null; });
+  return vals.length ? vals.reduce(function(a,b){ return a+b; },0)/vals.length : null;
+}
+function rcSum(arr,key){ return arr.reduce(function(s,w){ return s+(w[key]||0); },0); }
+function renderResourceCalc(ship, achievement, today){
+  var box=document.getElementById("rcBox"); if(!box) return;
+  RC.ship=ship; RC.today=today||""; RC.cfg=(achievement&&achievement.resourceCalc)||{};
+  var todayYm=RC.today.slice(0,7);
+  var list=rcMonthList(ship, RC.cfg, todayYm);
+  if(!list.length){ box.innerHTML='<div class="ach-nums">출고 데이터가 아직 없습니다.</div>'; return; }
+  if(!RC.month || list.indexOf(RC.month)<0) RC.month=(todayYm && list.indexOf(todayYm)>=0) ? todayYm : list[list.length-1];
+  var opts=list.map(function(m){ return '<option value="'+m+'"'+(m===RC.month?' selected':'')+'>'+m+'</option>'; }).join("");
+  box.innerHTML =
+    '<div class="ach-top"><select class="ach-month" id="rcMonth">'+opts+'</select><div class="ach-pct" id="rcGapBadge">–</div></div>'
+    +'<div class="ach-foot"><div class="ach-nums" id="rcBaseline"></div>'
+    +'<div class="ach-edits">'
+    +'<div class="ach-edit"><label for="rcShip">월목표</label><input class="ach-input" id="rcShip" type="number" min="0" step="1" inputmode="numeric" placeholder="예: 1000"></div>'
+    +'<div class="ach-edit"><label for="rcRate">목표율%</label><input class="ach-input" id="rcRate" type="number" min="1" max="100" step="0.1" inputmode="decimal" placeholder="90"></div>'
+    +'<div class="ach-edit"><label for="rcAgents">인원수</label><input class="ach-input" id="rcAgents" type="number" min="1" step="1" inputmode="numeric" placeholder="2"></div>'
+    +'<div class="ach-edit"><label for="rcTcpa">인당목표</label><input class="ach-input" id="rcTcpa" type="number" min="1" step="1" inputmode="numeric" placeholder="선택"></div>'
+    +'<div class="ach-edit"><button class="ach-save" id="rcSave">저장</button><span class="ach-msg" id="rcMsg"></span></div>'
+    +'</div></div>'
+    +'<div class="ach-pace" id="rcResult"></div>';
+  document.getElementById("rcMonth").addEventListener("change", function(){ RC.month=this.value; paintResourceCalc(); });
+  document.getElementById("rcSave").addEventListener("click", saveResourceCalc);
+  ["rcShip","rcRate","rcAgents","rcTcpa"].forEach(function(id){
+    var el=document.getElementById(id);
+    el.addEventListener("keydown", function(e){ if(e.key==="Enter") saveResourceCalc(); });
+    el.addEventListener("input", rcCompute); // 저장 전에도 즉시 미리보기 계산
+  });
+  paintResourceCalc();
+}
+function paintResourceCalc(){
+  var cfg=RC.cfg[RC.month]||{};
+  var shipEl=document.getElementById("rcShip"); if(!shipEl) return;
+  shipEl.value = cfg.shipBasis!=null ? cfg.shipBasis : "";
+  document.getElementById("rcRate").value = cfg.targetRate!=null ? cfg.targetRate : 90;
+  document.getElementById("rcAgents").value = cfg.agentCount!=null ? cfg.agentCount : 2;
+  document.getElementById("rcTcpa").value = cfg.targetCallsPerAgent!=null ? cfg.targetCallsPerAgent : "";
+  var msg=document.getElementById("rcMsg"); if(msg){ msg.textContent=""; msg.className="ach-msg"; }
+  rcCompute();
+}
+function rcCompute(){
+  var ship=RC.ship, baseEl=document.getElementById("rcBaseline"), resEl=document.getElementById("rcResult"), badge=document.getElementById("rcGapBadge");
+  if(!baseEl || !ship) return;
+  var shipBasis=parseInt(String(document.getElementById("rcShip").value||"").replace(/[, ]/g,""),10);
+  var targetRatePct=parseFloat(document.getElementById("rcRate").value); if(isNaN(targetRatePct)) targetRatePct=90;
+  var targetRate=targetRatePct/100;
+  var agentCount=parseInt(document.getElementById("rcAgents").value,10); if(isNaN(agentCount)||agentCount<=0) agentCount=2;
+  var tcpaRaw=String(document.getElementById("rcTcpa").value||"").trim();
+  var targetCallsPerAgent = tcpaRaw==="" ? null : parseFloat(tcpaRaw);
+
+  var baseline=rcBaselineWeeks(ship, targetRate);
+  var usedFallback = !baseline.some(function(w){ return w.doneRate!=null && w.doneRate>=targetRate; });
+  var totalShipped=rcSum(baseline,"shipped"), totalSelf=rcSum(baseline,"self"),
+      totalAgentUnits=rcSum(baseline,"agentUnits"), totalTouch=rcSum(baseline,"touchTotal"),
+      totalInstalls=rcSum(baseline,"installs");
+  var selfRate = totalShipped>0 ? totalSelf/totalShipped : 0;
+  var touchPerUnit = totalAgentUnits>0 ? totalTouch/totalAgentUnits : 0;
+  var doneRateBaseline = totalShipped>0 ? totalInstalls/totalShipped : null;
+  // 배송소요일: avgDeliverySpeed(T열, 08-13↑만 유효) 없으면 avgFirstContactSpeed(P열)로 대체
+  var deliverySpeed = rcAvgOf(baseline,"avgDeliverySpeed"), deliverySrc="배송완료(T열) 기준";
+  if(deliverySpeed==null){ deliverySpeed = rcAvgOf(baseline,"avgFirstContactSpeed"); deliverySrc="최초컨택(P열) 기준 대용"; }
+  var effectiveWindow = deliverySpeed!=null ? Math.max(1, 7-deliverySpeed) : 7;
+
+  var wkLabels = baseline.map(function(w){ return wkLabel(w.week); }).join(", ");
+  baseEl.innerHTML =
+    '기준선 <b>'+baseline.length+'주</b>'
+    +(usedFallback ? ' <span class="ach-remain">(목표완료율 달성주 없어 최근 마감주로 대체)</span>' : ' <span class="ach-src auto">목표완료율 달성주</span>')
+    +' <span class="ach-remain">('+wkLabels+')</span><br>'
+    +'자가설치율 <b>'+(totalShipped>0?(selfRate*100).toFixed(1):"–")+'%</b>'
+    +' · 건당 컨택횟수 <b>'+(touchPerUnit?touchPerUnit.toFixed(2):"–")+'회</b>'
+    +' · 기준선 완료율 <b>'+(doneRateBaseline!=null?(doneRateBaseline*100).toFixed(1):"–")+'%</b>'
+    +' · 배송소요일 <b>'+(deliverySpeed!=null?deliverySpeed.toFixed(1):"–")+'일</b> <span class="ach-remain">('+deliverySrc+')</span>';
+
+  if(!shipBasis || isNaN(shipBasis) || shipBasis<=0){
+    resEl.innerHTML='월목표설치갯수를 입력하면 필요인원을 계산합니다.';
+    if(badge){ badge.textContent="–"; badge.className="ach-pct"; }
+    return;
+  }
+  var contactUnits = shipBasis*(1-selfRate);
+  var rateRatio = (doneRateBaseline && doneRateBaseline>0) ? (targetRate/doneRateBaseline) : 1;
+  var neededCalls = contactUnits*touchPerUnit*rateRatio;
+  var y=+RC.month.slice(0,4), mo=+RC.month.slice(5);
+  var workDays = weekdaysLeftInMonth(y,mo,1); if(workDays<1) workDays=1;
+  var dailyCallsNeeded = neededCalls/(workDays*(effectiveWindow/7));
+  var actualCapacityPerAgentDay = (totalTouch>0 && baseline.length>0) ? (totalTouch/agentCount)/(baseline.length*5) : null;
+  var neededAgentsActual = actualCapacityPerAgentDay ? neededCalls/(actualCapacityPerAgentDay*workDays) : null;
+  var neededAgentsTarget = targetCallsPerAgent ? neededCalls/(targetCallsPerAgent*workDays) : null;
+
+  var html = '필요컨택물량 <b>'+fmt(Math.round(contactUnits))+'건</b>'
+    +' → 월 필요통화량 <b>'+fmt(Math.round(neededCalls))+'회</b> (목표/기준선 배율 ×'+rateRatio.toFixed(2)+')<br>'
+    +'실효가용일수(7−배송소요일) <b>'+effectiveWindow.toFixed(1)+'일</b> 기준 필요콜/일 <b>'+fmt(Math.round(dailyCallsNeeded))+'회</b><br>';
+  if(actualCapacityPerAgentDay && neededAgentsActual!=null){
+    var gapA=agentCount-neededAgentsActual;
+    html += '실측 인당 일처리량 <b>'+actualCapacityPerAgentDay.toFixed(1)+'회</b> 기준 필요인원 <b class="pace-hl">'+neededAgentsActual.toFixed(1)+'명</b>'
+      +' (현재 '+agentCount+'명, 과부족 <b class="'+(gapA<0?'pace-bad':'pace-hl')+'">'+(gapA>=0?'+':'')+gapA.toFixed(1)+'명</b>, 가동률 '+(neededAgentsActual/agentCount*100).toFixed(0)+'%)<br>';
+  }
+  if(neededAgentsTarget!=null){
+    var gapT=agentCount-neededAgentsTarget;
+    html += '목표 인당콜 '+targetCallsPerAgent+'회 기준 필요인원 <b class="pace-hl">'+neededAgentsTarget.toFixed(1)+'명</b>'
+      +' (현재 '+agentCount+'명, 과부족 <b class="'+(gapT<0?'pace-bad':'pace-hl')+'">'+(gapT>=0?'+':'')+gapT.toFixed(1)+'명</b>)';
+  }
+  resEl.innerHTML=html;
+  if(badge){
+    if(neededAgentsActual!=null){
+      var overA=agentCount>=neededAgentsActual;
+      badge.textContent=(neededAgentsActual/agentCount*100).toFixed(0)+"%";
+      badge.className="ach-pct"+(overA?" over":"");
+    } else { badge.textContent="–"; badge.className="ach-pct"; }
+  }
+}
+function saveResourceCalc(){
+  if(!LAST_PASS) return;
+  var msg=document.getElementById("rcMsg"), btn=document.getElementById("rcSave");
+  var shipRaw=String(document.getElementById("rcShip").value||"").replace(/[, ]/g,"").trim();
+  var rateRaw=document.getElementById("rcRate").value;
+  var agentsRaw=document.getElementById("rcAgents").value;
+  var tcpaRaw=String(document.getElementById("rcTcpa").value||"").trim();
+  if(shipRaw===""||isNaN(parseInt(shipRaw,10))||parseInt(shipRaw,10)<0){ msg.textContent="월목표 오류(0 이상 정수)"; msg.className="ach-msg err"; return; }
+  if(rateRaw===""||isNaN(parseFloat(rateRaw))||parseFloat(rateRaw)<=0||parseFloat(rateRaw)>100){ msg.textContent="목표율 오류(0~100)"; msg.className="ach-msg err"; return; }
+  if(agentsRaw===""||isNaN(parseInt(agentsRaw,10))||parseInt(agentsRaw,10)<=0){ msg.textContent="인원수 오류(1 이상)"; msg.className="ach-msg err"; return; }
+  btn.disabled=true; msg.textContent="저장 중…"; msg.className="ach-msg";
+  fetchData(LAST_PASS, function(res){
+    btn.disabled=false;
+    if(res && res.ok){
+      RC.cfg=res.resourceCalc||RC.cfg;
+      if(LAST_DATA && LAST_DATA.achievement) LAST_DATA.achievement.resourceCalc=RC.cfg;
+      paintResourceCalc(); msg.textContent="저장됨 ✓"; msg.className="ach-msg ok";
+    } else { msg.textContent=(res&&res.error)||"저장 실패"; msg.className="ach-msg err"; }
+  }, function(){ btn.disabled=false; msg.textContent="통신 오류"; msg.className="ach-msg err"; },
+  { params:{ action:"setresourcecalc", month:RC.month, shipBasis:shipRaw, targetRate:rateRaw, agentCount:agentsRaw, targetCallsPerAgent:tcpaRaw } });
+}
+
 // ===== 📝 주차별 리포트 (전주 대비 자동 요약 + 수기 코멘트) =====
 // ---------- 당일통화당일설치(2026-08-14 재설계 → 같은 날 후속 수정) ----------
 // 운영자가 예전에 Claude Artifact로 받아본 "통화→당일설치 전환" 정적 리포트(PHASE145)를 그 양식
@@ -5086,7 +5253,7 @@ var CUR_TAB="weeklyboard"; // 현재 보고 있는 메뉴(탭). 날짜조회 시
 //    카드를 지워 실제로 안 쓰게 되면 여기서도 섹션을 빼야 커스텀 날짜조회가 다시 빨라진다.
 //    (cohort=미설치 잔여 경과일·월 목표 / perf=KPI 타일·채널비율·설치소요일 분포 / reasons=D+7 지연사유)
 var TAB_SECTIONS={
-  ops:["ops","perf","cohort","reasons"],
+  ops:["ops","perf","cohort","reasons","ship"], // 🆕 2026-08-26: ship 추가([테스트] 리소스 계산기가 buildShipCohortScore_ 결과를 씀, rawVals 재사용이라 추가 읽기비용 없음)
   perf:["perf","reasons"], cohort:["cohort"],
   weekly:["perf"], daily:["perf"], report:["perf"],
   shipweekly:["ship"], shipdaily:["ship"], accel:["accel","perf"],
@@ -5117,6 +5284,7 @@ function renderAll(d){
   render(d);
   if(d.reasons) renderDelay(d.reasons, d.perf&&d.perf.install);
   if(d.achievement) renderAchievement(d.achievement, d.meta && d.meta.today);
+  if(d.ship) renderResourceCalc(d.ship, d.achievement, d.meta && d.meta.today);
   renderWeeklyBoard(d);
   renderWeeklyAction(d);
   document.getElementById("page-badge").textContent = CUR_PERIOD.start ? ("● "+CUR_PERIOD.label) : "● 전체 기간";
