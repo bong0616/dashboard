@@ -767,7 +767,7 @@
         <div class="gauge-wrap"><canvas id="perfGauge"></canvas><div class="gauge-center"><div class="g-val" id="gauge-val">–</div><div class="g-lab">설치 완료율</div></div></div>
       </div>
       <div class="card col-8 fill" data-cid="perfMonthly"><h3>📈 월별 처리량 추세</h3><div class="sub">실적로그 · 통화시도(처리)량 vs 설치완료 <b>(설치완료도 실적로그 기록 기준)</b></div><div class="chart-wrap ch-m"><canvas id="perfMonthly"></canvas></div></div>
-      <div class="card col-5 fill" data-cid="perfChannel"><h3>🔌 설치 채널 비중</h3><div class="sub">자가설치 vs 상담원 · 5/6 출고건부터(채널 분류 시작일 기준)</div><div class="chart-wrap ch-s"><canvas id="perfChannel"></canvas></div><div class="legend" id="channel-legend"></div></div>
+      <div class="card col-5 fill" data-cid="perfChannel"><h3>🔌 설치 채널 비중</h3><div class="sub">자가설치·상담원·원격설치·방문설치 · 5/6 출고건부터(채널 분류 시작일 기준) · <b>원격설치</b>는 N열(외주/원격)에 원격이 찍힌 상담원 안내건</div><div class="chart-wrap ch-s"><canvas id="perfChannel"></canvas></div><div class="legend" id="channel-legend"></div></div>
       <div class="card col-7 fill" data-cid="perfSpeed"><h3>⏱️ 설치 소요일 분포</h3><div class="sub">출고 → 설치완료 (일). 평균 <b id="perf-avglead">–</b>일 · 5일 이내 <b id="perf-within5">–</b></div><div class="chart-wrap ch-s"><canvas id="perfSpeed"></canvas></div></div>
       <div class="card col-6 fill" data-cid="perfRetouch"><h3>🔁 재컨택 주기 → 설치 속도</h3><div class="sub">메모 재컨택 간격이 짧을수록 실제로 빨리 설치되는가?</div><div class="chart-wrap ch-l"><canvas id="perfRetouch"></canvas></div><div class="insight" id="retouch-insight"></div></div>
       <div class="card col-6 fill" data-cid="perfDelay"><h3>🐢 7일+ 지연 사유</h3><div class="sub">설치완료됐지만 7일 이상 걸린 건 (메모 자동분류) · <b style="color:var(--s-blue-d)">기타 막대 클릭 시 세부내역</b></div><div class="chart-wrap ch-xl"><canvas id="perfDelay"></canvas></div></div>
@@ -1344,7 +1344,7 @@ function renderPerf(p) {
   // Channel doughnut + custom legend (relief: visible labels)
   // 채널 비율은 분류 시작(5/6) 이후 출고 완료건만 모수(정합) — 구 캐시 대비 폴백
   var bs=ins.bySourceClassified||ins.bySource, cComp=ins.completedClassified||ins.completed;
-  var ch=[["자가설치",bs.자가설치,C["--s-aqua"]],["상담원",(bs.상담원||0)+(bs.문자발송||0),C["--s-blue"]],["방문설치",bs.방문설치||0,C["--s-violet"]]];
+  var ch=[["자가설치",bs.자가설치,C["--s-aqua"]],["상담원",(bs.상담원||0)+(bs.문자발송||0),C["--s-blue"]],["원격설치",bs.원격설치||0,C["--s-yellow"]],["방문설치",bs.방문설치||0,C["--s-violet"]]];
   mk("perfChannel", { type:"doughnut",
     data:{ labels:ch.map(function(x){return x[0];}), datasets:[{ data:ch.map(function(x){return x[1];}), backgroundColor:ch.map(function(x){return x[2];}), borderColor:C["--surface-1"], borderWidth:2 }] },
     options:{ cutout:"64%", plugins:{ datalabels: dl({color:"#fff", formatter:function(v){return v>0?Math.round(v/cComp*100)+"%":"";}}) } } });
@@ -3096,19 +3096,19 @@ function renderResourceCalc(ship, achievement, today, cohort){
   if(!RC.month || list.indexOf(RC.month)<0) RC.month=(todayYm && list.indexOf(todayYm)>=0) ? todayYm : list[list.length-1];
   var opts=list.map(function(m){ return '<option value="'+m+'"'+(m===RC.month?' selected':'')+'>'+m+'</option>'; }).join("");
   box.innerHTML =
-    '<div class="ach-top"><select class="ach-month" id="rcMonth">'+opts+'</select><div class="ach-pct" id="rcGapBadge">–</div></div>'
+    '<div class="ach-top"><select class="ach-month" id="rcMonth">'+opts+'</select>'
+    +'<div style="text-align:right"><div class="ach-pct" id="rcGapBadge">–</div><div class="ach-remain" style="font-size:11px">가동률(필요인원÷현재인원)</div></div></div>'
     +'<div class="ach-foot"><div class="ach-nums" id="rcBaseline"></div>'
     +'<div class="ach-edits">'
     +'<div class="ach-edit"><label for="rcShip">월목표</label><input class="ach-input" id="rcShip" type="number" min="0" step="1" inputmode="numeric" placeholder="예: 1000"></div>'
     +'<div class="ach-edit"><label for="rcRate">목표율%</label><input class="ach-input" id="rcRate" type="number" min="1" max="100" step="0.1" inputmode="decimal" placeholder="90"></div>'
     +'<div class="ach-edit"><label for="rcAgents">인원수</label><input class="ach-input" id="rcAgents" type="number" min="1" step="1" inputmode="numeric" placeholder="2"></div>'
-    +'<div class="ach-edit"><label for="rcTcpa">인당목표</label><input class="ach-input" id="rcTcpa" type="number" min="1" step="1" inputmode="numeric" placeholder="선택"></div>'
     +'<div class="ach-edit"><button class="ach-save" id="rcSave">저장</button><span class="ach-msg" id="rcMsg"></span></div>'
     +'</div></div>'
     +'<div class="ach-pace" id="rcResult"></div>';
   document.getElementById("rcMonth").addEventListener("change", function(){ RC.month=this.value; paintResourceCalc(); });
   document.getElementById("rcSave").addEventListener("click", saveResourceCalc);
-  ["rcShip","rcRate","rcAgents","rcTcpa"].forEach(function(id){
+  ["rcShip","rcRate","rcAgents"].forEach(function(id){
     var el=document.getElementById(id);
     el.addEventListener("keydown", function(e){ if(e.key==="Enter") saveResourceCalc(); });
     el.addEventListener("input", rcCompute); // 저장 전에도 즉시 미리보기 계산
@@ -3121,7 +3121,6 @@ function paintResourceCalc(){
   shipEl.value = cfg.shipBasis!=null ? cfg.shipBasis : "";
   document.getElementById("rcRate").value = cfg.targetRate!=null ? cfg.targetRate : 90;
   document.getElementById("rcAgents").value = cfg.agentCount!=null ? cfg.agentCount : 2;
-  document.getElementById("rcTcpa").value = cfg.targetCallsPerAgent!=null ? cfg.targetCallsPerAgent : "";
   var msg=document.getElementById("rcMsg"); if(msg){ msg.textContent=""; msg.className="ach-msg"; }
   rcCompute();
 }
@@ -3132,8 +3131,6 @@ function rcCompute(){
   var targetRatePct=parseFloat(document.getElementById("rcRate").value); if(isNaN(targetRatePct)) targetRatePct=90;
   var targetRate=targetRatePct/100;
   var agentCount=parseInt(document.getElementById("rcAgents").value,10); if(isNaN(agentCount)||agentCount<=0) agentCount=2;
-  var tcpaRaw=String(document.getElementById("rcTcpa").value||"").trim();
-  var targetCallsPerAgent = tcpaRaw==="" ? null : parseFloat(tcpaRaw);
 
   var d7map = rcD7ByWeek(RC.cohort);
   var baseline=rcBaselineWeeks(ship, d7map, targetRate);
@@ -3177,20 +3174,17 @@ function rcCompute(){
   var dailyCallsNeeded = neededCalls/workDays;
   var actualCapacityPerAgentDay = (totalTouch>0 && baseline.length>0) ? (totalTouch/agentCount)/(baseline.length*5) : null;
   var neededAgentsActual = actualCapacityPerAgentDay ? neededCalls/(actualCapacityPerAgentDay*workDays) : null;
-  var neededAgentsTarget = targetCallsPerAgent ? neededCalls/(targetCallsPerAgent*workDays) : null;
 
+  // 곱셈 전 과정을 그대로 노출 — "0.98배만 곱한 줄 알았는데 숫자가 안 맞는다"는 혼동 방지(2026-08-26)
   var html = '필요컨택물량 <b>'+fmt(Math.round(contactUnits))+'건</b>'
-    +' → 월 필요통화량 <b>'+fmt(Math.round(neededCalls))+'회</b> (목표/기준선 배율 ×'+rateRatio.toFixed(2)+')<br>'
+    +' × 건당컨택횟수 <b>'+touchPerUnit.toFixed(2)+'회</b>'
+    +' × 목표/기준선 배율 <b>×'+rateRatio.toFixed(2)+'</b>'
+    +' = 월 필요통화량 <b>'+fmt(Math.round(neededCalls))+'회</b><br>'
     +'월영업일수 '+workDays+'일 기준 필요콜/일 <b>'+fmt(Math.round(dailyCallsNeeded))+'회</b><br>';
   if(actualCapacityPerAgentDay && neededAgentsActual!=null){
     var gapA=agentCount-neededAgentsActual;
-    html += '실측 인당 일처리량 <b>'+actualCapacityPerAgentDay.toFixed(1)+'회</b> 기준 필요인원 <b class="pace-hl">'+neededAgentsActual.toFixed(1)+'명</b>'
-      +' (현재 '+agentCount+'명, 과부족 <b class="'+(gapA<0?'pace-bad':'pace-hl')+'">'+(gapA>=0?'+':'')+gapA.toFixed(1)+'명</b>, 가동률 '+(neededAgentsActual/agentCount*100).toFixed(0)+'%)<br>';
-  }
-  if(neededAgentsTarget!=null){
-    var gapT=agentCount-neededAgentsTarget;
-    html += '목표 인당콜 '+targetCallsPerAgent+'회 기준 필요인원 <b class="pace-hl">'+neededAgentsTarget.toFixed(1)+'명</b>'
-      +' (현재 '+agentCount+'명, 과부족 <b class="'+(gapT<0?'pace-bad':'pace-hl')+'">'+(gapT>=0?'+':'')+gapT.toFixed(1)+'명</b>)';
+    html += '실측 인당 일처리량(부재 포함 전체 컨택시도) <b>'+actualCapacityPerAgentDay.toFixed(1)+'회</b> 기준 필요인원 <b class="pace-hl">'+neededAgentsActual.toFixed(1)+'명</b>'
+      +' (현재 '+agentCount+'명, 과부족 <b class="'+(gapA<0?'pace-bad':'pace-hl')+'">'+(gapA>=0?'+':'')+gapA.toFixed(1)+'명</b>)';
   }
   resEl.innerHTML=html;
   if(badge){
@@ -3207,7 +3201,6 @@ function saveResourceCalc(){
   var shipRaw=String(document.getElementById("rcShip").value||"").replace(/[, ]/g,"").trim();
   var rateRaw=document.getElementById("rcRate").value;
   var agentsRaw=document.getElementById("rcAgents").value;
-  var tcpaRaw=String(document.getElementById("rcTcpa").value||"").trim();
   if(shipRaw===""||isNaN(parseInt(shipRaw,10))||parseInt(shipRaw,10)<0){ msg.textContent="월목표 오류(0 이상 정수)"; msg.className="ach-msg err"; return; }
   if(rateRaw===""||isNaN(parseFloat(rateRaw))||parseFloat(rateRaw)<=0||parseFloat(rateRaw)>100){ msg.textContent="목표율 오류(0~100)"; msg.className="ach-msg err"; return; }
   if(agentsRaw===""||isNaN(parseInt(agentsRaw,10))||parseInt(agentsRaw,10)<=0){ msg.textContent="인원수 오류(1 이상)"; msg.className="ach-msg err"; return; }
@@ -3220,7 +3213,7 @@ function saveResourceCalc(){
       paintResourceCalc(); msg.textContent="저장됨 ✓"; msg.className="ach-msg ok";
     } else { msg.textContent=(res&&res.error)||"저장 실패"; msg.className="ach-msg err"; }
   }, function(){ btn.disabled=false; msg.textContent="통신 오류"; msg.className="ach-msg err"; },
-  { params:{ action:"setresourcecalc", month:RC.month, shipBasis:shipRaw, targetRate:rateRaw, agentCount:agentsRaw, targetCallsPerAgent:tcpaRaw } });
+  { params:{ action:"setresourcecalc", month:RC.month, shipBasis:shipRaw, targetRate:rateRaw, agentCount:agentsRaw } });
 }
 
 // ===== 📝 주차별 리포트 (전주 대비 자동 요약 + 수기 코멘트) =====
@@ -4399,8 +4392,8 @@ function saveKpi(kind){
 function renderBoard(d){
   var rows=(d.perf&&d.perf.weekly)||[];
   var notes=d.weeklyNotes||{};
-  var tbox=document.getElementById("board-tiles"); if(!tbox) return;
-  if(!rows.length){ tbox.innerHTML='<div class="tile"><div class="t-label">주간 데이터 없음</div></div>'; return; }
+  var tbox=document.getElementById("board-tiles");
+  if(!rows.length){ if(tbox) tbox.innerHTML='<div class="tile"><div class="t-label">주간 데이터 없음</div></div>'; return; }
   // 상담원설치 = 상담원 + 문자발송(병합) 파생필드
   rows.forEach(function(r){ if(r.agentAll==null) r.agentAll=(r.agent||0)+(r.sms||0); });
   // 기준 주 선택: 드롭다운 채우고 선택 인덱스 확정(기본=최신 주)
@@ -4419,7 +4412,7 @@ function renderBoard(d){
   if(hintEl) hintEl.textContent="";
   // KPI 타일: '상담원설치'만 유지 — 나머지 6개(설치완료·자가·출고·통화·속도·재컨택)는 '주간 비교' 탭과
   // 중복이라 운영자 지시(2026-07-24)로 삭제. 상담원설치는 운영탭 고유라 남긴다. 선택 주 vs 전주.
-  tbox.innerHTML = weekTile("상담원설치","🎧", wrows, "agentAll");
+  if(tbox) tbox.innerHTML = weekTile("상담원설치","🎧", wrows, "agentAll");
   renderBoardNote(cur.week, notes);
   // 미설치 잔여 경과일(배송완료 기준)
   var agd=(d.cohort&&d.cohort.agingDelivered)||{"0-6":0,"7-13":0,"14-29":0,"30+":0};
