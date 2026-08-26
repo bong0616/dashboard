@@ -3058,7 +3058,7 @@ function saveAchInstall(){
 // d.ship.weekly(buildShipCohortScore_) 중 목표D+7완료율을 실제 달성한 주들만 골라 그 주들의 실측
 // 평균(자가설치율·건당컨택횟수·배송소요일)을 "달성 가능 기준선"으로 쓴다. 단순 최근 N주 평균보다
 // "그 완료율을 냈을 때 실제 콜 강도가 얼마였는지"를 더 정확히 반영한다(2026-08-26 운영자 설계).
-var RC = { ship:null, cfg:{}, month:null, today:"" };
+var RC = { ship:null, cohort:null, cfg:{}, month:null, today:"" };
 function rcMonthList(ship, cfg, todayYm){
   var seen={}, list=[];
   ((ship&&ship.weekly)||[]).forEach(function(w){ var m=w.week.slice(0,7); if(m && !seen[m]){ seen[m]=1; list.push(m); } });
@@ -3067,20 +3067,29 @@ function rcMonthList(ship, cfg, todayYm){
   list.sort();
   return list;
 }
-// 목표완료율 달성 주 우선, 없으면 최근 마감(성숙) 4주로 폴백
-function rcBaselineWeeks(ship, targetRate){
-  var mature=((ship&&ship.weekly)||[]).filter(function(w){ return !w.immature; });
-  var hit=mature.filter(function(w){ return w.doneRate!=null && w.doneRate>=targetRate; });
-  return hit.length ? hit : mature.slice(-4);
+// 🆕 2026-08-26(버그수정): 완료율은 ship.weekly의 doneRate(=언젠가 설치완료, 실측 95~98%로 항상
+// 목표율을 넘어버려 "달성주 선별"이 무의미했다)가 아니라 cohort.shipCurve[].cum[7](진짜 D+7 이내
+// 누적설치율, cohStatusTable/출고코호트 탭과 동일 정본)을 쓴다. week 키로 매칭 — cum[7]이 null이면
+// 그 주가 아직 D+7을 다 채우지 못한 진행중 코호트라는 뜻이라 기준선 후보에서 제외한다.
+function rcD7ByWeek(cohort){
+  var m={};
+  ((cohort&&cohort.shipCurve)||[]).forEach(function(c){ if(c.cum && c.cum[7]!=null) m[c.week]=c.cum[7]; });
+  return m;
+}
+// 목표완료율 달성 주 우선, 없으면 D+7 관측 가능한 최근 4주로 폴백
+function rcBaselineWeeks(ship, d7map, targetRate){
+  var withD7=((ship&&ship.weekly)||[]).filter(function(w){ return d7map[w.week]!=null; });
+  var hit=withD7.filter(function(w){ return d7map[w.week]>=targetRate; });
+  return hit.length ? hit : withD7.slice(-4);
 }
 function rcAvgOf(arr,key){
   var vals=arr.map(function(w){ return w[key]; }).filter(function(v){ return v!=null; });
   return vals.length ? vals.reduce(function(a,b){ return a+b; },0)/vals.length : null;
 }
 function rcSum(arr,key){ return arr.reduce(function(s,w){ return s+(w[key]||0); },0); }
-function renderResourceCalc(ship, achievement, today){
+function renderResourceCalc(ship, achievement, today, cohort){
   var box=document.getElementById("rcBox"); if(!box) return;
-  RC.ship=ship; RC.today=today||""; RC.cfg=(achievement&&achievement.resourceCalc)||{};
+  RC.ship=ship; RC.today=today||""; RC.cfg=(achievement&&achievement.resourceCalc)||{}; RC.cohort=cohort;
   var todayYm=RC.today.slice(0,7);
   var list=rcMonthList(ship, RC.cfg, todayYm);
   if(!list.length){ box.innerHTML='<div class="ach-nums">출고 데이터가 아직 없습니다.</div>'; return; }
@@ -3126,28 +3135,31 @@ function rcCompute(){
   var tcpaRaw=String(document.getElementById("rcTcpa").value||"").trim();
   var targetCallsPerAgent = tcpaRaw==="" ? null : parseFloat(tcpaRaw);
 
-  var baseline=rcBaselineWeeks(ship, targetRate);
-  var usedFallback = !baseline.some(function(w){ return w.doneRate!=null && w.doneRate>=targetRate; });
+  var d7map = rcD7ByWeek(RC.cohort);
+  var baseline=rcBaselineWeeks(ship, d7map, targetRate);
+  var usedFallback = !baseline.some(function(w){ return d7map[w.week]>=targetRate; });
   var totalShipped=rcSum(baseline,"shipped"), totalSelf=rcSum(baseline,"self"),
-      totalAgentUnits=rcSum(baseline,"agentUnits"), totalTouch=rcSum(baseline,"touchTotal"),
-      totalInstalls=rcSum(baseline,"installs");
+      totalAgentUnits=rcSum(baseline,"agentUnits"), totalTouch=rcSum(baseline,"touchTotal");
   var selfRate = totalShipped>0 ? totalSelf/totalShipped : 0;
   var touchPerUnit = totalAgentUnits>0 ? totalTouch/totalAgentUnits : 0;
-  var doneRateBaseline = totalShipped>0 ? totalInstalls/totalShipped : null;
-  // 배송소요일: avgDeliverySpeed(T열, 08-13↑만 유효) 없으면 avgFirstContactSpeed(P열)로 대체
+  // 기준선 완료율 = 진짜 D+7 이내 누적설치율(cohort.shipCurve[].cum[7])의 출고건수 가중평균.
+  // (구버전 버그: ship.weekly의 doneRate는 '언젠가 설치완료'까지 포함한 누적치라 실측 95~98%로
+  //  거의 항상 목표율을 넘어버려 "달성주 선별" 자체가 무의미했다 — 2026-08-26 운영자 지적으로 수정)
+  var d7WeightedNum = baseline.reduce(function(s,w){ return s + d7map[w.week]*w.shipped; },0);
+  var doneRateBaseline = totalShipped>0 ? d7WeightedNum/totalShipped : null;
+  // 배송소요일: avgDeliverySpeed(T열, 08-13↑만 유효) 없으면 avgFirstContactSpeed(P열)로 대체 — 진단용 참고치일 뿐, 아래 산식엔 반영하지 않는다(반영 시 월 총량을 며칠로 압축하는 오류가 났었음)
   var deliverySpeed = rcAvgOf(baseline,"avgDeliverySpeed"), deliverySrc="배송완료(T열) 기준";
   if(deliverySpeed==null){ deliverySpeed = rcAvgOf(baseline,"avgFirstContactSpeed"); deliverySrc="최초컨택(P열) 기준 대용"; }
-  var effectiveWindow = deliverySpeed!=null ? Math.max(1, 7-deliverySpeed) : 7;
 
   var wkLabels = baseline.map(function(w){ return wkLabel(w.week); }).join(", ");
   baseEl.innerHTML =
     '기준선 <b>'+baseline.length+'주</b>'
-    +(usedFallback ? ' <span class="ach-remain">(목표완료율 달성주 없어 최근 마감주로 대체)</span>' : ' <span class="ach-src auto">목표완료율 달성주</span>')
+    +(usedFallback ? ' <span class="ach-remain">(D+7 목표완료율 달성주 없어 최근 관측가능 주로 대체)</span>' : ' <span class="ach-src auto">D+7 목표완료율 달성주</span>')
     +' <span class="ach-remain">('+wkLabels+')</span><br>'
     +'자가설치율 <b>'+(totalShipped>0?(selfRate*100).toFixed(1):"–")+'%</b>'
     +' · 건당 컨택횟수 <b>'+(touchPerUnit?touchPerUnit.toFixed(2):"–")+'회</b>'
-    +' · 기준선 완료율 <b>'+(doneRateBaseline!=null?(doneRateBaseline*100).toFixed(1):"–")+'%</b>'
-    +' · 배송소요일 <b>'+(deliverySpeed!=null?deliverySpeed.toFixed(1):"–")+'일</b> <span class="ach-remain">('+deliverySrc+')</span>';
+    +' · 기준선 D+7 완료율 <b>'+(doneRateBaseline!=null?(doneRateBaseline*100).toFixed(1):"–")+'%</b>'
+    +' · 배송소요일 <b>'+(deliverySpeed!=null?deliverySpeed.toFixed(1):"–")+'일</b> <span class="ach-remain">('+deliverySrc+', 참고용·아래 계산엔 미반영)</span>';
 
   if(!shipBasis || isNaN(shipBasis) || shipBasis<=0){
     resEl.innerHTML='월목표설치갯수를 입력하면 필요인원을 계산합니다.';
@@ -3159,14 +3171,17 @@ function rcCompute(){
   var neededCalls = contactUnits*touchPerUnit*rateRatio;
   var y=+RC.month.slice(0,4), mo=+RC.month.slice(5);
   var workDays = weekdaysLeftInMonth(y,mo,1); if(workDays<1) workDays=1;
-  var dailyCallsNeeded = neededCalls/(workDays*(effectiveWindow/7));
+  // 🆕 정상상태(steady-state) 가정: 월간 총 필요통화량을 그 달 영업일수로 고르게 나눈 값이 하루
+  // 평균 필요콜이다. (구버전 버그: 여기에 (7−배송소요일)/7 배율을 또 곱해 나눠 월 전체 물량을
+  // 실질 2~3일 치로 압축해버렸다 — "인당 680건" 같은 비현실적 수치의 원인이었음, 2026-08-26 수정)
+  var dailyCallsNeeded = neededCalls/workDays;
   var actualCapacityPerAgentDay = (totalTouch>0 && baseline.length>0) ? (totalTouch/agentCount)/(baseline.length*5) : null;
   var neededAgentsActual = actualCapacityPerAgentDay ? neededCalls/(actualCapacityPerAgentDay*workDays) : null;
   var neededAgentsTarget = targetCallsPerAgent ? neededCalls/(targetCallsPerAgent*workDays) : null;
 
   var html = '필요컨택물량 <b>'+fmt(Math.round(contactUnits))+'건</b>'
     +' → 월 필요통화량 <b>'+fmt(Math.round(neededCalls))+'회</b> (목표/기준선 배율 ×'+rateRatio.toFixed(2)+')<br>'
-    +'실효가용일수(7−배송소요일) <b>'+effectiveWindow.toFixed(1)+'일</b> 기준 필요콜/일 <b>'+fmt(Math.round(dailyCallsNeeded))+'회</b><br>';
+    +'월영업일수 '+workDays+'일 기준 필요콜/일 <b>'+fmt(Math.round(dailyCallsNeeded))+'회</b><br>';
   if(actualCapacityPerAgentDay && neededAgentsActual!=null){
     var gapA=agentCount-neededAgentsActual;
     html += '실측 인당 일처리량 <b>'+actualCapacityPerAgentDay.toFixed(1)+'회</b> 기준 필요인원 <b class="pace-hl">'+neededAgentsActual.toFixed(1)+'명</b>'
@@ -4636,15 +4651,19 @@ var CUR_TAB="weeklyboard"; // 현재 보고 있는 메뉴(탭). 날짜조회 시
 //    카드를 지워 실제로 안 쓰게 되면 여기서도 섹션을 빼야 커스텀 날짜조회가 다시 빨라진다.
 //    (cohort=미설치 잔여 경과일·월 목표 / perf=KPI 타일·채널비율·설치소요일 분포 / reasons=D+7 지연사유)
 var TAB_SECTIONS={
-  ops:["ops","perf","cohort","reasons","ship"], // 🆕 2026-08-26: ship 추가([테스트] 리소스 계산기가 buildShipCohortScore_ 결과를 씀, rawVals 재사용이라 추가 읽기비용 없음)
+  // 🆕 2026-08-26: 부재단계별·잔여경과일·미설치사유(현재잔여/키워드) 4카드가 '설치지연상세사유'
+  // 탭으로 이관되며 ops는 그 카드들이 쓰던 cohort·reasons가 더는 필요없어 빠졌고, returned는
+  // 그 카드들이 필요로 하는 ops(부재단계별)·reasons(미설치사유)·cohort(잔여경과일)가 추가됐다.
+  // 설치가속화 탭 삭제로 accel 탭 항목도 제거(accel '데이터 섹션'은 weeklyaction이 여전히 씀 — 별개).
+  ops:["ops","perf","ship"],
   perf:["perf","reasons"], cohort:["cohort"],
   weekly:["perf"], daily:["perf"], report:["perf"],
-  shipweekly:["ship"], shipdaily:["ship"], accel:["accel","perf"],
+  shipweekly:["ship"], shipdaily:["ship"],
   weeklyboard:["ship","reasons","weeklyBoard"],
   weeklyaction:["cohort","weeklyBoard","accel"],
   weeklyreport:["weeklyBoard"],
   c2i:["callInstall"],
-  returned:["returned"]
+  returned:["returned","ops","reasons","cohort"]
 };
 var TAB_LOADED={}; // 탭 → 마지막으로 로드된 기간키("start|end", 전체는 ""). 같은 기간 재조회 방지.
 function periodKey(){ return CUR_PERIOD.start ? (CUR_PERIOD.start+"|"+CUR_PERIOD.end) : ""; }
@@ -4667,7 +4686,7 @@ function renderAll(d){
   render(d);
   if(d.reasons) renderDelay(d.reasons, d.perf&&d.perf.install);
   if(d.achievement) renderAchievement(d.achievement, d.meta && d.meta.today);
-  if(d.ship) renderResourceCalc(d.ship, d.achievement, d.meta && d.meta.today);
+  if(d.ship) renderResourceCalc(d.ship, d.achievement, d.meta && d.meta.today, d.cohort);
   renderWeeklyBoard(d);
   renderWeeklyAction(d);
   document.getElementById("page-badge").textContent = CUR_PERIOD.start ? ("● "+CUR_PERIOD.label) : "● 전체 기간";
@@ -5229,7 +5248,7 @@ function shareTabLayout(){
   if(s) s.addEventListener("click", shareTabLayout);
 })();
 
-var TABMETA={ favorites:["즐겨찾기","내가 ⭐ 표시한 카드를 모아봅니다 · 탭에 들어올 때마다 원본을 다시 캡처합니다(실시간 동기화 아님)"], ops:["운영 대시보드","① 현재 잔여 업무량(콜리스트 기준) + ② 주간 요약(구 현황판) · 두 섹션은 기준 시점이 다릅니다"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], accel:["설치가속화 Action","배송완료 당일 설치 전환 · 통화 당일 설치 전환 · 실적로그 콜시도(N, 구K) 대비 설치예정(D) 병기"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 1만원 이벤트·야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"], weeklyreport:["위클리 리포트","주차별 리포트 게시판 · 주요회의내용 4-5줄 요약(수기 입력, Phase 1)"], c2i:["당일통화당일설치","월별·주별 요약(최근 3개월) + 일별 상세(최근 30일) 한 페이지 · 통화→당일설치 전환(상담원 담당자별 비교)"],returned:["미설치 분석","로우데이터 I열(상태)이 반품·폐업인 2026년 출고건 · 출고 주차·월별 집계 + J열 메모/K열 사유 키워드 분류"] };
+var TABMETA={ favorites:["즐겨찾기","내가 ⭐ 표시한 카드를 모아봅니다 · 탭에 들어올 때마다 원본을 다시 캡처합니다(실시간 동기화 아님)"], ops:["운영 대시보드","현재 잔여 업무량(콜리스트 기준) + 주간·일간 설치 채널구성 + 설치소요일 분포 · 지연사유 상세는 '설치지연상세사유' 탭 참고"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 1만원 이벤트·야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"], weeklyreport:["위클리 리포트","주차별 리포트 게시판 · 주요회의내용 4-5줄 요약(수기 입력, Phase 1)"], c2i:["당일통화당일설치","월별·주별 요약(최근 3개월) + 일별 상세(최근 30일) 한 페이지 · 통화→당일설치 전환(상담원 담당자별 비교)"],returned:["설치지연상세사유","현재 잔여 지연사유(부재단계별·경과일·미설치사유) + 로우데이터 I열(상태)이 반품·폐업인 2026년 출고건 출고 주차·월별 집계"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
