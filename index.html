@@ -580,22 +580,6 @@
   /* 설치완료 그룹이 없는 표(nth-child(5)/(7) 아쿠아 세로선 규칙에서 제외) */
   table.dtable.no-grp td:nth-child(5) { border-left: 0; }
   table.dtable.no-grp td:nth-child(7) { border-right: 0; }
-  /* 설치가속화 통화표 — 원격 그룹은 8~10열이라 위 5·7열 고정 규칙으로는 안 잡힌다(본문 셀만 별도 지정) */
-  table.dtable#accelSdTable td:nth-child(8) { border-left: 1.5px solid color-mix(in srgb, var(--s-aqua) 42%, transparent); }
-  table.dtable#accelSdTable td:nth-child(10) { border-right: 1.5px solid color-mix(in srgb, var(--s-aqua) 42%, transparent); }
-  /* 설치가속화 배송반영 상세표 — 성격이 다른 세 묶음이라 경계를 긋는다(2026-07-23 요청,
-     2026-08-13 열 개정으로 경계 재계산).
-     ① 2~6열 콜 투입(콜시도·설치예정·부재건·콜대비설치예정율·콜당일설치건, 실적로그+통화당일설치)
-     ② 7~10열 배송 코호트 건수(전일출고·오후배송·배송당일설치완료·원격접수건)
-     ③ 11~13열 비율·소요일(설치완료율·배송소요일·평균설치소요일)
-     ⚠️ 이 표는 no-grp 라 위 nth-child(5)/(7) 기본 규칙이 꺼져 있다. ID 선택자로 다시 켜는 것이므로
-        (ID 1개 > no-grp 클래스) 특이도로 이긴다. no-grp 를 떼는 방식은 쓰지 말 것 —
-        기본 규칙이 7열에 오른쪽 선까지 그어 8열 왼쪽 선과 겹쳐 이중선이 된다.
-     ⚠️ 열 순서를 바꾸면 이 숫자도 같이 바꿔야 한다. renderAccelDevTable 의 th 순서가 정본이다. */
-  table.dtable#accelDevTable th:nth-child(7), table.dtable#accelDevTable td:nth-child(7),
-  table.dtable#accelDevTable th:nth-child(11), table.dtable#accelDevTable td:nth-child(11) {
-    border-left: 1.5px solid color-mix(in srgb, var(--s-aqua) 42%, transparent);
-  }
   /* 출고월별 현재 상태 표 — 셀 = 건수 + 그 달 출고 대비 % */
   table.dtable .cell-pct2 { font-size: 10.5px; font-weight: 600; color: var(--muted); margin-left: 5px; }
   /* 주차별 D+N 누적 설치완료율 표 — 33열 가로스크롤 + 좌측 2열 고정 + 히트맵 */
@@ -611,108 +595,6 @@
   table.dtable.curve-tbl td.cv { font-weight: 600; color: var(--text-primary); }
   table.dtable.curve-tbl td.cv-na { color: var(--muted); font-weight: 500; }
   table.dtable.curve-tbl td.imm { font-style: italic; }
-
-  /* 설치가속화 Action — 한 줄 요약(운영자가 그대로 읽어 보고하는 문장 형식) */
-  .acl { display: flex; flex-direction: column; gap: 7px; margin-top: 4px; }
-  .acl .acl-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 10px; padding: 9px 12px; border-radius: 10px; background: color-mix(in srgb, var(--s-blue) 4%, transparent); border: 1px solid var(--border); font-size: 13px; font-variant-numeric: tabular-nums; }
-  .acl .acl-row.cur { background: color-mix(in srgb, var(--s-blue) 10%, transparent); border-color: color-mix(in srgb, var(--s-blue) 35%, transparent); }
-  .acl .acl-d { font-weight: 700; color: var(--text-primary); min-width: 74px; }
-  .acl .acl-seg { color: var(--text-secondary); }
-  .acl .acl-seg b { color: var(--text-primary); font-weight: 700; font-size: 14px; }
-  .acl .acl-seg.hi b { color: var(--s-blue-d); }
-  .acl .acl-sep { color: var(--muted); }
-  .acl .acl-tail { color: var(--muted); font-size: 11.5px; margin-left: auto; }
-  .acl .acl-empty { padding: 14px; color: var(--muted); font-size: 12.5px; }
-  /* 일평균 이상인 날을 연파랑으로 — "무슨 요일에 물량이 몰리는가"를 훑어서 보기 위한 표시(운영자 요청 2026-07-22).
-     ⚠️ dtable 의 tr.cur 규칙과 특이도가 같으므로 반드시 그 뒤(여기)에 와야 이긴다. 위로 옮기면 조용히 안 먹는다. */
-  .acl .acl-row.abv { background: color-mix(in srgb, var(--s-blue) 17%, transparent);
-    border-color: color-mix(in srgb, var(--s-blue) 38%, transparent); }
-  .acl .acl-row.abv.cur { background: color-mix(in srgb, var(--s-blue) 24%, transparent); }
-  /* 표는 흰 배경 위라 옅으면 안 보인다 — 11%로 했더니 육안으로 구분이 안 돼 18%로 올렸다(실측). */
-  table.dtable tbody tr.abv td { background: color-mix(in srgb, var(--s-blue) 18%, transparent); }
-  table.dtable tbody tr.abv.cur td { background: color-mix(in srgb, var(--s-blue) 25%, transparent); }
-  /* 평균 이상 표시 칩 */
-  .avgtag { display:inline-block; font-size:10px; font-weight:800; color:var(--s-blue-d);
-    background: color-mix(in srgb, var(--s-blue) 22%, transparent); border-radius:5px;
-    padding:1px 6px; margin-left:6px; vertical-align:middle; white-space:nowrap; }
-  /* 집계 자체가 불가능한 구간을 알리는 경고 배너(0으로 그리면 거짓이 되는 경우) */
-  .acl-warn { margin: 8px 0 12px; padding: 11px 14px; border-radius: 10px; font-size: 12.5px; line-height: 1.65;
-    color: var(--text-secondary); background: color-mix(in srgb, var(--s-orange) 10%, transparent);
-    border-left: 3px solid var(--s-orange); word-break: keep-all; }
-  .acl-warn b { color: var(--text-primary); }
-  /* 갱신 시점 안내(경고가 아니라 사용법) — 오늘 행이 0인 게 정상임을 먼저 알려 오해를 막는다 */
-  .acl-info { margin: 8px 0 12px; padding: 11px 14px; border-radius: 10px; font-size: 12.5px; line-height: 1.65;
-    color: var(--text-secondary); background: color-mix(in srgb, var(--s-blue) 8%, transparent);
-    border-left: 3px solid var(--s-blue); word-break: keep-all; }
-  .acl-info b { color: var(--text-primary); }
-
-  /* 설치가속화 통화 축 — 슬래시 나열은 칸 구분이 안 돼 읽기 힘들다는 지적(2026-07-22).
-     날짜당 한 행, 지표당 넓은 칸(라벨·숫자·출처를 세로로) 으로 바꾼다. */
-  .acg { display: flex; flex-direction: column; gap: 7px; margin-top: 4px; }
-  .acg-row { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface-1); }
-  .acg-row.cur { border-color: color-mix(in srgb, var(--s-blue) 45%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--s-blue) 22%, transparent); }
-  /* 주말(토·일) = 일평균 모수에서 제외한 날. 표엔 남기되 회색으로 낮춰 '평균에 안 들어간 날'임을 눈으로 알린다(2026-07-27). */
-  .acg-row.wknd { opacity: .6; background: var(--surface-2, #f3f4f6); }
-  .acg-row.wknd .acg-head { background: color-mix(in srgb, var(--muted) 10%, transparent); }
-  .wkndtag { display:inline-block; font-size:10px; font-weight:700; color:var(--text-secondary); background:color-mix(in srgb, var(--muted) 22%, transparent); border-radius:5px; padding:1px 6px; margin-left:6px; vertical-align:middle; }
-  .acg-head { display: flex; align-items: baseline; gap: 10px; padding: 6px 12px;
-    background: color-mix(in srgb, var(--s-blue) 6%, transparent); border-bottom: 1px solid var(--border); }
-  .acg-row.cur .acg-head { background: color-mix(in srgb, var(--s-blue) 13%, transparent); }
-  .acg-d { font-size: 13px; font-weight: 800; color: var(--text-primary); }
-  /* 통화완료건 대비 설치완료율 배지 — 날짜(acg-d)보다는 작게 유지한다. 넘어서면 행의 시선 순서가 뒤집힌다. */
-  .acg-hint { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-left: auto; }
-  .acg-hint b { font-weight: 800; color: var(--text-primary); }
-  .acg-cells { display: grid; grid-template-columns: repeat(auto-fit, minmax(146px, 1fr)); }
-  /* 🔻 일자별 블록 압축(운영자 요청 2026-07-23 '일데이터 크기 축소').
-     라벨/숫자/출처를 3줄로 쌓던 것을 → [라벨 … 숫자] 한 줄 + 출처 한 줄, 2줄로 줄였다.
-     칸 높이가 약 절반이 되어 위 '당일배송 요약'(.acl 한 줄 요약)과 밀도가 비슷해진다.
-     ⚠️ 출처(.acg-s)는 지우지 않는다 — 어느 시트 어느 열에서 온 숫자인지가 이 카드의 신뢰 근거다.
-        flex-basis:100% 로 강제 개행시켜 살려 둔다. */
-  .acg-cell { padding: 7px 11px; border-right: 1px solid var(--border); min-width: 0;
-    display: flex; flex-wrap: wrap; align-items: baseline; gap: 1px 8px; }
-  .acg-cell:last-child { border-right: 0; }
-  .acg-k { flex: 1 1 auto; font-size: 11px; font-weight: 700; color: var(--text-secondary); white-space: nowrap; }
-  .acg-v { flex: 0 0 auto; font-size: 18px; font-weight: 800; color: var(--text-primary);
-    line-height: 1.15; font-variant-numeric: tabular-nums; }
-  .acg-v i { font-style: normal; font-size: 11px; font-weight: 700; color: var(--muted); margin-left: 2px; }
-  .acg-s { flex: 1 0 100%; font-size: 10px; color: var(--muted); white-space: nowrap;
-    overflow: hidden; text-overflow: ellipsis; }
-  .acg-cell.hi { background: color-mix(in srgb, var(--s-violet) 8%, transparent); }
-  .acg-cell.hi .acg-v { color: var(--s-violet); }
-  /* D+1 설치 칸 — 당일설치(violet)와 나란히 놓이므로 주황으로 구분(그래프 D+1 막대와 같은 색) */
-  .acg-cell.hi2 { background: color-mix(in srgb, var(--s-orange) 9%, transparent); }
-  .acg-cell.hi2 .acg-v { color: var(--s-orange); }
-  /* 상세(원격) 칸 — 본 지표의 하위임을 배경과 좌측선으로 구분 */
-  .acg-cell.sub { background: color-mix(in srgb, var(--s-aqua) 7%, transparent); }
-  .acg-cell.sub .acg-k::before { content: "└ "; color: var(--muted); font-weight: 400; }
-  /* 원격 묶음의 머리칸(총계) — 하위항목이 아니므로 '└' 를 붙이지 않는다 */
-  .acg-cell.subtop .acg-k::before { content: none; }
-  .acg-cell.sub .acg-v { font-size: 16px; }
-  /* 라벨이 길어져도(당일 총 원격접수건) 칸 밖으로 새지 않게 */
-  .acg-k { overflow: hidden; text-overflow: ellipsis; }
-  .acg-empty { padding: 16px; color: var(--muted); font-size: 12.5px; }
-  @media (max-width: 900px) { .acg-cells { grid-template-columns: repeat(auto-fit, minmax(124px, 1fr)); } .acg-v { font-size: 16px; } }
-
-  /* 📦 카드 묶음 — 타일 6~8개와 '그 타일을 날짜별로 풀어 쓴 요약 카드'는 같은 계열인데
-     따로 떠 있어 가독성이 나쁘다는 지적(운영자 2026-07-23). 한 판으로 묶어 계열을 눈에 보이게 한다.
-     ⚠️ 묶음 안쪽은 반드시 .grid 를 유지할 것 — 배치 편집(layoutContainers)이 .grid/.stack 만
-        컨테이너로 인식한다. .cgrp 를 카드의 직접 부모로 만들면 그 카드가 편집에서 빠진다. */
-  .cgrp { border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 18px;
-    background: color-mix(in srgb, var(--s-blue) 3.5%, transparent); }
-  .cgrp > .tiles { margin-bottom: 14px; }
-  .cgrp-t { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; margin: 0 2px 12px;
-    font-size: 14.5px; font-weight: 800; letter-spacing: -.3px; color: var(--text-primary); }
-  .cgrp-t small { font-size: 11.5px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
-  /* 설치가속화 큰 섹션 배너 — 배송/통화 두 데이터 묶음의 경계를 크게·색으로 구분(운영자 2026-07-24 요청) */
-  .accel-sec { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
-    font-size:19px; font-weight:800; letter-spacing:-.3px; color:var(--text-primary);
-    padding:12px 16px; margin:6px 0 16px; border-radius:10px;
-    border-left:7px solid var(--s-blue-d);
-    background: color-mix(in srgb, var(--s-blue-d) 10%, transparent); }
-  .accel-sec small { font-size:12.5px; font-weight:600; color:var(--text-secondary); letter-spacing:0; }
-  /* 통화 섹션 — 위 배송 섹션과 큰 간격 + 보라 계열로 구분(그래프 당일설치 막대색과 통일) */
-  .accel-sec.sec-call { margin-top:44px; border-left-color:var(--s-violet);
-    background: color-mix(in srgb, var(--s-violet) 12%, transparent); }
 
   /* Passcode gate */
   #gate { position: fixed; inset: 0; background: var(--page); z-index: 100; display:flex; align-items:center; justify-content:center; }
@@ -779,12 +661,11 @@
   <div class="navitem navchild" data-tab="weeklyreport" id="nav-weeklyreport" style="display:none"><span class="ic">🗒️</span><div>위클리 리포트<small>주차별 요약 게시판</small></div></div>
   <div class="navitem" data-tab="c2i" id="nav-c2i"><span class="ic">📞</span><div>당일통화당일설치<small>최근 14일 · 담당자별 비교</small></div></div>
   <div class="navitem" data-tab="cohort" id="nav-cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div><span class="navcaret" id="cohort-caret">▸</span></div>
-  <div class="navitem navchild" data-tab="returned" id="nav-returned" style="display:none"><span class="ic">↩️</span><div>미설치 분석<small>반품·폐업 사유(2026년~)</small></div></div>
+  <div class="navitem navchild" data-tab="returned" id="nav-returned" style="display:none"><span class="ic">↩️</span><div>설치지연상세사유<small>현재잔여 지연사유·반품/폐업(2026년~)</small></div></div>
   <!-- 2026-08-14: 출고코호트 바로 밑으로 이동(운영자 요청, 성격이 비슷한 코호트 계열 메뉴끼리 묶음) -->
   <div class="navitem" data-tab="shipweekly" id="nav-shipweekly"><span class="ic">🚚</span><div>출고주 비교<small>출고 물량 처리현황</small></div><span class="navcaret" id="shipweekly-caret">▸</span></div>
   <div class="navitem navchild" data-tab="shipdaily" id="nav-shipdaily" style="display:none"><span class="ic">📬</span><div>출고일 비교<small>출고 물량 처리현황</small></div></div>
-  <div class="navitem" data-tab="accel"><span class="ic">🚀</span><div>설치가속화 Action<small>배송반영·통화 당일설치</small></div></div>
-  <div class="navitem" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량 · 주간 요약</small></div></div>
+  <div class="navitem" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량 · 채널구성</small></div></div>
   <!-- 하위 '월·주·일 흐름'은 2026-07-28 삭제(주간/일간 비교와 완전 중복) → 성과는 이제 하위메뉴 없음(캐럿 제거) -->
   <div class="navitem" data-tab="perf" id="nav-perf"><span class="ic">⚡</span><div>성과<small>설치속도·작업량</small></div></div>
   <div class="navitem" data-tab="report"><span class="ic">📝</span><div>주차별 리포트<small>전주 대비 요약·코멘트</small></div></div>
@@ -857,102 +738,22 @@
     <div class="grid">
       <div class="card col-5 fill" data-cid="opsStatus"><h3>📊 상태 분포</h3><div class="sub">콜리스트 점주의사 기준 · 미설치는 배송완료/배송중으로 분리</div><div class="chart-wrap ch-m"><canvas id="opsStatus"></canvas></div></div>
       <div class="card col-7 fill" data-cid="opsDelivery"><h3>🚚 배송상태 · 미설치 즉시 컨택 대상</h3><div class="sub">미설치 중 배송완료/구매확정 건은 바로 설치 유도 가능</div><div class="chart-wrap ch-m"><canvas id="opsDelivery"></canvas></div><div class="insight" id="ops-insight"></div></div>
-      <div class="card col-6 fill" data-cid="opsAbsent"><h3>📵 부재 단계별</h3><div class="sub">재컨택 우선순위 판단용</div><div class="chart-wrap ch-m"><canvas id="opsAbsent"></canvas></div></div>
-      <!-- 구 현황판 '미설치 잔여 경과일' — 선택 주와 무관한 현재시점 지표라 ①현재 잔여 섹션에 둔다(2026-07-23 이관) -->
-      <div class="card col-6 fill" data-cid="boardAging"><h3>⏳ 미설치 잔여 경과일 <small class="th-tgt" style="display:inline">배송완료 기준</small></h3><div class="sub">설치예정·보류·부재(1~4회)만 · 배송완료 기준(배송중 제외) · 출고 후 경과일 · 장기미설치·위약금·반품/폐업 제외 · <b style="color:var(--s-blue-d)">막대 클릭 시 주문번호·경과일·메모</b></div><div class="chart-wrap ch-m"><canvas id="boardAging"></canvas></div></div>
-      <div class="card col-12 fill" data-cid="opsReason"><h3>🧾 미설치 사유 (현재 잔여)</h3><div class="sub">로우데이터 K열 코드화 사유 · 반품/폐업 및 <b>배송중 전체 제외</b>(배송완료·구매확정만) · '(사유미기재) 배송완료'=설치 가능한데 사유 미입력</div><div class="chart-wrap ch-m"><canvas id="opsReason"></canvas></div></div>
-      <div class="card col-12" data-cid="opsReasonKw"><h3>🔑 미설치 사유 (메모 키워드 분류)</h3><div class="sub">현재 미설치 잔여건(반품·폐업 제외)의 <b>메모를 키워드 자동분류</b> · 설치일 무관 · 7일+ 지연 사유와 동일 로직(부재·문자안내/미룸/방문설치 접수/원격접수/전산·결제단말 등) · <b>기타 막대 클릭 시 세부내역</b> · <span id="ops-kw-skip"></span></div><div class="chart-wrap ch-xl"><canvas id="opsReasonKw"></canvas></div></div>
     </div>
+    <!-- 부재단계별·잔여경과일·미설치사유(현재잔여/키워드) 4개 카드는 2026-08-26 운영자 지시로
+         '출고 코호트 → 설치지연상세사유' 탭으로 이관(렌더 함수는 그대로, DOM 위치만 이동). -->
 
-    <!-- ② 주간 요약 — 구 '현황판' 탭 전량 이관(2026-07-23). 아래 카드는 '기준 주' 드롭다운을 따라간다.
-         중복 카드(월목표·채널비율·D+7지연)는 2026-07-24 삭제, 상담원설치 타일·회의코멘트·설치소요일분포만 남김. -->
-    <div class="sec-head">📊 주간 요약 <small>구 현황판 · 아래 카드는 선택한 <b>기준 주</b> 기준 (위 '현재 잔여'와 시점이 다릅니다)</small></div>
-    <div class="filters" id="board-wksel" style="margin-bottom:14px">
-      <span class="flab">🗓️ 기준 주</span>
-      <select id="board-wk-sel"></select>
-      <span class="board-wk" id="board-wk-hint"></span>
-    </div>
-    <div class="tiles" id="board-tiles"></div>
-    <div class="grid">
-      <div class="card col-12" data-cid="boardNote"><h3>📝 회의 코멘트 <span id="board-week" class="board-wk"></span></h3><div class="sub">이번 주 회의 메모 · 저장 시 공유 · <b>지난 주차 메모는 '주차별 리포트' 탭 하단 📚 전체 주차 메모</b>에서 한 번에 볼 수 있습니다</div><div id="boardNote" class="rpt-note"></div></div>
-    </div>
-
-    <!-- ③ 주간·일간 처리속도 상세 — 구 '주간 비교'/'일간 비교' 탭 흡수(2026-08-04, 운영자 요청).
-         종합 콤보차트(wkVolume/dyVolume)는 "그래프가 오히려 가독성이 떨어진다"는 지적으로 삭제,
-         채널구성 차트 + 상세비교표만 남긴다. renderWeekly/renderDaily(대시보드API 무변경, JS만 축소)가
-         그대로 이 id들에 씀 — 물리적으로 이 탭으로 옮겼을 뿐 데이터 흐름은 그대로다. -->
-    <div class="sec-head">🗓️ 주간·일간 처리속도 상세 <small>구 '주간 비교'/'일간 비교' 탭 · 표 위주로 재구성</small></div>
-    <div class="tiles" id="weekly-tiles"></div>
+    <!-- ②③ 주간요약·주간/일간 처리속도 상세 섹션(회의코멘트·상세비교표 등) 2026-08-26 운영자 지시로 삭제.
+         채널구성 차트 2개(wkChannel·dyChannel)만 유지 — renderWeekly/renderDaily(대시보드API 무변경)가
+         그대로 이 id들에 씀. -->
+    <div class="sec-head">🔧 주간·일간 설치 채널구성</div>
     <div class="grid">
       <div class="card col-12" data-cid="wkChannel"><h3>🔧 주별 설치 채널 구성</h3><div class="sub">자가설치 · 상담원 완료 건수(설치일 기준) · 막대 안 %는 그 주 설치완료 대비 비중</div><div class="chart-wrap ch-m"><canvas id="wkChannel"></canvas></div></div>
-      <div class="card col-12" data-cid="weeklyTable"><h3>🗓️ 주차별 상세 비교표</h3><div class="sub">최근 12주 · 최신 주가 위 · <b>▲▼</b>는 직전 주 대비 증감(속도·재컨택주기는 낮을수록 개선)</div><div class="tbl-wrap"><table class="dtable" id="weeklyTable"></table></div></div>
       <div class="card col-12" data-cid="dyChannel"><h3>🔧 일별 설치 채널 구성</h3><div class="sub">자가설치 · 상담원 완료 건수(설치일 기준) · 막대 안 %는 그 날 설치완료 대비 비중</div><div class="chart-wrap ch-m"><canvas id="dyChannel"></canvas></div></div>
-      <div class="card col-12" data-cid="dailyTable"><h3>📆 일자별 상세 비교표</h3><div class="sub">최근 30일 · 최신 일이 위 · <b>▲▼</b>는 직전 일 대비 증감(속도·재컨택주기는 낮을수록 개선)</div><div class="tbl-wrap"><table class="dtable" id="dailyTable"></table></div></div>
-    </div>
-  </section>
-
-  <!-- ACCEL (설치가속화 Action) — 첫 화면이었으나 2026-07-31 운영자 지시로 위클리 현황판으로 교체 -->
-  <section class="tab-content" id="tab-accel">
-    <!-- 큰 섹션 배너 ① 배송 (운영자 지시 이미지: 빨간 제목 '오후 배송완료 당일 설치건') -->
-    <div class="accel-sec">🚚 오후 배송완료 당일 설치건 <small>오후 배송반영(T열)으로 배송완료 전환된 코호트가 그날 설치까지 끝난 흐름</small></div>
-    <!-- 📦 배송 계열 묶음 — 타일(일평균)과 그것을 날짜별로 풀어 쓴 요약은 같은 데이터다. 한 판에 넣는다. -->
-    <div class="cgrp">
-      <div class="cgrp-t">🚚 배송반영 계열 <small>타일 = 구간 일평균 · 아래 = 그 값을 날짜별로 풀어 쓴 것 (같은 데이터)</small></div>
-      <div class="tiles" id="accel-dev-tiles"></div>
-      <div class="grid">
-        <div class="card col-12" data-cid="accelDevLines">
-        <h3>🚚 당일배송/당일설치완료 요약</h3>
-        <div class="sub">로우데이터 <b>T열(당일배송반영)</b>에 그 날짜가 찍힌 건들의 코호트 · <b>전일출고</b>=하루 전 출고건수(G열) — 배송소요일이 약 1일이라 <b>그날 배송전환의 모집단</b>입니다 · <b>배송업데이트</b>=그날 배송완료로 전환된 건 · <b>당일설치건</b>=설치일(S)−T가 0일 · <b>배송소요일</b>=T−출고일(H) · <b>평균설치소요일</b>=S−T · 과거 코호트도 매 조회 시 재계산되므로 설치가 뒤늦게 찍히면 숫자가 올라갑니다 · <b style="color:var(--s-blue-d)">연파랑 행(평균↑)</b>은 배송업데이트가 <b>일평균 이상</b>인 날 — 요일별 물량 쏠림을 보세요</div>
-        <div id="accelDevLines" class="acl"></div>
-        </div>
-      </div>
-    </div>
-    <div class="grid">
-      <div class="card col-12" data-cid="acDev">
-        <h3>📊 배송반영 대비 설치 전환</h3>
-        <div class="sub">막대=배송업데이트·설치완료·당일설치 <b>(왼쪽축 건수)</b> · 점선=평균 설치소요일 <b>(오른쪽축 일)</b> · 최근 코호트는 아직 설치 진행중이라 완료·소요일이 낮게 나옵니다</div>
-        <div class="chart-wrap ch-xl"><canvas id="acDev"></canvas></div>
-      </div>
-      <div class="card col-12" data-cid="accelDevTable">
-        <h3>📋 배송반영 상세표 <small class="th-tgt" style="display:inline">실적로그 N(구K)·D 병기</small></h3>
-        <div class="sub">최신 일이 위 · 콜시도·설치예정·부재건은 <b>실적로그 N(구K)·D·F열</b>(상담원만, 토요일은 0 처리) · <b style="color:var(--s-blue-d)">연파랑 행(평균↑)</b>=오후배송이 <b>일평균 이상</b>인 날 · 일자에 요일이 붙어 있어 <b>무슨 요일에 몰리는지</b> 바로 보입니다</div>
-        <div class="coldef accel-coldef"></div>
-        <div class="tbl-wrap"><table class="dtable no-grp" id="accelDevTable"></table></div>
-      </div>
     </div>
 
-    <!-- 큰 섹션 배너 ② 통화 (운영자 지시 이미지: 빨간 제목 '당일 통화 당일설치 집계') -->
-    <div class="accel-sec sec-call">📞 당일 통화 당일설치 집계 <small>상담원이 통화한 그날(및 다음날 D+1) 설치까지 끝난 흐름</small></div>
-    <!-- 📦 통화 계열 묶음 — 위 배송 계열과 같은 구조(타일=일평균, 아래=날짜별 상세) -->
-    <div class="cgrp">
-      <div class="cgrp-t">📞 통화후 D+1일 이내 설치 <small>타일 = 구간 일평균 · 아래 = 그 값을 날짜별로 풀어 쓴 것 (같은 데이터)</small></div>
-      <div class="tiles" id="accel-sd-tiles"></div>
-      <div class="grid">
-        <div class="card col-12" data-cid="accelSdNote">
-        <h3>📞 통화 → 당일설치 · 일자별 한 줄 요약</h3>
-        <div class="sub">콜 투입부터 당일 설치까지 한 흐름으로 · <b>콜시도·통화성공·부재·원격접수는 실적로그</b>(그날 적재 스냅샷이라 사후에 안 변함) · <b>당일설치·원격 설치완료만 로우데이터</b>(U열=설치예정 ∧ 마지막통화일=설치일) · 상담원 담당자만 집계하며 자가설치·문자발송은 제외합니다 · 행 오른쪽 <b>통화완료건 대비 설치완료율</b>=당일 통화·당일설치 ÷ 통화성공 — 통화가 된 건 중 <b>그날 설치까지 끝난 비율</b>입니다</div>
-        <div class="acl-info">⏱️ <b>해당일 +1일부터 값을 확인할 수 있습니다.</b> 당일 건은 업무 종료 후 집계되어 <b>다음날 오전 9시 30분에 갱신</b>됩니다 — 오늘 행이 0으로 보이는 것은 정상이며, 내일 아침에 채워집니다. <b>전일(어제) 행부터 확정값</b>으로 보세요.</div>
-        <div class="acl-warn" id="accelSdNote" style="display:none"></div>
-        <div id="accelSdLines" class="acg"></div>
-        </div>
-      </div>
-    </div>
-    <div class="grid">
-      <div class="card col-12" data-cid="acSd">
-        <h3>📊 콜시도 → 설치예정 → 당일·D+1일 설치</h3>
-        <div class="sub">막대=콜시도(K열)·설치예정(D열)·통화당일 설치완료·통화 다음날(D+1) 설치완료 <b>(왼쪽축 건수)</b> · 점선=콜시도 대비 설치예정율 <b>(오른쪽축 %)</b></div>
-        <div class="chart-wrap ch-xl"><canvas id="acSd"></canvas></div>
-      </div>
-      <div class="card col-12" data-cid="accelSdTable">
-        <h3>📋 통화 당일설치 상세표 <small class="th-tgt" style="display:inline">실적로그 N(구K)·D 병기</small></h3>
-        <div class="sub">최신 일이 위 · <b>▲▼</b>는 직전 일 대비 · <b>당일설치율</b>=당일설치 ÷ 통화성공(D열) — 잡은 일정이 그 자리에서 끝난 비율 · <b>오늘 행이 0</b>인 것은 당일 건이 <b>다음날 오전 9시 30분에 갱신</b>되기 때문입니다</div>
-        <div class="coldef accel-remote-coldef"></div>
-        <div class="tbl-wrap"><table class="dtable no-grp" id="accelSdTable"></table></div>
-      </div>
-    </div>
-
-    <!-- 구 운영탭 '설치소요일 분포' 이동(2026-08-05, 운영자 요청) — 최초컨택 주 기준이라 accel의 다른 카드(출고/통화 주 기준)와 축이 다름을 명시 -->
-    <div class="accel-sec">📐 설치소요일 분포 <small>최초컨택 주 기준 — 위 카드들과 기준 주가 다릅니다</small></div>
+    <!-- 구 '설치가속화 Action' 탭에 있던 카드 — 2026-08-26 운영자 지시로 그 탭 전체 삭제(당일배송·통화당일설치는
+         보고서 탭/당일통화당일설치 탭과 중복). 이 카드만 다른 탭에 대응물이 없어 운영탭으로 이관. -->
+    <div class="sec-head">📐 설치소요일 분포 <small>최초컨택 주 기준 — 이 카드만 다른 카드들과 기준 주가 다릅니다</small></div>
     <div class="grid">
       <div class="card col-12 fill" data-cid="boardLead"><h3>📐 설치소요일 분포 <small class="th-tgt" style="display:inline">최초컨택 주 기준</small></h3><div class="sub"><b>그 주에 최초컨택한 건들</b>이 출고→설치까지 며칠 걸렸는지 분포 · 전주 vs 금주 · 막대 위 %는 그 주 총건 대비 비중 (빠를수록 왼쪽)</div><div class="chart-wrap ch-m"><canvas id="boardLead"></canvas></div></div>
     </div>
@@ -998,11 +799,23 @@
     </div>
   </section>
 
-  <!-- RETURNED ANALYSIS (미설치 분석 — 반품·폐업 사유, 2026-08-10 PHASE 129 신설) -->
+  <!-- RETURNED ANALYSIS (구 '미설치 분석' — 반품·폐업 사유, 2026-08-10 PHASE 129 신설.
+       2026-08-26 운영자 지시로 '설치지연상세사유'로 개편 — 운영탭의 현재잔여 지연사유 카드
+       4개(opsAbsent·boardAging·opsReason·opsReasonKw)를 이 탭으로 이관해 반품·폐업 사유와
+       한 탭에서 같이 본다. 렌더 함수(renderOps/renderBoard)는 그대로 — 카드 DOM 위치만 이동. -->
   <section class="tab-content" id="tab-returned">
+    <div class="sec-head">📋 현재 잔여 지연사유 <small>조회 시점 기준 · 구 운영탭에서 이관</small></div>
+    <div class="grid">
+      <div class="card col-6 fill" data-cid="opsAbsent"><h3>📵 부재 단계별</h3><div class="sub">재컨택 우선순위 판단용</div><div class="chart-wrap ch-m"><canvas id="opsAbsent"></canvas></div></div>
+      <div class="card col-6 fill" data-cid="boardAging"><h3>⏳ 미설치 잔여 경과일 <small class="th-tgt" style="display:inline">배송완료 기준</small></h3><div class="sub">설치예정·보류·부재(1~4회)만 · 배송완료 기준(배송중 제외) · 출고 후 경과일 · 장기미설치·위약금·반품/폐업 제외 · <b style="color:var(--s-blue-d)">막대 클릭 시 주문번호·경과일·메모</b></div><div class="chart-wrap ch-m"><canvas id="boardAging"></canvas></div></div>
+      <div class="card col-12 fill" data-cid="opsReason"><h3>🧾 미설치 사유 (현재 잔여)</h3><div class="sub">로우데이터 K열 코드화 사유 · 반품/폐업 및 <b>배송중 전체 제외</b>(배송완료·구매확정만) · '(사유미기재) 배송완료'=설치 가능한데 사유 미입력</div><div class="chart-wrap ch-m"><canvas id="opsReason"></canvas></div></div>
+      <div class="card col-12" data-cid="opsReasonKw"><h3>🔑 미설치 사유 (메모 키워드 분류)</h3><div class="sub">현재 미설치 잔여건(반품·폐업 제외)의 <b>메모를 키워드 자동분류</b> · 설치일 무관 · 7일+ 지연 사유와 동일 로직(부재·문자안내/미룸/방문설치 접수/원격접수/전산·결제단말 등) · <b>기타 막대 클릭 시 세부내역</b> · <span id="ops-kw-skip"></span></div><div class="chart-wrap ch-xl"><canvas id="opsReasonKw"></canvas></div></div>
+    </div>
+
+    <div class="sec-head">↩️ 반품·폐업 사유 <small>2026년 출고건만 · 출고 주차별·월별 집계</small></div>
     <div class="grid">
       <div class="card col-12" data-cid="retHead">
-        <h3>↩️ 미설치 분석 — 반품·폐업 사유</h3>
+        <h3>↩️ 반품·폐업 사유 상세</h3>
         <div class="sub">로우데이터 I열(상태)에 <b>반품·폐업</b>이 포함된 2026년 출고건만 · 출고 <b>주차별</b>·<b>월별</b> 집계 · 사유는 J열 메모 키워드 우선, 없으면 K열(설치지연사유) 코드로 대체 · 셀 클릭 시 주문번호·메모 상세</div>
       </div>
       <div class="card col-12" data-cid="retWeeklyTable"><h3>🗓️ 출고 주차별</h3><div class="tbl-wrap"><table class="dtable no-grp" id="retWeeklyTable"></table></div></div>
@@ -1394,7 +1207,6 @@ function render(d) {
   renderDaily(d.perf);
   renderShipWeekly(d.ship);
   renderShipDaily(d.ship);
-  renderAccel(d.accel);
   renderCallToInstall(d.callInstall);
   renderReport(d.perf, d.weeklyNotes);
   renderReturnedAnalysis(d.returnedAnalysis);
@@ -1671,12 +1483,6 @@ function plainCell(cur, opts){
 
 function renderWeekly(p){
   var rows = (p && p.weekly) || [];
-  // 2026-08-04(운영자 요청): 종합 콤보차트는 삭제하고 이 탭(→ 운영탭으로 이관)엔 평균 설치속도·
-  // 재컨택주기 타일만 남긴다 — 출고/통화/설치완료/자가설치는 이미 다른 탭에도 나오는 값이라 중복.
-  document.getElementById("weekly-tiles").innerHTML =
-    weekTile("평균 설치속도","⏱️", rows, "avgSpeed", {valFn:round1, unit:"일", lowerBetter:true, target:SPD_TGT}) +
-    weekTile("평균 재컨택주기","🔁", rows, "avgRetouch", {valFn:round1, unit:"일", lowerBetter:true, target:RTC_TGT});
-
   var labels = rows.map(function(x){ return wkLabel(x.week); });
 
   // 주별 설치 채널 구성(누적 막대) — 각 세그먼트에 그 주 설치완료 대비 비중(%) 표기
@@ -1701,39 +1507,6 @@ function renderWeekly(p){
           var tot = chTotal[ct.dataIndex] || 0, v = ct.parsed.y || 0;
           return ct.dataset.label + ": " + fmt(v) + "건 (" + (tot>0?Math.round(v/tot*100):0) + "%)";
         } } } } } });
-
-  renderWeeklyTable(rows);
-}
-
-function renderWeeklyTable(rows){
-  var head = '<thead>'
-    + '<tr>'
-    +   '<th rowspan="2">주 (월요일)</th><th rowspan="2">출고</th><th rowspan="2">주통화량</th><th rowspan="2">최초컨택</th>'
-    +   '<th colspan="3" class="grp grp-top gl gr">설치완료 <small>합계 = 자가설치 + 상담원컨택후설치</small></th>'
-    +   '<th rowspan="2">평균 설치속도<br><small class="th-tgt">목표 ≤'+SPD_TGT+'일</small></th><th rowspan="2">평균 재컨택주기<br><small class="th-tgt">목표 ≤'+RTC_TGT+'일</small></th>'
-    + '</tr>'
-    + '<tr><th class="grp gl">합계</th><th class="grp">자가설치</th><th class="grp gr">상담원컨택후설치</th></tr>'
-    + '</thead>';
-  var recent = rows.slice(-12);            // 최근 12주(오름차순)
-  var lastIdx = recent.length - 1;
-  var body = recent.map(function(w, i){
-    var prev = i>0 ? recent[i-1] : null;   // 표에선 직전(더 이전) 주
-    var isCur = (i === lastIdx);
-    var wl = w.week.slice(5).replace("-",".") + "주";
-    var tag = isCur ? '<span class="curtag">이번주</span>' : '';
-    return '<tr'+(isCur?' class="cur"':'')+'>'
-      + '<td>'+wl+tag+'</td>'
-      + wowCell(w.shipped, prev&&prev.shipped)
-      + wowCell(w.calls, prev&&prev.calls)
-      + plainCell(w.firstContacts)
-      + plainCell(w.installs)
-      + plainCell(w.self, {share: w.installs>0 ? Math.round(w.self/w.installs*100) : null})
-      + plainCell((w.agent||0)+(w.sms||0), {share: w.installs>0 ? Math.round(((w.agent||0)+(w.sms||0))/w.installs*100) : null})
-      + wowCell(w.avgSpeed, prev?prev.avgSpeed:null, {valFn:round1, unit:"일", lowerBetter:true, target:SPD_TGT})
-      + wowCell(w.avgRetouch, prev?prev.avgRetouch:null, {valFn:round1, unit:"일", lowerBetter:true, target:RTC_TGT})
-      + '</tr>';
-  }).reverse().join("");                    // 최신 주가 위로
-  document.getElementById("weeklyTable").innerHTML = head + '<tbody>' + body + '</tbody>';
 }
 
 // ---------- DAILY (일간 비교 스코어보드) — 주간 비교와 동일 지표를 '일' 단위로 ----------
@@ -1795,38 +1568,6 @@ function renderDaily(p){
           var tot = chTotal[ct.dataIndex] || 0, v = ct.parsed.y || 0;
           return ct.dataset.label + ": " + fmt(v) + "건 (" + (tot>0?Math.round(v/tot*100):0) + "%)";
         } } } } } });
-
-  renderDailyTable(rows);
-}
-
-function renderDailyTable(rows){
-  var head = '<thead>'
-    + '<tr>'
-    +   '<th rowspan="2">일자</th><th rowspan="2">출고</th><th rowspan="2">일통화량</th><th rowspan="2">최초컨택</th>'
-    +   '<th colspan="3" class="grp grp-top gl gr">설치완료 <small>합계 = 자가설치 + 상담원컨택후설치</small></th>'
-    +   '<th rowspan="2">평균 설치속도<br><small class="th-tgt">목표 ≤'+SPD_TGT+'일</small></th><th rowspan="2">평균 재컨택주기<br><small class="th-tgt">목표 ≤'+RTC_TGT+'일</small></th>'
-    + '</tr>'
-    + '<tr><th class="grp gl">합계</th><th class="grp">자가설치</th><th class="grp gr">상담원컨택후설치</th></tr>'
-    + '</thead>';
-  var recent = rows.slice(-30);            // 최근 30일(오름차순) — 2026-07-21 14→30일로 확대
-  var lastIdx = recent.length - 1;
-  var body = recent.map(function(w, i){
-    var prev = i>0 ? recent[i-1] : null;   // 표에선 직전 일
-    var isCur = (i === lastIdx);
-    var tag = isCur ? '<span class="curtag">오늘</span>' : '';
-    return '<tr'+(isCur?' class="cur"':'')+'>'
-      + '<td>'+dyLabelW(w.date)+tag+'</td>'
-      + wowCell(w.shipped, prev&&prev.shipped)
-      + wowCell(w.calls, prev&&prev.calls)
-      + plainCell(w.firstContacts)
-      + plainCell(w.installs)
-      + plainCell(w.self, {share: w.installs>0 ? Math.round(w.self/w.installs*100) : null})
-      + plainCell((w.agent||0)+(w.sms||0), {share: w.installs>0 ? Math.round(((w.agent||0)+(w.sms||0))/w.installs*100) : null})
-      + wowCell(w.avgSpeed, prev?prev.avgSpeed:null, {valFn:round1, unit:"일", lowerBetter:true, target:SPD_TGT})
-      + wowCell(w.avgRetouch, prev?prev.avgRetouch:null, {valFn:round1, unit:"일", lowerBetter:true, target:RTC_TGT})
-      + '</tr>';
-  }).reverse().join("");                    // 최신 일이 위로
-  document.getElementById("dailyTable").innerHTML = head + '<tbody>' + body + '</tbody>';
 }
 
 // ---------- SHIP COHORT (출고주/출고일 코호트 스코어보드) ----------
@@ -3056,364 +2797,6 @@ function wbBindMemoButton(){
     }, function(){ btn.disabled=false; msg.textContent="통신 오류"; msg.style.color="var(--s-red)"; },
     { params:{ action:"addmemo", text: text } });
   });
-}
-
-// ---------- ACCEL (설치가속화 Action) ----------
-// 두 축 모두 "그날 들어온 물량이 그날 얼마나 끝났나"를 본다(서버 buildAccel_ 참고).
-//  ① 배송 축 — T열(당일배송반영) 각인일 코호트. 오후 배송반영 자동화가 도는 날부터만 존재한다.
-//     ⚠️ 비어 있는 것이 곧 고장이 아니다 → cohortStart 로 '아직 없음'을 안내한다(빈 화면 금지).
-//  ② 통화 축 — 통화당일설치 탭과 동일 판정(U=설치예정 && R==S).
-//     ⚠️ '당일 통화건'은 R열(마지막통화일) 기준이라 과거일수록 과소집계된다 → 콜 시도량 정본은 실적로그 N열(구K).
-var ACCEL_LINE_DAYS = 10;   // 한 줄 요약에 노출할 최근 일수(표는 더 길게 본다)
-var ACCEL_TABLE_DAYS = 30;
-
-// ⚠️ 날짜 카테고리가 적으면 막대가 슬롯 전체로 퍼져 "어느 날짜의 막대인지" 안 보인다(운영자 지적 2026-07-22).
-//    날짜가 2개일 때 한 슬롯이 600px씩 잡혀 같은 날 막대 3개가 100px씩 벌어지고,
-//    x축 라벨은 가운데 막대 밑에만 붙어 첫 막대가 어느 날 것인지 읽히지 않았다.
-//    → 날짜 수에 따라 그룹 폭(categoryPercentage)을 좁히고 막대는 서로 붙인다(barPercentage=1).
-//
-// 🚨 여기에 maxBarThickness 를 같이 주면 안 된다. 좁은 categoryPercentage 와 겹치면 Chart.js 가
-//    막대 폭을 0으로 계산해 **막대가 통째로 사라진다**(축·범례는 그대로라 '데이터가 없는' 것처럼 보임).
-//    실제로 겪음: cat .26 + barPct 1 + maxBarThickness 58 → 폭 0. 셋 중 maxBarThickness 만 빼면 정상.
-//    전역 Chart.defaults.datasets.bar.maxBarThickness(46)로 충분하다 — 슬롯이 이미 좁아
-//    46px 상한에 걸려도 막대끼리 몇 px 만 떨어져 한 덩어리로 읽힌다.
-function acBarGeom(n){
-  return {
-    categoryPercentage: n<=2 ? .26 : n<=4 ? .40 : n<=8 ? .58 : .76,
-    barPercentage: 1
-  };
-}
-// 날짜 라벨 — 적을 땐 요일까지 보여 어느 날인지 분명히(7.21(화)), 많을 땐 짧게(7/21)
-function acLabels(rows){ return rows.map(function(x){ return rows.length<=14 ? dyLabelW(x.date) : dyLabel(x.date); }); }
-// 날짜축 눈금 — 카테고리가 적으면 전부 표시하고 글자도 키운다
-function acXTicks(n){
-  return { color:C["--text-secondary"], maxRotation:0, autoSkip:n>14, maxTicksLimit:21,
-    font:{ size: n<=14 ? 12.5 : 11, weight:"700" } };
-}
-// 선 그래프 점 위 숫자 — 점이 많으면 겹치므로 14개 이하일 때만
-function acLineDL(unit){
-  return { display:function(ctx){ return ctx.chart.data.labels.length<=14 && ctx.dataset.data[ctx.dataIndex]!=null; },
-    anchor:"end", align:"top", offset:4, clamp:true,
-    color:C["--text-primary"], font:{weight:"700",size:11.5},
-    backgroundColor:C["--surface-1"], borderRadius:4, padding:{top:2,bottom:1,left:5,right:5},
-    formatter:function(v){ return v+unit; } };
-}
-var AC_BAR_DL = {font:{weight:"700",size:12.5}};   // 막대 위 숫자(기본 9px는 너무 작다는 지적)
-
-// 상단 타일은 '오늘값'이 아니라 표시 구간의 **일평균**을 보여준다.
-// 당일 행은 다음날 09:30에야 채워져 오늘값 타일이 늘 0으로 보이기 때문(운영자 지적 2026-07-22).
-// 평균·비율은 서버가 원본 합계로 계산해 내려준다(날짜별 평균의 평균은 왜곡됨) → 여기선 표시만 한다.
-//   val  : 표시값(일평균 또는 비율)
-//   total: 구간 합계(있으면 부제에 "합계 N건"으로 함께 보여준다)
-function avgTile(label, ic, sum, valKey, opts){
-  opts = opts || {};
-  var days = (sum && sum.days) || 0;
-  var cur = sum ? sum[valKey] : null;
-  var valFn = opts.valFn || round1;
-  var unit = opts.unit || "건";
-  var sub;
-  if (!days) sub = '<span style="color:var(--muted)">표시할 날짜 없음</span>';
-  else {
-    // 일평균 칸은 '평균', 비율·소요일 칸은 '합계 기준'이라고 정확히 쓴다(날짜별 평균의 평균이 아님).
-    // 당일은 아직 미완성이라 평균에서 뺀다 — 그 사실을 부제에 적어야 "왜 오늘이 안 들어갔지"를 안 묻는다.
-    var scope = sum.includesToday ? '<span style="color:var(--s-orange)">오늘 포함</span>' : '오늘 제외';
-    // 통화 축은 주말(토·일)을 일평균에서 뺀다(상담원 미근무). 배송 축 sum엔 이 플래그가 없어 표기 안 됨.
-    var wknd = sum.weekdaysOnly ? ' · 주말 제외' : '';
-    sub = '<span style="color:var(--muted)">최근 <b>'+days+'일</b> '+(opts.basis || "평균")+' · '+scope+wknd+'</span>';
-    if (opts.totalKey && sum[opts.totalKey]!=null) {
-      sub += ' <span style="color:var(--text-secondary)">· 합계 '+fmt(sum[opts.totalKey])+'건</span>';
-    }
-  }
-  var valOut = (cur==null) ? "–" : valFn(cur);
-  return tile(label, ic, valOut, unit, sub, opts.accent, opts.tip);
-}
-
-// 당일설치(D+0) + D+1일 설치 두 타일의 합산 일평균 캡션 — 두 타일 위에 한 줄로 얹는다(사용자 요청 2026-07-29).
-// installsPerDay/installsD1PerDay는 이미 payload에 있는 값을 그대로 더할 뿐 별도 집계를 새로 하지 않는다
-// (같은 sum(sdSum)·같은 날짜창을 쓰므로 분모가 어긋날 일이 없다).
-function comboCapTile(sum) {
-  var days = (sum && sum.days) || 0;
-  var d0 = sum ? sum.installsPerDay : null, d1 = sum ? sum.installsD1PerDay : null;
-  var t0 = sum ? sum.installs : null, t1 = sum ? sum.installsD1 : null;
-  if (!days || d0 == null || d1 == null) {
-    return '<div class="tile-combo-cap">🧮 당일+D+1일 합산 평균 <span style="color:var(--muted)">표시할 날짜 없음</span></div>';
-  }
-  var avg = d0 + d1;
-  var total = (t0 != null && t1 != null) ? (t0 + t1) : null;
-  return '<div class="tile-combo-cap">🧮 당일+D+1일 합산 평균 <b>' + round1(avg) + '건</b>/일'
-    + (total != null ? ' <span class="tc-sub">(최근 ' + days + '일 합계 ' + fmt(total) + '건)</span>' : '') + '</div>';
-}
-
-// 사용자 요청 표기: "21일 배송업데이트 54건 / 설치완료건 21건 / …" — 일(日) + 요일만 붙인다.
-function aclDay(s){ var p=s.split("-"); var d=new Date(+p[0],+p[1]-1,+p[2]); return (+p[2])+"일("+DY_WD[d.getDay()]+")"; }
-function aclSeg(label, val, unit, hi){
-  return '<span class="acl-seg'+(hi?' hi':'')+'">'+label+' <b>'+(val==null?"–":val)+'</b>'+(unit||"")+'</span>';
-}
-var aclSep = '<span class="acl-sep">/</span>';
-function aclEmpty(el, msg){ el.innerHTML='<div class="acl-empty">'+msg+'</div>'; }
-
-// 통화 축 한 칸 — 라벨 / 큰 숫자 / 출처를 세로로 쌓아 칸 경계로 구분한다(슬래시 나열 대체).
-// null 은 '–' 로 그린다(집계 불가와 0을 구분해야 하므로 fmt 그대로 쓴다).
-function acgCell(label, val, src, cls){
-  return '<div class="acg-cell'+(cls?' '+cls:'')+'">'
-    + '<span class="acg-k">'+label+'</span>'
-    + '<span class="acg-v">'+fmt(val)+(val==null?'':'<i>건</i>')+'</span>'
-    + '<span class="acg-s">'+src+'</span></div>';
-}
-
-function renderAccel(a){
-  a = a || {};
-  var dev = a.delivery || [], sd = a.sameday || [];
-
-  // ----- 배송 축 -----
-  var devSum = a.deliverySummary || {days:0};
-  document.getElementById("accel-dev-tiles").innerHTML =
-    avgTile("일평균 배송업데이트","🚚", devSum, "deliveredPerDay", {accent:true, totalKey:"delivered",
-      tip:"표시 구간의 <b>하루 평균</b> 배송완료 전환 건수입니다.<br><br>당일 행은 다음날 오전 9시 30분에 채워지므로 '오늘값' 대신 일평균을 봅니다."}) +
-    avgTile("일평균 설치완료","✅", devSum, "installedPerDay", {totalKey:"installed"}) +
-    avgTile("일평균 당일설치","⚡", devSum, "sameDayPerDay", {totalKey:"sameDay"}) +
-    avgTile("배송소요일","📦", devSum, "avgShipDays", {unit:"일", basis:"전체 평균",
-      tip:"배송반영일(T) − 출고일(H) 의 <b>전체 평균</b>입니다. 날짜별 평균을 다시 평균 내지 않고 원본 합계로 계산합니다."}) +
-    avgTile("평균설치소요일","⏱️", devSum, "avgLeadDays", {unit:"일", basis:"전체 평균",
-      tip:"설치일(S) − 배송반영일(T) 의 <b>전체 평균</b>(설치가 끝난 건만)."}) +
-    avgTile("설치완료율","📈", devSum, "doneRate", {valFn:shipPct, unit:"%", basis:"합계 기준",
-      tip:"구간 <b>합계 기준</b> 설치완료 ÷ 배송업데이트."});
-
-  var devLines = document.getElementById("accelDevLines");
-  if(!dev.length){
-    aclEmpty(devLines, a.cohortStart
-      ? "선택한 기간에 배송반영(T열) 코호트가 없습니다. 기간을 넓혀 보세요. (첫 각인일 "+a.cohortStart+")"
-      : "아직 배송반영(T열) 코호트가 없습니다. 오후 배송반영 자동화(14:45~15:15)가 한 번 돌아야 T열에 날짜가 찍힙니다.");
-  } else {
-    var dRecent = dev.slice(-ACCEL_LINE_DAYS), dLast = dRecent.length-1;
-    // 배송업데이트가 일평균 이상인 날을 연파랑으로 — 요일별 물량 쏠림을 눈으로 잡기 위함.
-    var devAvg = devSum.deliveredPerDay;
-    devLines.innerHTML = dRecent.map(function(r,i){
-      var abv = (devAvg!=null && r.delivered!=null && r.delivered >= devAvg);
-      return '<div class="acl-row'+(i===dLast?' cur':'')+(abv?' abv':'')+'">'
-        + '<span class="acl-d">'+aclDay(r.date)+(abv?'<span class="avgtag">평균↑</span>':'')+'</span>'
-        + aclSeg("전일출고", fmt(r.prevShipped), "건") + aclSep
-        + aclSeg("배송업데이트", fmt(r.delivered), "건") + aclSep
-        + aclSeg("설치완료건", fmt(r.installed), "건") + aclSep
-        + aclSeg("당일설치건", fmt(r.sameDay), "건", true) + aclSep
-        + aclSeg("배송소요일", round1(r.avgShipDays), "일") + aclSep
-        + aclSeg("평균설치소요일", round1(r.avgLeadDays), "일")
-        + '<span class="acl-tail">콜시도 '+fmt(r.calls)+'건 · 설치예정 '+fmt(r.planned)+'건</span>'
-        + '</div>';
-    }).reverse().join("");
-  }
-
-  var dGeom = acBarGeom(dev.length);
-  mk("acDev", { type:"bar",
-    data:{ labels:acLabels(dev), datasets:[
-      Object.assign({ type:"bar", label:"배송업데이트", data:dev.map(function(x){return x.delivered;}), backgroundColor:C["--s-blue-l"], yAxisID:"y", borderRadius:3, datalabels:dlBarTop(AC_BAR_DL) }, dGeom),
-      Object.assign({ type:"bar", label:"설치완료", data:dev.map(function(x){return x.installed;}), backgroundColor:C["--s-aqua"], yAxisID:"y", borderRadius:3, datalabels:dlBarTop(AC_BAR_DL) }, dGeom),
-      Object.assign({ type:"bar", label:"당일설치", data:dev.map(function(x){return x.sameDay;}), backgroundColor:C["--s-violet"], yAxisID:"y", borderRadius:3, datalabels:dlBarTop(AC_BAR_DL) }, dGeom),
-      { type:"line", label:"평균설치소요일(일)", data:dev.map(function(x){return x.avgLeadDays==null?null:Math.round(x.avgLeadDays*10)/10;}), borderColor:C["--s-blue-d"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2.4, borderDash:[5,3], tension:.3, pointRadius:4, pointBackgroundColor:C["--s-blue-d"], spanGaps:true, datalabels:acLineDL("일") }
-    ]},
-    options:{ scales:{
-      x:{grid:{display:false},ticks:acXTicks(dev.length)},
-      y:{position:"left",beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]},title:{display:true,text:"건수",color:C["--muted"],font:{size:11}}},
-      y1:{position:"right",beginAtZero:true,grid:{drawOnChartArea:false},ticks:{color:C["--muted"],callback:function(v){return v+"일";}},title:{display:true,text:"소요일",color:C["--muted"],font:{size:11}}}
-    },
-      plugins:{ legend:{display:true,labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false},
-        tooltip:{callbacks:{label:function(ct){ var v=ct.parsed.y; if(v==null) return ct.dataset.label+": –";
-          return ct.dataset.label+": "+(ct.dataset.yAxisID==="y1" ? v+"일" : fmt(v)+"건"); }}} },
-      interaction:{mode:"index",intersect:false} } });
-
-  renderAccelDevTable(dev, devSum.deliveredPerDay);
-  paintAccelColdef();
-
-  // ----- 통화 축 -----
-  // 🔴 U열(통화시점상태)이 2026-07-21에 신설됐다. 그 이전 날짜는 '설치예정을 잡은 통화'인지
-  //    판별할 근거가 아예 없다(J열은 설치완료로 덮여 되짚을 수 없음) → 0으로 그리면 거짓이라
-  //    화면에서 통째로 제외하고, 몇 일을 뺐는지 명시한다. 시간이 지나면 자동으로 늘어난다.
-  var sdAll = sd;
-  sd = sd.filter(function(x){ return x.uReady; });
-  var sdSkipped = sdAll.length - sd.length;
-  var sdNote = document.getElementById("accelSdNote");
-  if (sdNote) {
-    sdNote.innerHTML = sdSkipped > 0
-      ? '⚠️ <b>' + (a.samedayStart || "2026-07-21") + ' 이전 ' + sdSkipped + '일은 제외</b>했습니다 — '
-        + '통화당일설치 판별에 쓰는 <b>U열(통화시점상태)이 그날 신설</b>돼 이전 데이터가 존재하지 않습니다. '
-        + '0으로 표시하면 "그날은 당일설치가 없었다"는 뜻이 되어 뺐습니다. 날이 갈수록 구간이 늘어납니다.'
-      : '';
-    sdNote.style.display = sdSkipped > 0 ? "block" : "none";
-  }
-
-  var sdSum = a.samedaySummary || {days:0};
-  document.getElementById("accel-sd-tiles").innerHTML =
-    avgTile("일평균 콜시도","☎️", sdSum, "callsPerDay", {accent:true, totalKey:"calls", tip:"실적로그 <b>N열(총계, 구K)</b> — <b>상담원 담당자만</b>(현재 김규리·김봉수). 자가설치·문자발송 행은 통화가 아니라 제외합니다.<br><br>당일 행은 다음날 오전 9시 30분에 채워지므로 '오늘값' 대신 일평균을 봅니다."}) +
-    avgTile("일평균 통화성공","🗓️", sdSum, "plannedPerDay", {totalKey:"planned", tip:"실적로그 <b>D열(설치예정)</b> — 고객과 통화가 되어 <b>설치 일정을 잡은 건</b>."}) +
-    avgTile("일평균 부재·기타","📵", sdSum, "othersPerDay", {totalKey:"others", tip:"실적로그 <b>E~K열 합</b> — 통화성공(설치예정)을 뺀 나머지 전부입니다.<br><br>부재 · 명의변경 · 미설치/보류 · 반품/폐업 · 설치거부/장기지연 · 위약금청구 · 서류보완중.<br><br>이렇게 합쳐야 <b>총 콜시도 = 통화성공 + 이 칸</b> 이 성립합니다."}) +
-    '<div class="tile-combo">' + comboCapTile(sdSum) +
-      avgTile("일평균 당일설치","⚡", sdSum, "installsPerDay", {totalKey:"installs", tip:"로우데이터 <b>U열='설치예정'</b> 이면서 <b>마지막통화일(R) = 설치일(S)</b> 인 건.<br><br>U열은 2026-07-21 신설이라 그 이전은 집계 불가입니다."}) +
-      avgTile("일평균 D+1일 설치","📆", sdSum, "installsD1PerDay", {totalKey:"installsD1", tip:"로우데이터 <b>U열='설치예정'</b> 이면서 <b>설치일(S) − 마지막통화일(R) = 1일</b> 인 건(통화한 <b>다음날</b> 설치).<br><br>당일설치(S=R)와는 겹치지 않는 별개 집계입니다. U열은 2026-07-21 신설이라 그 이전은 집계 불가입니다."}) +
-    '</div>' +
-    avgTile("일평균 원격접수","💻", sdSum, "logRemotePerDay", {totalKey:"logRemote", tip:"실적로그 <b>P열(원격설치 접수, 구M)</b> — 원격 접수량의 <b>정본</b>입니다.<br><br>로우데이터 N열은 진행이 안 되면 상담원이 <b>콜리스트에서 지워버려</b> 나중에 값이 사라집니다(미러링 반영)."}) +
-    avgTile("일평균 원격완료","✅", sdSum, "remotePerDay", {totalKey:"remote", tip:"접수한 원격 중 <b>그날 설치까지 끝난 건</b>(로우데이터 N열 기준). 시간이 지나면 줄어드니 <b>최근치만 신뢰</b>하세요."}) +
-    avgTile("통화성공률","📊", sdSum, "plannedRate", {valFn:shipPct, unit:"%", basis:"합계 기준", tip:"구간 <b>합계 기준</b> — 실적로그 D열(설치예정) ÷ N열(구K, 콜시도)."}) +
-    avgTile("당일설치율","📈", sdSum, "ofPlanned", {valFn:shipPct, unit:"%", basis:"합계 기준", tip:"구간 <b>합계 기준</b> — 당일설치 ÷ 통화성공. 잡은 일정이 그 자리에서 끝난 비율."});
-
-  var sdLines = document.getElementById("accelSdLines");
-  if(!sd.length){
-    sdLines.innerHTML = '<div class="acg-empty">표시할 날짜가 없습니다. (U열 신설 이후 데이터가 쌓이면 채워집니다)</div>';
-  } else {
-    var sRecent = sd.slice(-ACCEL_LINE_DAYS), sLast = sRecent.length-1;
-    sdLines.innerHTML = sRecent.map(function(r,i){
-      // 배지 = 통화완료건 대비 설치완료율(당일설치 ÷ 통화성공). 2026-07-23 사용자 요청으로
-      // 통화성공률(설치예정 ÷ 콜시도)에서 교체했다 — 콜이 얼마나 붙었나보다 "통화가 된 건이
-      // 그 자리에서 설치까지 끝났나"가 이 카드에서 보고 싶은 값이다.
-      // ⚠️ 직접 계산하지 말고 payload의 ofPlanned 를 쓴다. 같은 지표를 타일('당일설치율')과
-      //    상세표 컬럼이 이미 이 필드로 그리고 있어, 따로 계산하면 세 곳이 조용히 갈라진다.
-      //    U열 신설(2026-07-21) 이전 날짜는 installs 가 null(집계 불가)이라 ofPlanned 도 null → 배지 생략.
-      var instRate = (r.ofPlanned==null) ? ""
-        : '통화완료건 대비 설치완료율 <b>'+Math.round(r.ofPlanned*100)+'%</b>';
-      // 주말(토·일)은 일평균 모수에서 빠졌다 → 표엔 남기되 회색+'평균제외' 배지로 구분(운영자 2026-07-27).
-      return '<div class="acg-row'+(i===sLast?' cur':'')+(r.isWeekend?' wknd':'')+'">'
-        + '<div class="acg-head"><span class="acg-d">'+aclDay(r.date)+'</span>'
-        +   (i===sLast?'<span class="curtag">최신</span>':'')
-        +   (r.isWeekend?'<span class="wkndtag">주말·평균제외</span>':'')
-        +   '<span class="acg-hint" title="당일 통화·당일설치 ÷ 통화성공(실적로그 D열 설치예정) — 통화가 된 건 중 그날 설치까지 끝난 비율">'+instRate+'</span></div>'
-        + '<div class="acg-cells">'
-        +   acgCell("당일 총 콜시도", r.calls, "실적로그 N(구K) · 상담원만")
-        +   acgCell("통화성공", r.planned, "실적로그 D · 설치예정")
-        +   acgCell("부재/보류/반품 및 기타", r.others, "실적로그 E~K 합")
-        +   acgCell("당일 통화·당일설치", r.installs, "U=설치예정 · R=S", "hi")
-        +   acgCell("당일 통화·D+1일 설치", r.installsD1, "U=설치예정 · S−R=1", "hi2")
-        // 원격접수는 '당일설치의 하위'가 아니라 그날 원격 접수 총량이다 → '└' 없이 총계로 읽히게 한다.
-        // 그 아래 '원격 설치완료'만 이 총량의 하위(그중 당일 끝난 건)라 '└' 를 남긴다.
-        +   acgCell("당일 총 원격접수건", r.logRemote, "실적로그 P(구M) · 정본", "sub subtop")
-        +   acgCell("원격 설치완료", r.remote, "그중 당일 설치완료", "sub")
-        + '</div></div>';
-    }).reverse().join("");
-  }
-
-  var sGeom = acBarGeom(sd.length);
-  mk("acSd", { type:"bar",
-    data:{ labels:acLabels(sd), datasets:[
-      Object.assign({ type:"bar", label:"콜시도(K열)", data:sd.map(function(x){return x.calls;}), backgroundColor:C["--s-yellow"], yAxisID:"y", borderRadius:3, datalabels:dlBarTop(AC_BAR_DL) }, sGeom),
-      Object.assign({ type:"bar", label:"설치예정(D열)", data:sd.map(function(x){return x.planned;}), backgroundColor:C["--s-blue"], yAxisID:"y", borderRadius:3, datalabels:dlBarTop(AC_BAR_DL) }, sGeom),
-      Object.assign({ type:"bar", label:"통화당일 설치완료", data:sd.map(function(x){return x.installs;}), backgroundColor:C["--s-violet"], yAxisID:"y", borderRadius:3, datalabels:dlBarTop(AC_BAR_DL) }, sGeom),
-      Object.assign({ type:"bar", label:"통화 D+1일 설치완료", data:sd.map(function(x){return x.installsD1;}), backgroundColor:C["--s-orange"], yAxisID:"y", borderRadius:3, datalabels:dlBarTop(AC_BAR_DL) }, sGeom),
-      { type:"line", label:"콜시도 대비 설치예정(%)", data:sd.map(function(x){return x.plannedRate==null?null:Math.round(x.plannedRate*100);}), borderColor:C["--good"], backgroundColor:"transparent", yAxisID:"y1", borderWidth:2.4, borderDash:[5,3], tension:.3, pointRadius:4, pointBackgroundColor:C["--good"], spanGaps:true, datalabels:acLineDL("%") }
-    ]},
-    options:{ scales:{
-      x:{grid:{display:false},ticks:acXTicks(sd.length)},
-      y:{position:"left",beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]},title:{display:true,text:"건수",color:C["--muted"],font:{size:11}}},
-      y1:{position:"right",beginAtZero:true,max:100,grid:{drawOnChartArea:false},ticks:{color:C["--muted"],callback:function(v){return v+"%";}},title:{display:true,text:"전환율",color:C["--muted"],font:{size:11}}}
-    },
-      plugins:{ legend:{display:true,labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:false},
-        tooltip:{callbacks:{label:function(ct){ var v=ct.parsed.y; if(v==null) return ct.dataset.label+": –";
-          return ct.dataset.label+": "+(ct.dataset.yAxisID==="y1" ? v+"%" : fmt(v)+"건"); }}} },
-      interaction:{mode:"index",intersect:false} } });
-
-  renderAccelSdTable(sd);
-}
-
-// 표에서만 쓰는 컬럼 설명(부제 한 줄로는 T열의 의미가 전달되지 않는다)
-var ACCEL_COLDEF_HTML =
-    '<span class="cd-row"><span class="cd-k">읽는 법</span> 한 행 = <b>그 날 배송완료로 바뀐 물량</b>(T열 각인일)의 현재 처리 상태. 설치완료도 <b>설치한 날이 아니라 배송반영된 날</b>에 계상됩니다. 2026-08-13부터 <b>전일 대비 ▲▼는 표시하지 않습니다</b>(하루 변동이 자잘해 오히려 지저분하다는 지적) — 값만 보세요.</span>'
-  + '<span class="cd-row"><span class="cd-k">전일 출고</span> 그 날짜의 <b>하루 전 출고건수</b>(로우데이터 H열). 배송소요일(T−H)이 평균 1일 안팎이라 <b>어제 출고분이 오늘 배송완료로 전환</b>됩니다 → 오후배송이 적은 날이 <b>물량이 없었던 날인지, 물량은 있었는데 전환이 덜 된 날인지</b> 가릅니다. <b>출고일 코호트 탭의 출고건수와 같은 기준</b>(자가설치 포함)입니다. ⚠️ 배송이 하루 넘게 걸린 건은 그 전 날짜 출고분이라 <b>오후배송 ÷ 전일출고를 전환율로 읽으면 안 됩니다</b>(100%를 넘을 수 있음).</span>'
-  + '<span class="cd-row"><span class="cd-k">오후배송</span> 오후 배송반영 자동화(14:45~15:15)가 그 실행에서 <b>배송완료로 전환한 건수</b>(구 '+'&#39;배송업데이트&#39;'+'). 오전 자동화·수동 실행은 T열을 건드리지 않아 여기 안 잡힙니다.</span>'
-  + '<span class="cd-row"><span class="cd-k">배송당일설치완료</span> 설치일(S) − 배송반영일(T) = <b>0일</b>(구 '+'&#39;당일설치건&#39;'+'). 물건이 도착한 그날 설치까지 끝난 건 = 가속화의 최종 목표치.</span>'
-  + '<span class="cd-row"><span class="cd-k">콜시도·설치예정·부재건</span> 같은 날짜의 <b>실적로그 N열(총계, 구K)·D열(설치예정)·F열(부재)</b>. 배송 코호트와 <b>모수가 다릅니다</b>(콜은 그날 배송분만 거는 게 아님) — 비율이 아니라 <b>그날의 콜 투입량 대비 성과</b>로 읽으세요. 자가설치 담당자는 통화를 하지 않아 제외됩니다. <b>토요일은 콜시도·설치예정을 0으로 표시합니다</b>(상담원이 실제로 통화를 안 하는 날이라 자동화 각인만 남는 노이즈 — 일요일은 이미 자연스럽게 0에 가까워 그대로 둡니다).</span>'
-  + '<span class="cd-row"><span class="cd-k">콜당일설치건</span> <b>통화당일설치</b>(마지막통화일 R = 설치일 S, U열='+'&#39;설치예정&#39;'+') — 통화 축(아래 '+'&#39;통화 당일설치 상세표&#39;'+')의 <b>당일 통화·당일설치</b>와 같은 정의를 여기 배송 축 행에 같이 얹은 것입니다. 배송 코호트(T기준)와 통화 코호트(R기준)는 <b>서로 다른 축</b>이라 이 칸만 예외적으로 날짜만 같고 축이 다릅니다.</span>'
-  + '<span class="cd-row"><span class="cd-k">원격접수건</span> 실적로그 <b>P열(원격설치 접수, 구M)</b> — 그날 원격으로 접수된 건수의 <b>정본</b>입니다(사후에 변하지 않음).</span>'
-  + '<span class="cd-row"><span class="cd-k">최근 행</span> 아직 설치가 진행중이라 <b>설치완료율·소요일이 계속 올라갑니다</b> → 성숙한 행끼리만 비교하세요.</span>'
-  + '<span class="cd-row"><span class="cd-k">오늘 행</span> 당일 건은 업무 종료 후 집계되어 <b>다음날 오전 9시 30분에 갱신</b>됩니다 → 갱신 전에는 오늘의 <b>콜시도·설치예정이 0</b>으로 보입니다. 데이터 누락이 아니라 아직 안 채워진 것이며, <b>해당일 +1일부터 확정값</b>입니다.</span>';
-function paintAccelColdef(){
-  var els=document.querySelectorAll(".accel-coldef");
-  for(var i=0;i<els.length;i++) els[i].innerHTML=ACCEL_COLDEF_HTML;
-  var els2=document.querySelectorAll(".accel-remote-coldef");
-  for(var j=0;j<els2.length;j++) els2[j].innerHTML=ACCEL_REMOTE_COLDEF_HTML;
-}
-
-// 원격 관련 두 숫자가 왜 다른지 — 운영자가 가장 많이 물을 지점이라 표 위에 고정으로 적어둔다.
-// ⚠️ '실적로그가 정본'은 운영자 확인 사실이다(2026-07-22). 진행이 안 되면 상담원이 콜리스트에서
-//    원격 표기를 지우고, 그게 미러링으로 로우데이터까지 넘어가 뒤늦게 값이 사라진다.
-var ACCEL_REMOTE_COLDEF_HTML =
-    '<span class="cd-row"><span class="cd-k">원격접수</span> <b>실적로그 P열(원격설치 접수, 구M)</b> = 그날 원격으로 접수된 건수. <b>이 숫자가 정본</b>입니다 — 실적로그는 그날 적재된 스냅샷이라 사후에 변하지 않습니다.</span>'
-  + '<span class="cd-row"><span class="cd-k">그중 당일완결</span> 접수된 원격 중 <b>그날 통화로 그날 설치까지 끝난 건</b>(로우데이터 N열 기준). <span class="cd-warn">⚠️ 이 칸은 로우데이터라 시간이 지나면 줄어듭니다</span> — 진행이 안 된 건은 상담원이 <b>콜리스트에서 원격 표기를 지우고</b> 그게 로우데이터까지 미러링되기 때문입니다. <b>당일~어제치만 신뢰</b>하세요.</span>'
-  + '<span class="cd-row"><span class="cd-k">왜 두 숫자가 다른가</span> 모수가 다릅니다. 원격접수는 <b>접수만 되면</b> 계상되고, 당일완결은 거기에 <b>그날 설치까지 끝났을 것</b>이 더 붙습니다 → <b>당일완결 ≤ 원격접수</b>가 정상입니다. 실측(07/21): 접수 15건 중 12건 당일완결, 판정 예외 0건.</span>'
-  + '<span class="cd-row"><span class="cd-k">시작일</span> 통화 축 전체가 <b>U열(통화시점상태)</b>에 의존합니다. <span class="cd-warn">U열은 2026-07-21에 신설된 컬럼이라 그 이전 날짜는 집계가 불가능</span>합니다 — <b>J열(상태)로 대신할 수 없습니다.</b> 설치가 끝나면 J는 \'설치완료\'로 덮여, 그 통화 시점에 설치예정이었는지 되짚을 수 없기 때문입니다. 이전 구간은 0이 아니라 <b>표시에서 제외</b>했습니다.</span>'
-  + '<span class="cd-row"><span class="cd-k">R열 한계</span> 당일설치는 R열(마지막통화일)=S열(설치일)로 판정하는데 R은 <b>마지막 통화 1회만</b> 남습니다. 나중에 다시 통화하면 과거 흔적이 덮이므로 <b>며칠 지난 행은 값이 내려갈 수 있습니다.</b> 접수량 추이는 사후에 안 변하는 왼쪽 <b>실적로그</b> 칸으로 보세요.</span>';
-
-// 🔀 2026-08-13(운영자 요청) 헤더 순서·구성 전면 개정 + 전일대비 ▲▼ 제거 + 부재건·콜당일설치건·
-//    원격접수건 신설. 열 순서가 CSS 그룹 경계선(위 nth-child(7)/(11) 규칙)의 정본이니 같이 볼 것.
-function renderAccelDevTable(rows, avgDelivered){
-  var head='<thead><tr>'
-    + '<th>일자</th>'
-    + '<th>콜시도<br><small class="th-tgt">실적로그 N(구K)</small></th>'
-    + '<th>설치예정<br><small class="th-tgt">실적로그 D</small></th>'
-    + '<th>부재건<br><small class="th-tgt">실적로그 F</small></th>'
-    + '<th>콜시도 대비<br><small class="th-tgt">설치예정율</small></th>'
-    + '<th>콜당일설치건<br><small class="th-tgt">통화당일 R=S</small></th>'
-    + '<th title="하루 전 출고건수(G열). 배송소요일이 약 1일이라 그날 배송전환의 모집단으로 봅니다.">전일 출고<br><small class="th-tgt">G열 D−1</small></th>'
-    + '<th>오후배송<br><small class="th-tgt">T열 각인</small></th>'
-    + '<th>배송당일설치완료<br><small class="th-tgt">S−T=0</small></th>'
-    + '<th>원격접수건<br><small class="th-tgt">실적로그 P(구M)</small></th>'
-    + '<th>설치완료율</th>'
-    + '<th>배송소요일<br><small class="th-tgt">T−H</small></th><th>평균설치소요일<br><small class="th-tgt">S−T</small></th>'
-    + '</tr></thead>';
-  if(!rows.length){ document.getElementById("accelDevTable").innerHTML = head+'<tbody><tr><td colspan="13" style="text-align:center;color:var(--muted)">데이터 없음</td></tr></tbody>'; return; }
-  var recent=rows.slice(-ACCEL_TABLE_DAYS), lastIdx=recent.length-1;
-  var body=recent.map(function(w,i){
-    var isCur=(i===lastIdx);
-    // 배송업데이트(오후배송)가 일평균 이상인 날 → 행 전체를 연파랑으로(요일별 쏠림 확인용)
-    var abv=(avgDelivered!=null && w.delivered!=null && w.delivered>=avgDelivered);
-    var cls=(isCur?"cur":"")+(abv?(isCur?" abv":"abv"):"");
-    return '<tr'+(cls?' class="'+cls+'"':'')+'>'
-      + '<td>'+dyLabelW(w.date)+(isCur?'<span class="curtag">최신</span>':'')+(abv?'<span class="avgtag">평균↑</span>':'')+'</td>'
-      + plainCell(w.calls)
-      + plainCell(w.planned)
-      + plainCell(w.absent)
-      + plainCell(w.plannedRate, {valFn:shipPct, unit:"%"})
-      + plainCell(w.callSameDay)
-      + plainCell(w.prevShipped)
-      + plainCell(w.delivered)
-      + plainCell(w.sameDay, {share: w.delivered>0?Math.round(w.sameDay/w.delivered*100):null})
-      + plainCell(w.remoteRecv)
-      + plainCell(w.doneRate, {valFn:shipPct, unit:"%"})
-      + plainCell(w.avgShipDays, {valFn:round1, unit:"일"})
-      + plainCell(w.avgLeadDays, {valFn:round1, unit:"일"})
-      + '</tr>';
-  }).reverse().join("");
-  document.getElementById("accelDevTable").innerHTML = head+'<tbody>'+body+'</tbody>';
-}
-
-function renderAccelSdTable(rows){
-  var head='<thead><tr>'
-    + '<th>일자</th>'
-    + '<th title="실적로그 N열(구K) 총계. 상담원 담당자만(자가설치·문자발송 제외).">당일 총 콜시도<br><small class="th-tgt">실적로그 N(구K) · 상담원</small></th>'
-    + '<th title="실적로그 D열. 고객과 통화가 되어 설치 일정을 잡은 건.">통화성공<br><small class="th-tgt">실적로그 D</small></th>'
-    + '<th title="실적로그 E~K 합(부재·명의변경·미설치/보류·반품폐업·설치거부·위약금·서류보완중). 총 콜시도 = 통화성공 + 이 칸.">부재/보류/반품 및 기타<br><small class="th-tgt">실적로그 E~K</small></th>'
-    + '<th>통화성공률<br><small class="th-tgt">D÷N(구K)</small></th>'
-    + '<th title="U열=설치예정 이면서 마지막통화일(R)=설치일(S).">당일 통화·당일설치<br><small class="th-tgt">U=설치예정 · R=S</small></th>'
-    + '<th>당일설치율<br><small class="th-tgt">당일설치÷통화성공</small></th>'
-    + '<th class="grp gl" title="실적로그 P열(구M). 원격 접수량의 정본이며 사후에 변하지 않습니다.">원격접수<br><small class="th-tgt">실적로그 P(구M) · 정본</small></th>'
-    + '<th class="grp" title="접수한 원격 중 그날 설치까지 끝난 건(로우데이터 N열 기준).">원격 설치완료<br><small class="th-tgt">로우 N열</small></th>'
-    + '<th class="grp gr">원격 완결률</th>'
-    + '</tr></thead>';
-  if(!rows.length){ document.getElementById("accelSdTable").innerHTML = head+'<tbody><tr><td colspan="10" style="text-align:center;color:var(--muted)">데이터 없음</td></tr></tbody>'; return; }
-  var recent=rows.slice(-ACCEL_TABLE_DAYS), lastIdx=recent.length-1;
-  var body=recent.map(function(w,i){
-    var prev=i>0?recent[i-1]:null;
-    var isCur=(i===lastIdx);
-    return '<tr'+(isCur?' class="cur"':'')+'>'
-      + '<td>'+dyLabelW(w.date)+(isCur?'<span class="curtag">최신</span>':'')+'</td>'
-      + wowCell(w.calls, prev&&prev.calls)
-      + wowCell(w.planned, prev&&prev.planned)
-      + wowCell(w.others, prev&&prev.others, {lowerBetter:true})
-      + wowCell(w.plannedRate, prev?prev.plannedRate:null, {valFn:shipPct, unit:"%"})
-      + wowCell(w.installs, prev&&prev.installs)
-      + wowCell(w.ofPlanned, prev?prev.ofPlanned:null, {valFn:shipPct, unit:"%"})
-      + wowCell(w.logRemote, prev&&prev.logRemote)
-      + wowCell(w.remote, prev&&prev.remote)
-      + wowCell(w.remoteSameDayRate, prev?prev.remoteSameDayRate:null, {valFn:shipPct, unit:"%"})
-      + '</tr>';
-  }).reverse().join("");
-  document.getElementById("accelSdTable").innerHTML = head+'<tbody>'+body+'</tbody>';
 }
 
 // ---------- COHORT ----------
