@@ -3058,7 +3058,7 @@ function saveAchInstall(){
 // d.ship.weekly(buildShipCohortScore_) 중 목표D+7완료율을 실제 달성한 주들만 골라 그 주들의 실측
 // 평균(자가설치율·건당컨택횟수·배송소요일)을 "달성 가능 기준선"으로 쓴다. 단순 최근 N주 평균보다
 // "그 완료율을 냈을 때 실제 콜 강도가 얼마였는지"를 더 정확히 반영한다(2026-08-26 운영자 설계).
-var RC = { ship:null, cohort:null, cfg:{}, month:null, today:"" };
+var RC = { ship:null, cohort:null, cfg:{}, month:null, today:"", lastNeededCalls:null };
 function rcMonthList(ship, cfg, todayYm){
   var seen={}, list=[];
   ((ship&&ship.weekly)||[]).forEach(function(w){ var m=w.week.slice(0,7); if(m && !seen[m]){ seen[m]=1; list.push(m); } });
@@ -3105,7 +3105,8 @@ function renderResourceCalc(ship, achievement, today, cohort){
     +'<div class="ach-edit"><label for="rcAgents">인원수</label><input class="ach-input" id="rcAgents" type="number" min="1" step="1" inputmode="numeric" placeholder="2"></div>'
     +'<div class="ach-edit"><button class="ach-save" id="rcSave">저장</button><span class="ach-msg" id="rcMsg"></span></div>'
     +'</div></div>'
-    +'<div class="ach-pace" id="rcResult"></div>';
+    +'<div class="ach-pace" id="rcResult"></div>'
+    +'<div class="ach-nums" id="rcTargetActual" style="margin-top:8px"></div>';
   document.getElementById("rcMonth").addEventListener("change", function(){ RC.month=this.value; paintResourceCalc(); });
   document.getElementById("rcSave").addEventListener("click", saveResourceCalc);
   ["rcShip","rcRate","rcAgents"].forEach(function(id){
@@ -3123,6 +3124,7 @@ function paintResourceCalc(){
   document.getElementById("rcAgents").value = cfg.agentCount!=null ? cfg.agentCount : 2;
   var msg=document.getElementById("rcMsg"); if(msg){ msg.textContent=""; msg.className="ach-msg"; }
   rcCompute();
+  rcRenderTargetVsActual();
 }
 function rcCompute(){
   var ship=RC.ship, baseEl=document.getElementById("rcBaseline"), resEl=document.getElementById("rcResult"), badge=document.getElementById("rcGapBadge");
@@ -3161,11 +3163,13 @@ function rcCompute(){
   if(!shipBasis || isNaN(shipBasis) || shipBasis<=0){
     resEl.innerHTML='월목표설치갯수를 입력하면 필요인원을 계산합니다.';
     if(badge){ badge.textContent="–"; badge.className="ach-pct"; }
+    RC.lastNeededCalls=null;
     return;
   }
   var contactUnits = shipBasis*(1-selfRate);
   var rateRatio = (doneRateBaseline && doneRateBaseline>0) ? (targetRate/doneRateBaseline) : 1;
   var neededCalls = contactUnits*touchPerUnit*rateRatio;
+  RC.lastNeededCalls = neededCalls;   // 저장 시 '목표 통화량'으로 얼려 담을 계산값(실측 기준선과는 별개)
   var y=+RC.month.slice(0,4), mo=+RC.month.slice(5);
   var workDays = weekdaysLeftInMonth(y,mo,1); if(workDays<1) workDays=1;
   // 🆕 정상상태(steady-state) 가정: 월간 총 필요통화량을 그 달 영업일수로 고르게 나눈 값이 하루
@@ -3204,6 +3208,9 @@ function saveResourceCalc(){
   if(shipRaw===""||isNaN(parseInt(shipRaw,10))||parseInt(shipRaw,10)<0){ msg.textContent="월목표 오류(0 이상 정수)"; msg.className="ach-msg err"; return; }
   if(rateRaw===""||isNaN(parseFloat(rateRaw))||parseFloat(rateRaw)<=0||parseFloat(rateRaw)>100){ msg.textContent="목표율 오류(0~100)"; msg.className="ach-msg err"; return; }
   if(agentsRaw===""||isNaN(parseInt(agentsRaw,10))||parseInt(agentsRaw,10)<=0){ msg.textContent="인원수 오류(1 이상)"; msg.className="ach-msg err"; return; }
+  // 저장 시점의 계산값(월 필요통화량)을 '목표 통화량'으로 얼려서 같이 저장 — 이후 실제 통화량과 비교용.
+  // 실측 기준선(자가설치율·건당컨택횟수 등)은 건드리지 않고 매번 다시 계산한다(운영자 2026-08-26 지시).
+  var targetCallsRaw = RC.lastNeededCalls!=null ? String(Math.round(RC.lastNeededCalls)) : "";
   btn.disabled=true; msg.textContent="저장 중…"; msg.className="ach-msg";
   fetchData(LAST_PASS, function(res){
     btn.disabled=false;
@@ -3213,7 +3220,21 @@ function saveResourceCalc(){
       paintResourceCalc(); msg.textContent="저장됨 ✓"; msg.className="ach-msg ok";
     } else { msg.textContent=(res&&res.error)||"저장 실패"; msg.className="ach-msg err"; }
   }, function(){ btn.disabled=false; msg.textContent="통신 오류"; msg.className="ach-msg err"; },
-  { params:{ action:"setresourcecalc", month:RC.month, shipBasis:shipRaw, targetRate:rateRaw, agentCount:agentsRaw } });
+  { params:{ action:"setresourcecalc", month:RC.month, shipBasis:shipRaw, targetRate:rateRaw, agentCount:agentsRaw, targetCalls:targetCallsRaw } });
+}
+// 저장된 '목표 통화량'(계산값을 얼린 것) vs 그 달 실제 통화량(perf.monthly) 비교 — 실측 기준선과는 별개 표시.
+function rcRenderTargetVsActual(){
+  var el=document.getElementById("rcTargetActual"); if(!el) return;
+  var cfg=RC.cfg[RC.month]||{};
+  if(cfg.targetCalls==null){ el.innerHTML=""; return; }
+  var mrow=((LAST_DATA&&LAST_DATA.perf&&LAST_DATA.perf.monthly)||[]).filter(function(x){ return x.ym===RC.month; })[0];
+  var actual = mrow ? mrow.calls : null;
+  var target = cfg.targetCalls;
+  var pctTxt = (actual!=null && target>0) ? Math.round(actual/target*100)+"%" : "–";
+  el.innerHTML = '🎯 목표 통화량 <b>'+fmt(target)+'회</b>'
+    + ' 대비 실제 <b>'+(actual!=null?fmt(actual):"–")+'회</b>'
+    + ' <span class="ach-pct'+((actual!=null&&target>0&&actual>=target)?' over':'')+'" style="font-size:12px;padding:2px 8px">'+pctTxt+'</span>'
+    + ' <span class="ach-remain">(저장 시점 계산값 · 이번 달 실제 통화량은 '+RC.month+' 실적로그 기준)</span>';
 }
 
 // ===== 📝 주차별 리포트 (전주 대비 자동 요약 + 수기 코멘트) =====
@@ -4645,10 +4666,12 @@ var CUR_TAB="weeklyboard"; // 현재 보고 있는 메뉴(탭). 날짜조회 시
 //    (cohort=미설치 잔여 경과일·월 목표 / perf=KPI 타일·채널비율·설치소요일 분포 / reasons=D+7 지연사유)
 var TAB_SECTIONS={
   // 🆕 2026-08-26: 부재단계별·잔여경과일·미설치사유(현재잔여/키워드) 4카드가 '설치지연상세사유'
-  // 탭으로 이관되며 ops는 그 카드들이 쓰던 cohort·reasons가 더는 필요없어 빠졌고, returned는
+  // 탭으로 이관되며 ops는 그 카드들이 쓰던 reasons가 더는 필요없어 빠졌고, returned는
   // 그 카드들이 필요로 하는 ops(부재단계별)·reasons(미설치사유)·cohort(잔여경과일)가 추가됐다.
   // 설치가속화 탭 삭제로 accel 탭 항목도 제거(accel '데이터 섹션'은 weeklyaction이 여전히 씀 — 별개).
-  ops:["ops","perf","ship"],
+  // ⚠️ cohort는 ops에 남겨둔다 — boardAging은 이관됐지만 [테스트] 리소스 계산기(rcCompute)가
+  //    cohort.shipCurve(D+7 기준선 선별)를 그대로 쓴다. 빼면 커스텀 날짜조회 시 계산기만 옛 데이터로 고정된다.
+  ops:["ops","perf","cohort","ship"],
   perf:["perf","reasons"], cohort:["cohort"],
   weekly:["perf"], daily:["perf"], report:["perf"],
   shipweekly:["ship"], shipdaily:["ship"],
