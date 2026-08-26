@@ -3910,8 +3910,8 @@ function renderCallToInstall(c){
       var mrows=rows.filter(function(r){ return r.manager===m; }).sort(function(a,b){ return a.date<b.date?-1:(a.date>b.date?1:0); });
       return '<div class="card col-6 fill"><h3><span class="c2i-dot" style="background:'+color+'"></span>'+m+'</h3>'
         + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">통화(총계)</span><b>'+fmt(t.calls)+'</b></div>'
-        + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">설치예정</span><b>'+fmt(t.planned)+'</b></div>'
-        + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">부재</span><b>'+fmt(t.absent)+'</b></div>'
+        + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">설치예정</span><b>'+fmt(t.planned)+' <small class="c2i-pct">('+c2iPctText(t.planned, t.calls)+')</small></b></div>'
+        + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">부재</span><b>'+fmt(t.absent)+' <small class="c2i-pct">('+c2iPctText(t.absent, t.calls)+')</small></b></div>'
         + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">명의변경</span><b>'+fmt(t.nameChange)+' <small class="c2i-pct">('+c2iPctText(t.nameChange, t.calls)+')</small></b></div>'
         + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">반품·폐업</span><b>'+fmt(t.returned)+' <small class="c2i-pct">('+c2iPctText(t.returned, t.calls)+')</small></b></div>'
         + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">서류보완중</span><b>'+fmt(t.docPending)+' <small class="c2i-pct">('+c2iPctText(t.docPending, t.calls)+')</small></b></div>'
