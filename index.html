@@ -1008,7 +1008,7 @@
       </div>
     </div>
     <div class="tiles" id="c2i-kpi"></div>
-    <div class="sec-head">👥 담당자별 비교 (30일 합계) <small>막대 = 설치예정 · 당일설치완료</small></div>
+    <div class="sec-head">👥 담당자별 비교 (30일 합계) <small>막대 = 설치예정 · 당일설치완료 · 하단 지표에 총설치완료 병기</small></div>
     <div class="grid" id="c2i-mgrgrid"></div>
     <div class="sec-head">📅 월별 요약 <small>최근 3개월</small></div>
     <div class="grid">
@@ -1031,7 +1031,8 @@
         <div class="coldef">
           <span class="cd-row"><span class="cd-k">통화(총계)</span>실적로그 N열(구K) — 설치예정+명의변경+부재+미설치/보류+서류보완중+반품폐업+설치거부+위약금 합. 설치완료는 별도 날짜(로우저장일) 귀속이라 제외됩니다.</span>
           <span class="cd-row"><span class="cd-k">당일설치완료</span>로우데이터 U열(통화시점상태)='설치예정' AND R(마지막통화일)=S(설치일)인 행 수. 통화당일설치 탭·samedayaudit과 동일 정의입니다.</span>
-          <span class="cd-row"><span class="cd-k">전환율</span>당일설치완료 ÷ 설치예정. 부재·기타 결과는 애초에 당일 설치로 이어질 수 없어 분모에서 제외했습니다.</span>
+          <span class="cd-row"><span class="cd-k">총설치완료</span>로우데이터 U열='설치예정' AND S열(설치일)이 존재하는 행 수(R=S 여부 무관 — 당일이 아니어도 결국 설치완료된 건 포함). 당일설치완료의 상위집합입니다.</span>
+          <span class="cd-row"><span class="cd-k">전환율</span>당일설치완료 ÷ 설치예정, 총설치완료 ÷ 설치예정. 부재·기타 결과는 애초에 설치로 이어질 수 없어 분모에서 제외했습니다.</span>
         </div>
       </div>
     </div>
@@ -3202,11 +3203,12 @@ function c2iAggregateBy(rows, keyFn, labelFn){
   rows.forEach(function(r){
     var k = keyFn(r.date), mk = k+"|"+r.manager;
     if(!map[mk]) map[mk] = { key:k, label:labelFn(k), manager:r.manager,
-      calls:0, planned:0, absent:0, nameChange:0, notInstalled:0, returned:0, refused:0, penalty:0, sameDayInstall:0, anyReady:false };
+      calls:0, planned:0, absent:0, nameChange:0, notInstalled:0, returned:0, refused:0, penalty:0, sameDayInstall:0, totalInstall:0, anyReady:false };
     var b=map[mk];
     b.calls+=r.calls; b.planned+=r.planned; b.absent+=r.absent; b.nameChange+=r.nameChange;
     b.notInstalled += r.notInstalled+(r.docPending||0);
     b.returned+=r.returned; b.refused+=r.refused; b.penalty+=r.penalty; b.sameDayInstall+=r.sameDayInstall;
+    b.totalInstall+=(r.totalInstall||0);
     if(r.uReady) b.anyReady=true;
   });
   return Object.keys(map).map(function(k){ return map[k]; });
@@ -3241,7 +3243,7 @@ function c2iRenderGroupedTable(tblId, buckets, opts){
   if(!tblEl) return;
   var shipMap = opts.shipMap;
   var head='<thead><tr><th>기간</th><th>담당자</th><th>통화(총계)</th><th>설치예정</th><th>부재</th>'
-    + '<th>명의변경</th><th>미설치/보류</th><th>반품·폐업</th><th>설치거부·지연</th><th>위약금</th><th>당일설치완료</th>'
+    + '<th>명의변경</th><th>미설치/보류</th><th>반품·폐업</th><th>설치거부·지연</th><th>위약금</th><th>당일설치완료</th><th>총설치완료</th>'
     + (shipMap ? '<th>출고완료</th><th>최초컨택D+1설치<br><small class="th-tgt">P→S≤1</small></th>' : '') + '</tr></thead>';
 
   // 기간(key) 기준으로 담당자 행들을 묶어 합계를 낸다.
@@ -3249,14 +3251,14 @@ function c2iRenderGroupedTable(tblId, buckets, opts){
   buckets.forEach(function(b){
     if(!groups[b.key]){
       groups[b.key] = { key:b.key, label:b.label, items:[],
-        calls:0, planned:0, absent:0, nameChange:0, notInstalled:0, returned:0, refused:0, penalty:0, sameDayInstall:0, anyReady:false };
+        calls:0, planned:0, absent:0, nameChange:0, notInstalled:0, returned:0, refused:0, penalty:0, sameDayInstall:0, totalInstall:0, anyReady:false };
       order.push(b.key);
     }
     var g=groups[b.key];
     g.items.push(b);
     g.calls+=b.calls; g.planned+=b.planned; g.absent+=b.absent; g.nameChange+=b.nameChange;
     g.notInstalled+=b.notInstalled; g.returned+=b.returned; g.refused+=b.refused; g.penalty+=b.penalty;
-    g.sameDayInstall+=b.sameDayInstall;
+    g.sameDayInstall+=b.sameDayInstall; g.totalInstall+=(b.totalInstall||0);
     if(b.anyReady) g.anyReady=true;
   });
   order.sort(function(a,b){ return a<b?1:-1; }); // 최근 기간이 위로
@@ -3264,6 +3266,8 @@ function c2iRenderGroupedTable(tblId, buckets, opts){
   function statCells(o, isSub){
     var sdi=o.anyReady?fmt(o.sameDayInstall):"–";
     var sub=(o.anyReady && o.planned)?(" ("+c2iPctText(o.sameDayInstall,o.planned)+")"):"";
+    var ti=o.anyReady?fmt(o.totalInstall):"–";
+    var tiSub=(o.anyReady && o.planned)?(" ("+c2iPctText(o.totalInstall,o.planned)+")"):"";
     var shipCell = "", contactCell = "";
     if(shipMap){
       var sm = shipMap[o.key];
@@ -3280,6 +3284,7 @@ function c2iRenderGroupedTable(tblId, buckets, opts){
       + '<td>'+fmt(o.nameChange)+'</td><td>'+fmt(o.notInstalled)+'</td><td>'+fmt(o.returned)+'</td>'
       + '<td>'+fmt(o.refused)+'</td><td>'+fmt(o.penalty)+'</td>'
       + '<td style="color:var(--good);font-weight:700">'+sdi+'<small class="c2i-pct">'+sub+'</small></td>'
+      + '<td style="color:var(--good);font-weight:700">'+ti+'<small class="c2i-pct">'+tiSub+'</small></td>'
       + shipCell + contactCell;
   }
 
@@ -3307,12 +3312,12 @@ function c2iRenderGroupedTable(tblId, buckets, opts){
 
   var foot = "";
   if(opts.footerLabel){
-    var sumAll={calls:0,planned:0,absent:0,nameChange:0,notInstalled:0,returned:0,refused:0,penalty:0,sameDayInstall:0};
+    var sumAll={calls:0,planned:0,absent:0,nameChange:0,notInstalled:0,returned:0,refused:0,penalty:0,sameDayInstall:0,totalInstall:0};
     var anyReadyAll=false;
     buckets.forEach(function(b){
       sumAll.calls+=b.calls; sumAll.planned+=b.planned; sumAll.absent+=b.absent; sumAll.nameChange+=b.nameChange;
       sumAll.notInstalled+=b.notInstalled; sumAll.returned+=b.returned; sumAll.refused+=b.refused; sumAll.penalty+=b.penalty;
-      sumAll.sameDayInstall+=b.sameDayInstall;
+      sumAll.sameDayInstall+=b.sameDayInstall; sumAll.totalInstall+=(b.totalInstall||0);
       if(b.anyReady) anyReadyAll=true;
     });
     sumAll.anyReady=anyReadyAll;
@@ -3393,7 +3398,7 @@ function renderCallToInstall(c){
   // 테이블(sumAll)은 옛 8버킷 양식을 유지해야 하므로 그쪽은 여전히 별도로 합산한다(이 totals는
   // 카드 전용, sumAll과 다른 값이라도 서로 영향 없음).
   var totals={};
-  managers.forEach(function(m){ totals[m]={calls:0,planned:0,absent:0,nameChange:0,notInstalled:0,docPending:0,returned:0,refused:0,penalty:0,sameDayInstall:0}; });
+  managers.forEach(function(m){ totals[m]={calls:0,planned:0,absent:0,nameChange:0,notInstalled:0,docPending:0,returned:0,refused:0,penalty:0,sameDayInstall:0,totalInstall:0}; });
   var anyReady=false;
   rows.forEach(function(r){
     if(r.uReady) anyReady=true;
@@ -3401,9 +3406,10 @@ function renderCallToInstall(c){
     t.calls+=r.calls; t.planned+=r.planned; t.absent+=r.absent; t.nameChange+=r.nameChange;
     t.notInstalled += r.notInstalled; t.docPending += (r.docPending||0);
     t.returned+=r.returned; t.refused+=r.refused; t.penalty+=r.penalty; t.sameDayInstall+=r.sameDayInstall;
+    t.totalInstall+=(r.totalInstall||0);
   });
-  var grand={calls:0,planned:0,absent:0,sameDayInstall:0};
-  managers.forEach(function(m){ ["calls","planned","absent","sameDayInstall"].forEach(function(k){ grand[k]+=totals[m][k]; }); });
+  var grand={calls:0,planned:0,absent:0,sameDayInstall:0,totalInstall:0};
+  managers.forEach(function(m){ ["calls","planned","absent","sameDayInstall","totalInstall"].forEach(function(k){ grand[k]+=totals[m][k]; }); });
   var sdiText=function(n){ return anyReady?fmt(n):"–"; };
 
   var kpiEl=document.getElementById("c2i-kpi");
@@ -3414,6 +3420,9 @@ function renderCallToInstall(c){
       tile("부재","📵", fmt(grand.absent), "건", "통화 중 "+c2iPctText(grand.absent, grand.calls)) +
       tile("당일설치완료","✅", sdiText(grand.sameDayInstall), "건",
         anyReady ? ("설치예정 대비 "+c2iPctText(grand.sameDayInstall, grand.planned)+" 전환")
+                 : "U열(통화시점상태) 신설 이전이라 집계 불가(2026-07-21부터)", true) +
+      tile("총설치완료","🏁", sdiText(grand.totalInstall), "건",
+        anyReady ? ("설치예정 대비 "+c2iPctText(grand.totalInstall, grand.planned)+" (당일 여부 무관)")
                  : "U열(통화시점상태) 신설 이전이라 집계 불가(2026-07-21부터)", true);
   }
 
@@ -3422,6 +3431,7 @@ function renderCallToInstall(c){
     gridEl.innerHTML = managers.map(function(m, idx){
       var t=totals[m], color=C2I_PALETTE[idx%C2I_PALETTE.length];
       var conv=(anyReady && t.planned) ? c2iPctText(t.sameDayInstall, t.planned) : "–";
+      var totalConv=(anyReady && t.planned) ? c2iPctText(t.totalInstall, t.planned) : "–";
       var mrows=rows.filter(function(r){ return r.manager===m; }).sort(function(a,b){ return a.date<b.date?-1:(a.date>b.date?1:0); });
       return '<div class="card col-6 fill"><h3><span class="c2i-dot" style="background:'+color+'"></span>'+m+'</h3>'
         + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">통화(총계)</span><b>'+fmt(t.calls)+'</b></div>'
@@ -3431,7 +3441,8 @@ function renderCallToInstall(c){
         + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">반품·폐업</span><b>'+fmt(t.returned)+' <small class="c2i-pct">('+c2iPctText(t.returned, t.calls)+')</small></b></div>'
         + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">서류보완중</span><b>'+fmt(t.docPending)+' <small class="c2i-pct">('+c2iPctText(t.docPending, t.calls)+')</small></b></div>'
         + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">미설치/보류</span><b>'+fmt(t.notInstalled)+' <small class="c2i-pct">('+c2iPctText(t.notInstalled, t.calls)+')</small></b></div>'
-        + '<div class="c2i-stat-row" style="border-bottom:none"><span style="color:var(--text-secondary)">당일설치완료</span><b style="color:var(--good)">'+sdiText(t.sameDayInstall)+' <small style="color:var(--muted);font-weight:400">('+conv+')</small></b></div>'
+        + '<div class="c2i-stat-row"><span style="color:var(--text-secondary)">당일설치완료</span><b style="color:var(--good)">'+sdiText(t.sameDayInstall)+' <small style="color:var(--muted);font-weight:400">('+conv+')</small></b></div>'
+        + '<div class="c2i-stat-row" style="border-bottom:none"><span style="color:var(--text-secondary)">총설치완료</span><b style="color:var(--good)">'+sdiText(t.totalInstall)+' <small style="color:var(--muted);font-weight:400">('+totalConv+')</small></b></div>'
         + '<div class="chart-wrap">'
         +   '<div class="c2i-legend"><span><i style="background:'+color+'"></i>설치예정</span><span><i style="background:var(--good)"></i>당일설치완료</span></div>'
         +   c2iRenderChart(mrows, color)
@@ -3448,9 +3459,12 @@ function renderCallToInstall(c){
   if(calloutEl){
     if(anyReady){
       var gConv=c2iPctText(grand.sameDayInstall, grand.planned);
+      var gTotalConv=c2iPctText(grand.totalInstall, grand.planned);
       var perMgr=managers.map(function(m){ return m+" "+c2iPctText(totals[m].sameDayInstall, totals[m].planned); }).join(", ");
+      var perMgrTotal=managers.map(function(m){ return m+" "+c2iPctText(totals[m].totalInstall, totals[m].planned); }).join(", ");
       calloutEl.innerHTML='<div class="rs-head">📌 요약</div><ul><li>최근 '+C2I_WINDOW_DAYS+'일간 담당자가 분류한 \'설치예정\' 콜 <b>'+fmt(grand.planned)+'건</b> 중 '
         + '<b>'+fmt(grand.sameDayInstall)+'건('+gConv+')</b>이 그날 안에 설치까지 끝났습니다('+perMgr+'). '
+        + '당일이 아니어도 결국 설치까지 이어진 건은 <b>'+fmt(grand.totalInstall)+'건('+gTotalConv+')</b>입니다('+perMgrTotal+'). '
         + '주말은 통화량이 정상적으로 적거나 0입니다 — 지연이나 오류가 아닙니다.</li></ul>';
     } else {
       calloutEl.innerHTML='<div class="rs-head">📌 요약</div><ul><li>U열(통화시점상태) 신설(2026-07-21) 이전 구간이 포함돼 있어 당일설치완료 집계가 불가합니다.</li></ul>';
