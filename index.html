@@ -3075,8 +3075,15 @@ function rcCompute(){
   var baseline=rcBaselineWeeks(ship, d7map, targetRate);
   var usedFallback = !baseline.some(function(w){ return d7map[w.week]>=targetRate; });
   var totalShipped=rcSum(baseline,"shipped"), totalSelf=rcSum(baseline,"self"),
-      totalAgentUnits=rcSum(baseline,"agentUnits"), totalTouch=rcSum(baseline,"touchTotal");
+      totalAgentUnits=rcSum(baseline,"agentUnits"), totalTouch=rcSum(baseline,"touchTotal"),
+      totalAutoReceived=rcSum(baseline,"autoReceived");
   var selfRate = totalShipped>0 ? totalSelf/totalShipped : 0;
+  // 🆕 2026-08-27(운영자 지적): 방문/원격설치 자동접수건(O열≠'상담원접수')도 상담원 콜이 안 들어가는
+  // 물량이라 자가설치처럼 "컨택 불요"로 뺀다. H열 담당자 이름만으로는 못 걸러진다 — '자동화' 담당자
+  // 계정이 생기기 전엔 자동접수건도 실제 상담원 이름으로 처리돼 있었다(N/O열이 정본, 백엔드
+  // buildShipCohortScore_에서 agentUnits·touch 계산 시 이미 제외됨). 여기서 noCallRate로 같이 반영하지
+  // 않으면 분자(touchPerUnit)만 정확해지고 분모(contactUnits)는 그대로 부풀려진 채로 남는다.
+  var noCallRate = totalShipped>0 ? (totalSelf+totalAutoReceived)/totalShipped : 0;
   var touchPerUnit = totalAgentUnits>0 ? totalTouch/totalAgentUnits : 0;
   // 기준선 완료율 = 진짜 D+7 이내 누적설치율(cohort.shipCurve[].cum[7])의 출고건수 가중평균.
   // (구버전 버그: ship.weekly의 doneRate는 '언젠가 설치완료'까지 포함한 누적치라 실측 95~98%로
@@ -3093,6 +3100,7 @@ function rcCompute(){
     +(usedFallback ? ' <span class="ach-remain">(D+7 목표완료율 달성주 없어 최근 관측가능 주로 대체)</span>' : ' <span class="ach-src auto">D+7 목표완료율 달성주</span>')
     +' <span class="ach-remain">('+wkLabels+')</span><br>'
     +'자가설치율 <b>'+(totalShipped>0?(selfRate*100).toFixed(1):"–")+'%</b>'
+    +' · 방문/원격 자동접수 <b>'+fmt(totalAutoReceived)+'건</b>'+(totalShipped>0?' <small class="ach-remain">('+(totalAutoReceived/totalShipped*100).toFixed(1)+'%, 컨택 불요로 제외)</small>':'')
     +' · 건당 컨택횟수 <b>'+(touchPerUnit?touchPerUnit.toFixed(2):"–")+'회</b>'
     +' · 기준선 D+7 완료율 <b>'+(doneRateBaseline!=null?(doneRateBaseline*100).toFixed(1):"–")+'%</b>'
     +' · 배송소요일 <b>'+(deliverySpeed!=null?deliverySpeed.toFixed(1):"–")+'일</b> <span class="ach-remain">('+deliverySrc+', 참고용·아래 계산엔 미반영)</span>';
@@ -3103,7 +3111,7 @@ function rcCompute(){
     RC.lastNeededCalls=null;
     return;
   }
-  var contactUnits = shipBasis*(1-selfRate);
+  var contactUnits = shipBasis*(1-noCallRate);
   var rateRatio = (doneRateBaseline && doneRateBaseline>0) ? (targetRate/doneRateBaseline) : 1;
   var neededCalls = contactUnits*touchPerUnit*rateRatio;
   RC.lastNeededCalls = neededCalls;   // 저장 시 '목표 통화량'으로 얼려 담을 계산값(실측 기준선과는 별개)
