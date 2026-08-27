@@ -3075,9 +3075,9 @@ function rcCompute(){
   var baseline=rcBaselineWeeks(ship, d7map, targetRate);
   var usedFallback = !baseline.some(function(w){ return d7map[w.week]>=targetRate; });
   var totalShipped=rcSum(baseline,"shipped"), totalSelf=rcSum(baseline,"self"),
-      totalTouch=rcSum(baseline,"touchTotal"),
       totalAutoReceived=rcSum(baseline,"autoReceived"),
-      totalD7Touch=rcSum(baseline,"d7Touch"), totalD7Completed=rcSum(baseline,"d7Completed");
+      totalD7Touch=rcSum(baseline,"d7Touch"), totalD7Completed=rcSum(baseline,"d7Completed"),
+      totalLogCalls=rcSum(baseline,"logCalls"), totalLogWeekdays=rcSum(baseline,"logWeekdays");
   var selfRate = totalShipped>0 ? totalSelf/totalShipped : 0;
   // 🆕 2026-08-27(운영자 지적): 방문/원격설치 자동접수건(O열≠'상담원접수')도 상담원 콜이 안 들어가는
   // 물량이라 자가설치처럼 "컨택 불요"로 뺀다. H열 담당자 이름만으로는 못 걸러진다 — '자동화' 담당자
@@ -3126,11 +3126,11 @@ function rcCompute(){
   // 평균 필요콜이다. (구버전 버그: 여기에 (7−배송소요일)/7 배율을 또 곱해 나눠 월 전체 물량을
   // 실질 2~3일 치로 압축해버렸다 — "인당 680건" 같은 비현실적 수치의 원인이었음, 2026-08-26 수정)
   var dailyCallsNeeded = neededCalls/workDays;
-  // 🆕 2026-08-27(운영자 지적): 분모를 "기준선 주수×5일" 가정이 아니라 R열(마지막통화일) 실측
-  // 근무일수(totalCallDays, buildShipCohortScore_에서 집계)로 바꾼다 — 주말·공휴일은 R열이 거의
-  // 안 찍히니 실제 콜이 있었던 날짜만 세는 게 고정 5일 가정보다 정확하다.
-  var totalCallDays = rcSum(baseline,"callDays");
-  var actualCapacityPerAgentDay = (totalTouch>0 && totalCallDays>0) ? (totalTouch/agentCount)/totalCallDays : null;
+  // 🆕 2026-08-27(운영자 지적, 2차): R열(마지막통화일) 기준은 자가설치 매칭·자동접수 처리 스크립트도
+  // I/J열을 편집해 onEdit으로 찍을 수 있어(사람이 아닌 자동화가 주말에도 찍음) "근무일" 판정이
+  // 불안정했다(52회/일처럼 비현실적인 수치의 원인 중 하나). 실적로그(자동화가 손댈 수 없는, 상담원이
+  // 직접 남기는 일별 집계 — N열이 총계)로 바꾸고 평일(월~금)만 센다(운영자 지정).
+  var actualCapacityPerAgentDay = (totalLogCalls>0 && totalLogWeekdays>0) ? (totalLogCalls/agentCount)/totalLogWeekdays : null;
   var neededAgentsActual = actualCapacityPerAgentDay ? neededCalls/(actualCapacityPerAgentDay*workDays) : null;
 
   // 곱셈 전 과정을 그대로 노출 — "0.98배만 곱한 줄 알았는데 숫자가 안 맞는다"는 혼동 방지(2026-08-26)
@@ -3142,7 +3142,7 @@ function rcCompute(){
     +'월영업일수 '+workDays+'일 기준 필요콜/일 <b>'+fmt(Math.round(dailyCallsNeeded))+'회</b><br>';
   if(actualCapacityPerAgentDay && neededAgentsActual!=null){
     var gapA=agentCount-neededAgentsActual;
-    html += '실측 인당 일처리량(부재 포함 전체 컨택시도, R열 실근무일 '+fmt(totalCallDays)+'일 기준) <b>'+actualCapacityPerAgentDay.toFixed(1)+'회</b> 기준 필요인원 <b class="pace-hl">'+neededAgentsActual.toFixed(1)+'명</b>'
+    html += '실측 인당 일처리량(실적로그 기준, 평일 '+fmt(totalLogWeekdays)+'일 기준) <b>'+actualCapacityPerAgentDay.toFixed(1)+'회</b> 기준 필요인원 <b class="pace-hl">'+neededAgentsActual.toFixed(1)+'명</b>'
       +' (현재 '+agentCount+'명, 과부족 <b class="'+(gapA<0?'pace-bad':'pace-hl')+'">'+(gapA>=0?'+':'')+gapA.toFixed(1)+'명</b>)';
   }
   resEl.innerHTML=html;
