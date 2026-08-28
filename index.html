@@ -3122,6 +3122,14 @@ function rcCompute(){
   RC.lastNeededCalls = neededCalls;   // 저장 시 '목표 통화량'으로 얼려 담을 계산값(실측 기준선과는 별개)
   var y=+RC.month.slice(0,4), mo=+RC.month.slice(5);
   var workDays = weekdaysLeftInMonth(y,mo,1); if(workDays<1) workDays=1;
+  // 🆕 2026-08-28(운영자 지적): "7000개 출고돼도 기한(D+7)내 설치는 못 채운다" — 목표율(targetRate)만큼만
+  // 기한내 완료되므로, 월목표(shipBasis, 기한내 설치 목표건수)를 채우려면 그보다 많은 물량을 출고해야
+  // 한다. requiredMonthlyShip = 월목표÷목표율, 주평균은 그 달 일수/7로 나눈 값(steady-state 가정,
+  // dailyCallsNeeded와 동일 원칙).
+  var daysInMonth = new Date(y,mo,0).getDate();
+  var weeksInMonth = daysInMonth/7;
+  var requiredMonthlyShip = targetRate>0 ? shipBasis/targetRate : null;
+  var requiredWeeklyShip = requiredMonthlyShip!=null ? requiredMonthlyShip/weeksInMonth : null;
   // 🆕 정상상태(steady-state) 가정: 월간 총 필요통화량을 그 달 영업일수로 고르게 나눈 값이 하루
   // 평균 필요콜이다. (구버전 버그: 여기에 (7−배송소요일)/7 배율을 또 곱해 나눠 월 전체 물량을
   // 실질 2~3일 치로 압축해버렸다 — "인당 680건" 같은 비현실적 수치의 원인이었음, 2026-08-26 수정)
@@ -3136,7 +3144,13 @@ function rcCompute(){
   // 곱셈 전 과정을 그대로 노출 — "0.98배만 곱한 줄 알았는데 숫자가 안 맞는다"는 혼동 방지(2026-08-26)
   // 🆕 2026-08-27: 목표/기준선 배율(rateRatio) 제거 — d7TouchPerUnit이 이미 "D+7 목표를 달성한
   // 성공 건"만 놓고 잰 값이라 별도 배율로 다시 스케일링할 필요가 없다(이중 반영이었음).
-  var html = '필요컨택물량 <b>'+fmt(Math.round(contactUnits))+'건</b>'
+  var html = (requiredWeeklyShip!=null
+    ? ('목표 <b>'+fmt(shipBasis)+'건</b>(D+7 기한내 완료 목표)을 목표율 <b>'+targetRatePct+'%</b>로 달성하려면'
+      +' 월 출고 <b>'+fmt(Math.round(requiredMonthlyShip))+'건</b> 필요'
+      +' → 주평균 출고 <b class="pace-hl">'+fmt(Math.round(requiredWeeklyShip))+'건/주</b>'
+      +' <span class="ach-remain">('+weeksInMonth.toFixed(1)+'주 기준 · 출고해도 목표율만큼만 기한내 완료되는 손실분 반영)</span><br>')
+    : '')
+    +'필요컨택물량 <b>'+fmt(Math.round(contactUnits))+'건</b>'
     +' × 건당컨택횟수(D+7 완료건 기준) <b>'+d7TouchPerUnit.toFixed(2)+'회</b>'
     +' = 월 필요통화량 <b>'+fmt(Math.round(neededCalls))+'회</b><br>'
     +'월영업일수 '+workDays+'일 기준 필요콜/일 <b>'+fmt(Math.round(dailyCallsNeeded))+'회</b><br>';
