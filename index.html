@@ -631,6 +631,45 @@
     main { padding: 18px 14px 50px; }
     .col-4,.col-5,.col-6,.col-7,.col-8 { grid-column: span 12; }
   }
+
+  /* D+7설치트래킹(2026-09-02) — 클래스는 다른 탭과 충돌 없게 전부 d7- 접두어 */
+  .d7-hero { display:flex; align-items:center; gap: 20px; flex-wrap: wrap; background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 22px; margin-bottom: 14px; }
+  .d7-hero .d7-hero-num { font-size: 38px; font-weight: 800; letter-spacing: -1px; color: var(--critical); line-height: 1; font-variant-numeric: tabular-nums; }
+  .d7-hero .d7-hero-num small { font-size: 15px; font-weight: 700; margin-left: 2px; }
+  .d7-hero .d7-hero-text { flex: 1 1 260px; }
+  .d7-hero .d7-hero-label { font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .3px; }
+  .d7-hero .d7-hero-detail { font-size: 12.5px; color: var(--muted); margin-top: 5px; line-height: 1.55; }
+  .d7-hero .d7-hero-detail b { color: var(--text-primary); font-weight: 700; }
+  .d7-wk-delay { display:block; font-size: 11px; font-weight: 700; color: var(--critical); margin-top: 3px; }
+  .d7-partial { display:inline-block; font-size: 10px; font-weight: 700; color: var(--s-orange); background: color-mix(in srgb, var(--s-orange) 16%, transparent); border-radius: 999px; padding: 2px 7px; margin-left: 7px; vertical-align: 1px; }
+  #d7WeekTable tbody tr.d7-wkrow { cursor: pointer; }
+  #d7WeekTable tbody tr.d7-wkrow:hover { background: color-mix(in srgb, var(--s-blue) 7%, transparent); }
+  td.d7-reasons { text-align: left; white-space: normal; min-width: 250px; }
+  .d7-r-row { display:flex; align-items:center; gap:7px; font-size: 11px; padding: 2px 0; }
+  .d7-r-rank { flex: 0 0 14px; color: var(--muted); font-weight: 700; }
+  .d7-r-name { flex: 1 1 auto; color: var(--text-secondary); font-weight: 600; }
+  .d7-r-bar-wrap { flex: 0 0 60px; height: 5px; border-radius: 999px; background: var(--grid); overflow: hidden; }
+  .d7-r-bar { height: 100%; border-radius: 999px; }
+  .d7-r-pct { flex: 0 0 auto; text-align: right; color: var(--text-primary); font-weight: 700; white-space: nowrap; }
+  .d7-r-total { display:flex; align-items:center; justify-content:space-between; font-size: 11.5px; font-weight: 800; color: var(--text-primary); background: color-mix(in srgb, var(--s-red) 9%, transparent); border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; }
+  .d7-r-total .d7-r-total-pct { color: var(--critical); }
+  .d7-tile-click { cursor: pointer; }
+  .d7-tile-click:hover { border-color: color-mix(in srgb, var(--s-blue) 45%, var(--border)); }
+  .d7-tile-click .t-label::after { content: " ›"; color: var(--s-blue); font-weight: 800; }
+  .d7-filter { display:flex; align-items:center; gap:8px; margin-bottom: 12px; }
+  .d7-filter label { font-size: 11.5px; color: var(--muted); font-weight: 700; }
+  .d7-filter select { font-family: var(--font); font-size: 12.5px; font-weight: 600; color: var(--text-primary); background: var(--page); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; }
+  .d7-brk-section { margin-bottom: 16px; }
+  .d7-brk-section:last-child { margin-bottom: 0; }
+  .d7-brk-h { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; margin-bottom: 8px; }
+  .d7-brk-row { display:flex; align-items:center; gap:10px; font-size: 12.5px; padding: 5px 0; }
+  .d7-brk-row .d7-b-dot { flex:0 0 9px; width:9px; height:9px; border-radius: 50%; }
+  .d7-brk-row .d7-b-name { flex: 1 1 auto; color: var(--text-secondary); font-weight: 600; }
+  .d7-brk-row .d7-b-bar-wrap { flex: 0 0 140px; height: 7px; border-radius: 999px; background: var(--grid); overflow: hidden; }
+  .d7-brk-row .d7-b-bar { height: 100%; border-radius: 999px; }
+  .d7-brk-row .d7-b-val { flex: 0 0 90px; text-align: right; font-weight: 700; color: var(--text-primary); }
+  .d7-brk-row .d7-b-val small { font-weight: 500; color: var(--muted); }
+  .d7-brk-row.d7-rank .d7-b-rank { flex: 0 0 16px; color: var(--muted); font-weight: 700; }
 </style>
 </head>
 <body>
@@ -660,6 +699,7 @@
   <div class="navitem navchild" data-tab="weeklyaction" id="nav-weeklyaction" style="display:none"><span class="ic">📄</span><div>보고서<small>야간원격·당일배송 주차별 검토</small></div></div>
   <div class="navitem navchild" data-tab="weeklyreport" id="nav-weeklyreport" style="display:none"><span class="ic">🗒️</span><div>위클리 리포트<small>주차별 요약 게시판</small></div></div>
   <div class="navitem" data-tab="c2i" id="nav-c2i"><span class="ic">📞</span><div>당일통화당일설치<small>최근 14일 · 담당자별 비교</small></div></div>
+  <div class="navitem" data-tab="d7tracking" id="nav-d7tracking"><span class="ic">⏱️</span><div>D+7설치트래킹<small>출고 주차별 처리·지연사유</small></div></div>
   <div class="navitem" data-tab="cohort" id="nav-cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div><span class="navcaret" id="cohort-caret">▸</span></div>
   <div class="navitem navchild" data-tab="returned" id="nav-returned" style="display:none"><span class="ic">↩️</span><div>설치지연상세사유<small>현재잔여 지연사유·반품/폐업(2026년~)</small></div></div>
   <!-- 2026-08-14: 출고코호트 바로 밑으로 이동(운영자 요청, 성격이 비슷한 코호트 계열 메뉴끼리 묶음) -->
@@ -1038,6 +1078,24 @@
     </div>
   </section>
 
+  <!-- D+7 설치트래킹 -->
+  <section class="tab-content" id="tab-d7tracking">
+    <div class="grid">
+      <div class="card col-12" data-cid="d7Head">
+        <h3>⏱️ D+7 설치트래킹</h3>
+        <div class="sub">출고일 기준 월~일로 묶은 주차별 처리 현황입니다. 모든 %는 그 주 전체 출고건수를 100%로 놓고 계산합니다 — D+7 이내/초과 설치완료, 폐업및반품, 서류보완지연, 그 외 지연사유까지 더하면 그 주 출고건의 100%가 됩니다. 주차 행을 클릭하면 아직 미설치인 건의 주문번호를 사유별로 조회합니다.</div>
+      </div>
+    </div>
+
+    <div class="d7-hero" id="d7Hero"></div>
+    <div class="tiles" id="d7Tiles"></div>
+
+    <div class="sec-head">📆 주차별 요약 <small>출고 주(월요일 시작) · 최근 6주 · 행을 클릭하면 D+7+ 지연건 상세가 열립니다</small></div>
+    <div class="grid">
+      <div class="card col-12"><div class="tbl-wrap"><table class="dtable no-grp" id="d7WeekTable"></table></div></div>
+    </div>
+  </section>
+
   <!-- REPORT (주차별 리포트) -->
   <section class="tab-content" id="tab-report">
     <div class="grid">
@@ -1158,6 +1216,7 @@ function render(d) {
   renderShipWeekly(d.ship);
   renderShipDaily(d.ship);
   renderCallToInstall(d.callInstall);
+  renderD7Tracking(d.d7tracking);
   renderReport(d.perf, d.weeklyNotes);
   renderReturnedAnalysis(d.returnedAnalysis);
 }
@@ -3526,6 +3585,186 @@ function rptDelta(cur, prev, low, vf, unit){
   var cls=(cur===prev)?"muted":(better?"good":"bad"), arrow=(cur===prev)?"–":(up?"▲":"▼");
   return {cls:cls, arrow:arrow, pct:Math.abs(pct), diff:cur-prev, better:better, txt:arrow+" "+Math.abs(pct)+"% (전주 "+vf(prev)+unit+")"};
 }
+// ---------- D+7 설치트래킹(2026-09-02) ----------
+var D7_LAST = null; // payload.d7tracking 원문 보관 — "가장 큰 지연사유" 타일 클릭 시 재조회 없이 6주 누적 재계산
+var D7_CAT_COLOR = {
+  "반품·폐업": "var(--s-red)", "전산미등록": "var(--s-orange)", "고객 연락불가": "var(--s-violet)",
+  "고객 설치미룸": "var(--s-blue)", "상담미흡": "var(--s-yellow)", "명의변경·양도양수": "var(--s-aqua)",
+  "기존 약정 잔여": "var(--muted)", "환경대기": "var(--s-blue-l)", "개인사유(휴가/방학 등)": "var(--muted)",
+  "미래 설치예정": "var(--good)", "약속1회(이력다수)": "var(--s-blue)", "방문설치 접수됨": "var(--good)",
+  "원격 접수됨": "var(--good)", "오배송": "var(--s-red)", "설치거부·장기지연": "var(--critical)", "기타": "var(--muted)"
+};
+function d7pct_(n, base){ return base>0 ? Math.round(n/base*100) : 0; }
+
+function renderD7Tracking(d7){
+  D7_LAST = d7;
+  if(!d7 || !d7.weekly || !d7.weekly.length) return;
+  var weekly = d7.weekly;
+
+  var shipped=0, fast=0, slow=0, returned=0, docPending=0;
+  weekly.forEach(function(w){ shipped+=w.shipped; fast+=w.fast; slow+=w.slow; returned+=w.returned; docPending+=w.docPending; });
+
+  var heroEl = document.getElementById("d7Hero");
+  if(heroEl){
+    var delayed = shipped-fast, dPct = d7pct_(delayed, shipped);
+    heroEl.innerHTML = '<div class="d7-hero-num">'+dPct+'<small>%</small></div>'
+      + '<div class="d7-hero-text"><div class="d7-hero-label">'+weekly.length+'주 누적 지연율 — 전체 출고 대비</div>'
+      + '<div class="d7-hero-detail">전체 출고 <b>'+fmt(shipped)+'건</b> 중 <b>'+fmt(delayed)+'건</b>이 D+7 이내에 설치완료되지 못했습니다'
+      + '(D+7 초과 설치완료 + 폐업및반품 + 서류보완지연 + 그 외 지연사유 전부 포함).</div></div>';
+  }
+
+  var catTotals={};
+  weekly.forEach(function(w){ (w.top5||[]).forEach(function(x){ catTotals[x.cat]=(catTotals[x.cat]||0)+x.count; }); });
+  var topCatKeys = Object.keys(catTotals).sort(function(a,b){ return catTotals[b]-catTotals[a]; });
+  var topCat = topCatKeys[0];
+
+  var tilesEl = document.getElementById("d7Tiles");
+  if(tilesEl){
+    tilesEl.innerHTML =
+      tile(weekly.length+"주 누적 출고","📦", fmt(shipped), "건", weekly[0].week+" ~ "+weekly[weekly.length-1].week+" 출고 기준 · 아래 %의 분모") +
+      tile("D+7 이내 설치완료","✅", fmt(fast), "건", d7pct_(fast,shipped)+"% · 전체 출고 대비") +
+      tile("D+7 초과 설치완료","🕒", fmt(slow), "건", d7pct_(slow,shipped)+"% · 전체 출고 대비") +
+      tile("폐업및반품","↩️", fmt(returned), "건", d7pct_(returned,shipped)+"% · 전체 출고 대비") +
+      tile("서류보완지연","📄", fmt(docPending), "건", d7pct_(docPending,shipped)+"% · 전체 출고 대비") +
+      (topCat ? tile("가장 큰 지연사유(14개 중)","🔎", topCat, "", fmt(catTotals[topCat])+"건 · "+weekly.length+"주 누적 1위") : "");
+    if(topCat){
+      var lastTile = tilesEl.lastElementChild;
+      if(lastTile){ lastTile.classList.add("d7-tile-click"); lastTile.addEventListener("click", openD7Overall); }
+    }
+  }
+
+  var tblEl = document.getElementById("d7WeekTable");
+  if(tblEl){
+    var head = '<thead><tr><th>주차</th><th>출고건</th><th>D+7이내<br>설치완료</th><th>D+7초과<br>설치완료</th>'
+      + '<th>폐업및반품</th><th>서류보완지연</th><th class="d7-reasons">지연사유 TOP5 <small style="font-weight:500">(14개 중 · 전체 출고 대비 %)</small></th></tr></thead>';
+    var body = weekly.slice().reverse().map(function(w){
+      var reasonPool = w.reasonPool!=null ? w.reasonPool : (w.shipped-w.fast-w.slow-w.returned-w.docPending);
+      var top5Sum = (w.top5||[]).reduce(function(s,x){return s+x.count;},0);
+      var etcN = w.etc!=null ? w.etc : Math.max(0, reasonPool-top5Sum);
+      var reasonsHtml = '<div class="d7-r-total"><span>지연사유 합계(14개+그 외)</span><span class="d7-r-total-pct">'+fmt(reasonPool)+'건 ('+d7pct_(reasonPool,w.shipped)+'%)</span></div>'
+        + (w.top5||[]).map(function(r,i){
+            return '<div class="d7-r-row"><span class="d7-r-rank">'+(i+1)+'</span>'
+              + '<span class="d7-r-name">'+esc(r.cat)+'</span>'
+              + '<span class="d7-r-bar-wrap"><span class="d7-r-bar" style="width:'+d7pct_(r.count,w.shipped)+'%;background:'+(D7_CAT_COLOR[r.cat]||"var(--s-blue)")+'"></span></span>'
+              + '<span class="d7-r-pct">'+fmt(r.count)+'건 ('+d7pct_(r.count,w.shipped)+'%)</span></div>';
+          }).join("")
+        + '<div class="d7-r-row" style="opacity:.65"><span class="d7-r-rank"></span><span class="d7-r-name">그 외 9개 사유</span>'
+        + '<span class="d7-r-bar-wrap"></span><span class="d7-r-pct">'+fmt(etcN)+'건 ('+d7pct_(etcN,w.shipped)+'%)</span></div>';
+      var wkDelayPct = d7pct_(w.shipped-w.fast, w.shipped);
+      return '<tr class="d7-wkrow" data-week="'+esc(w.week)+'">'
+        + '<td>'+rptWeekLabel(w.week)+(w.partial?'<span class="d7-partial">진행중</span>':'')+'<span class="d7-wk-delay">지연 '+wkDelayPct+'%</span></td>'
+        + '<td>'+fmt(w.shipped)+'</td>'
+        + '<td style="color:var(--good);font-weight:700">'+fmt(w.fast)+'<small class="c2i-pct">('+d7pct_(w.fast,w.shipped)+'%)</small></td>'
+        + '<td>'+fmt(w.slow)+'<small class="c2i-pct">('+d7pct_(w.slow,w.shipped)+'%)</small></td>'
+        + '<td style="color:var(--s-red);font-weight:700">'+fmt(w.returned)+'<small class="c2i-pct">('+d7pct_(w.returned,w.shipped)+'%)</small></td>'
+        + '<td style="color:var(--s-orange);font-weight:700">'+fmt(w.docPending)+'<small class="c2i-pct">('+d7pct_(w.docPending,w.shipped)+'%)</small></td>'
+        + '<td class="d7-reasons">'+reasonsHtml+'</td>'
+        + '</tr>';
+    }).join("");
+    tblEl.innerHTML = head + '<tbody>'+body+'</tbody>';
+    tblEl.querySelectorAll("tr.d7-wkrow").forEach(function(tr){
+      tr.addEventListener("click", function(){ openD7WeekDetail(tr.getAttribute("data-week")); });
+    });
+  }
+}
+
+// 주차 클릭 드릴다운(D+7+ 미설치건 주문번호·사유) — paintAgingDetail/paintCldWeekDetail과 동일한
+// 공용 모달(#modal) 패턴 재사용. 드롭다운(전체/폐업및반품/서류보완중)은 모달을 새로 열지 않고
+// modal-body만 다시 채운다(깜빡임 방지).
+function openD7WeekDetail(week){
+  if(!week || !LAST_PASS) return;
+  openDrill("D+7 지연 상세 · "+rptWeekLabel(week)+" 주차");
+  fetchD7WeekDetail(week, "all");
+}
+function fetchD7WeekDetail(week, cat){
+  fetchData(LAST_PASS, function(r){
+    if(!r || !r.ok){ failLastCallDetail((r&&r.error)||"조회 실패"); return; }
+    paintD7WeekDetail(r);
+  }, failLastCallDetail, { params:{ action:"d7detail", week:week, cat:cat } });
+}
+function paintD7WeekDetail(r){
+  var rows = r.rows||[];
+  document.getElementById("modal-title").textContent = "D+7 지연 상세 · "+rptWeekLabel(r.week)+" 주차 ("+fmt(r.count||0)+"건)";
+  document.getElementById("modal-sub").textContent = "로우데이터 A열 주문번호 · 설치완료 제외 · 경과일 많은 순";
+  var filterHtml = '<div class="d7-filter"><label for="d7CatFilter">사유 필터</label><select id="d7CatFilter">'
+    + '<option value="all"'+(r.cat==="all"?" selected":"")+'>전체 (설치완료 제외)</option>'
+    + '<option value="return"'+(r.cat==="return"?" selected":"")+'>폐업및반품</option>'
+    + '<option value="doc"'+(r.cat==="doc"?" selected":"")+'>서류보완중</option>'
+    + '</select></div>';
+  var body = filterHtml;
+  if(!rows.length){
+    body += '<div class="modal-empty">해당 필터에 건이 없습니다.</div>';
+  } else {
+    body += '<div class="lcd-warn">⚠️ 메모 원문에는 개인정보가 섞여 있을 수 있습니다. 화면 캡처·외부 공유에 주의하세요.</div>'
+      + '<table class="lcd-tbl"><thead><tr><th>주문번호</th><th>경과</th><th>사유</th><th>담당자</th><th>메모 (J열)</th></tr></thead><tbody>'
+      + rows.map(function(x){
+          var memo=String(x.memo||"").trim();
+          return '<tr><td class="lcd-ord">'+esc(x.order)+'</td>'
+            + '<td class="lcd-date">D+'+x.age+'</td>'
+            + '<td class="lcd-st">'+esc(x.cat)+'</td>'
+            + '<td class="lcd-st">'+esc(x.manager)+'</td>'
+            + '<td class="lcd-memo'+(memo?'':' empty')+'">'+(memo?esc(memo):"(메모 없음)")+'</td></tr>';
+        }).join('')
+      + '</tbody></table>';
+  }
+  document.getElementById("modal-body").innerHTML = body;
+  var selEl = document.getElementById("d7CatFilter");
+  if(selEl) selEl.addEventListener("change", function(){
+    document.getElementById("modal-sub").textContent = "불러오는 중…";
+    fetchD7WeekDetail(r.week, this.value);
+  });
+}
+
+// "가장 큰 지연사유" 타일 클릭 — 이미 로드된 payload.d7tracking(D7_LAST)에서 6주 누적을 클라이언트에서
+// 재계산해 보여준다(추가 서버 조회 없음). 완료·반품·서류보완·지연사유(top5+그외) 전부 전체 출고 대비 %.
+function openD7Overall(){
+  if(!D7_LAST || !D7_LAST.weekly || !D7_LAST.weekly.length) return;
+  var weekly = D7_LAST.weekly;
+  var shipped=0, fast=0, slow=0, returned=0, docPending=0, catTotals={};
+  weekly.forEach(function(w){
+    shipped+=w.shipped; fast+=w.fast; slow+=w.slow; returned+=w.returned; docPending+=w.docPending;
+    (w.top5||[]).forEach(function(x){ catTotals[x.cat]=(catTotals[x.cat]||0)+x.count; });
+  });
+  var top5 = Object.keys(catTotals).map(function(c){ return {cat:c, count:catTotals[c]}; })
+    .sort(function(a,b){ return b.count-a.count; }).slice(0,5);
+  var top5Sum = top5.reduce(function(s,x){ return s+x.count; }, 0);
+  var reasonPool = shipped-fast-slow-returned-docPending;
+  var etcN = Math.max(0, reasonPool-top5Sum);
+
+  document.getElementById("modal-box").classList.remove("wide");
+  document.getElementById("modal-title").textContent = weekly.length+"주 누적 지연사유 구성 · 전체 출고 대비 %";
+  document.getElementById("modal-sub").textContent = rptWeekLabel(weekly[0].week).split("~")[0]+"~"+rptWeekLabel(weekly[weekly.length-1].week).split("~")[1]+" · 전체 출고 "+fmt(shipped)+"건을 100%로 계산";
+
+  function row(name, count, color){
+    var p = d7pct_(count, shipped);
+    return '<div class="d7-brk-row"><span class="d7-b-dot" style="background:'+color+'"></span>'
+      + '<span class="d7-b-name">'+esc(name)+'</span>'
+      + '<span class="d7-b-bar-wrap"><span class="d7-b-bar" style="width:'+p+'%;background:'+color+'"></span></span>'
+      + '<span class="d7-b-val">'+fmt(count)+'건 <small>('+p+'%)</small></span></div>';
+  }
+  function rankRow(rank, name, count, color){
+    var p = d7pct_(count, shipped);
+    return '<div class="d7-brk-row d7-rank"><span class="d7-b-rank">'+rank+'</span>'
+      + '<span class="d7-b-name">'+esc(name)+'</span>'
+      + '<span class="d7-b-bar-wrap"><span class="d7-b-bar" style="width:'+p+'%;background:'+color+'"></span></span>'
+      + '<span class="d7-b-val">'+fmt(count)+'건 <small>('+p+'%)</small></span></div>';
+  }
+  var html =
+    '<div class="d7-brk-section"><div class="d7-brk-h">처리 결과 · 전체 출고 '+fmt(shipped)+'건 대비</div>'
+      + row("D+7 이내 설치완료", fast, "var(--good)")
+      + row("D+7 초과 설치완료", slow, "var(--s-blue)")
+      + row("폐업및반품", returned, "var(--s-red)")
+      + row("서류보완지연", docPending, "var(--s-orange)")
+    + '</div>'
+    + '<div class="d7-brk-section"><div class="d7-brk-h">D+7+ 지연사유 TOP5 (14개 중 · 전체 출고 대비)</div>'
+      + '<div class="d7-r-total" style="margin-bottom:10px"><span>지연사유 합계(14개+그 외)</span><span class="d7-r-total-pct">'+fmt(reasonPool)+'건 ('+d7pct_(reasonPool,shipped)+'%)</span></div>'
+      + top5.map(function(x,i){ return rankRow(i+1, x.cat, x.count, D7_CAT_COLOR[x.cat]||"var(--s-blue)"); }).join("")
+      + row("그 외 9개 사유", etcN, "var(--muted)")
+    + '</div>';
+  document.getElementById("modal-body").innerHTML = html;
+  document.getElementById("modal").classList.add("open");
+}
+
 function renderReport(perf, notesIn){
   var rows=(perf&&perf.weekly)||[]; var notes=notesIn||{};
   var box=document.getElementById("reportBox"); if(!box) return;
@@ -4573,6 +4812,7 @@ var TAB_SECTIONS={
   weeklyaction:["cohort","weeklyBoard","accel"],
   weeklyreport:["weeklyBoard"],
   c2i:["callInstall"],
+  d7tracking:["d7tracking"],
   returned:["returned","ops","reasons","cohort"]
 };
 var TAB_LOADED={}; // 탭 → 마지막으로 로드된 기간키("start|end", 전체는 ""). 같은 기간 재조회 방지.
@@ -4581,7 +4821,7 @@ function markAllLoaded(pk){ Object.keys(TAB_SECTIONS).forEach(function(t){ TAB_L
 // 부분 payload(섹션조회)를 기존 LAST_DATA 위에 덮어쓴다 — null 섹션은 이전값 유지(다른 탭은 안 건드림).
 function mergeData(base, part){
   if(!base) return part;
-  ["meta","ops","perf","cohort","reasons","ship","accel","weeklyBoard","callInstall","achievement","weeklyNotes","kpiTargets","layout","returnedAnalysis"].forEach(function(k){
+  ["meta","ops","perf","cohort","reasons","ship","accel","weeklyBoard","callInstall","d7tracking","achievement","weeklyNotes","kpiTargets","layout","returnedAnalysis"].forEach(function(k){
     if(part[k]!=null) base[k]=part[k];
   });
   return base;
