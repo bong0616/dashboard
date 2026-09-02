@@ -3641,7 +3641,8 @@ function renderD7Tracking(d7){
       var reasonPool = w.reasonPool!=null ? w.reasonPool : (w.shipped-w.fast-w.slow-w.returned-w.docPending);
       var top5Sum = (w.top5||[]).reduce(function(s,x){return s+x.count;},0);
       var etcN = w.etc!=null ? w.etc : Math.max(0, reasonPool-top5Sum);
-      var reasonsHtml = '<div class="d7-r-total"><span>지연사유 합계(14개+그 외)</span><span class="d7-r-total-pct">'+fmt(reasonPool)+'건 ('+d7pct_(reasonPool,w.shipped)+'%)</span></div>'
+      var reasonsHtml = (w.shipping>0 ? '<div class="d7-r-row" style="opacity:.65"><span class="d7-r-rank"></span><span class="d7-r-name">배송중(아직 도착 전 · 컨택 불가)</span><span class="d7-r-bar-wrap"></span><span class="d7-r-pct">'+fmt(w.shipping)+'건 ('+d7pct_(w.shipping,w.shipped)+'%)</span></div>' : '')
+        + '<div class="d7-r-total"><span>지연사유 합계(14개+그 외)</span><span class="d7-r-total-pct">'+fmt(reasonPool)+'건 ('+d7pct_(reasonPool,w.shipped)+'%)</span></div>'
         + (w.top5||[]).map(function(r,i){
             return '<div class="d7-r-row"><span class="d7-r-rank">'+(i+1)+'</span>'
               + '<span class="d7-r-name">'+esc(r.cat)+'</span>'
@@ -3669,7 +3670,8 @@ function renderD7Tracking(d7){
 }
 
 // 주차 클릭 드릴다운(D+7+ 미설치건 주문번호·사유) — paintAgingDetail/paintCldWeekDetail과 동일한
-// 공용 모달(#modal) 패턴 재사용. 드롭다운(전체/폐업및반품/서류보완중)은 모달을 새로 열지 않고
+// 공용 모달(#modal) 패턴 재사용. 드롭다운은 전체/폐업및반품/서류보완중/배송중 + 그 주에 실제로 존재하는
+// 개별 사유 전부(2026-09-02 확장, 예전엔 폐업·서류보완 2개뿐)로 동적 구성. 모달을 새로 열지 않고
 // modal-body만 다시 채운다(깜빡임 방지).
 function openD7WeekDetail(week){
   if(!week || !LAST_PASS) return;
@@ -3686,10 +3688,18 @@ function paintD7WeekDetail(r){
   var rows = r.rows||[];
   document.getElementById("modal-title").textContent = "D+7 지연 상세 · "+rptWeekLabel(r.week)+" 주차 ("+fmt(r.count||0)+"건)";
   document.getElementById("modal-sub").textContent = "로우데이터 A열 주문번호 · 설치완료 제외 · 경과일 많은 순";
+  // 드롭다운은 그 주 실제 데이터(D7_LAST, 이미 로드된 payload)를 기준으로 동적 구성 — 폐업/서류보완
+  // 2개뿐이던 걸 2026-09-02(운영자 요청)에 그 주에 실제로 존재하는 사유 전부로 확장.
+  var wk = D7_LAST && (D7_LAST.weekly||[]).filter(function(w){ return w.week===r.week; })[0];
+  var opts = [{v:"all", label:"전체 (설치완료 제외)"}];
+  if(wk){
+    if(wk.returned>0) opts.push({v:"반품·폐업", label:"폐업및반품 ("+fmt(wk.returned)+"건)"});
+    if(wk.docPending>0) opts.push({v:"전산미등록", label:"서류보완중 ("+fmt(wk.docPending)+"건)"});
+    if(wk.shipping>0) opts.push({v:"배송중", label:"배송중, 아직 도착 전 ("+fmt(wk.shipping)+"건)"});
+    (wk.reasons||[]).forEach(function(x){ opts.push({v:x.cat, label:x.cat+" ("+fmt(x.count)+"건)"}); });
+  }
   var filterHtml = '<div class="d7-filter"><label for="d7CatFilter">사유 필터</label><select id="d7CatFilter">'
-    + '<option value="all"'+(r.cat==="all"?" selected":"")+'>전체 (설치완료 제외)</option>'
-    + '<option value="return"'+(r.cat==="return"?" selected":"")+'>폐업및반품</option>'
-    + '<option value="doc"'+(r.cat==="doc"?" selected":"")+'>서류보완중</option>'
+    + opts.map(function(o){ return '<option value="'+esc(o.v)+'"'+(r.cat===o.v?" selected":"")+'>'+esc(o.label)+'</option>'; }).join("")
     + '</select></div>';
   var body = filterHtml;
   if(!rows.length){
@@ -3720,15 +3730,15 @@ function paintD7WeekDetail(r){
 function openD7Overall(){
   if(!D7_LAST || !D7_LAST.weekly || !D7_LAST.weekly.length) return;
   var weekly = D7_LAST.weekly;
-  var shipped=0, fast=0, slow=0, returned=0, docPending=0, catTotals={};
+  var shipped=0, fast=0, slow=0, returned=0, docPending=0, shipping=0, catTotals={};
   weekly.forEach(function(w){
-    shipped+=w.shipped; fast+=w.fast; slow+=w.slow; returned+=w.returned; docPending+=w.docPending;
-    (w.top5||[]).forEach(function(x){ catTotals[x.cat]=(catTotals[x.cat]||0)+x.count; });
+    shipped+=w.shipped; fast+=w.fast; slow+=w.slow; returned+=w.returned; docPending+=w.docPending; shipping+=(w.shipping||0);
+    (w.reasons||w.top5||[]).forEach(function(x){ catTotals[x.cat]=(catTotals[x.cat]||0)+x.count; });
   });
   var top5 = Object.keys(catTotals).map(function(c){ return {cat:c, count:catTotals[c]}; })
     .sort(function(a,b){ return b.count-a.count; }).slice(0,5);
   var top5Sum = top5.reduce(function(s,x){ return s+x.count; }, 0);
-  var reasonPool = shipped-fast-slow-returned-docPending;
+  var reasonPool = shipped-fast-slow-returned-docPending-shipping;
   var etcN = Math.max(0, reasonPool-top5Sum);
 
   document.getElementById("modal-box").classList.remove("wide");
@@ -3755,6 +3765,7 @@ function openD7Overall(){
       + row("D+7 초과 설치완료", slow, "var(--s-blue)")
       + row("폐업및반품", returned, "var(--s-red)")
       + row("서류보완지연", docPending, "var(--s-orange)")
+      + row("배송중(아직 도착 전)", shipping, "var(--muted)")
     + '</div>'
     + '<div class="d7-brk-section"><div class="d7-brk-h">D+7+ 지연사유 TOP5 (14개 중 · 전체 출고 대비)</div>'
       + '<div class="d7-r-total" style="margin-bottom:10px"><span>지연사유 합계(14개+그 외)</span><span class="d7-r-total-pct">'+fmt(reasonPool)+'건 ('+d7pct_(reasonPool,shipped)+'%)</span></div>'
