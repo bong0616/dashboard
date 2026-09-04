@@ -811,10 +811,12 @@
       <div class="card col-7 fill" data-cid="perfSpeed"><h3>⏱️ 설치 소요일 분포</h3><div class="sub">출고 → 설치완료 (일). 평균 <b id="perf-avglead">–</b>일 · 5일 이내 <b id="perf-within5">–</b></div><div class="chart-wrap ch-s"><canvas id="perfSpeed"></canvas></div></div>
       <div class="card col-6 fill" data-cid="perfRetouch"><h3>🔁 재컨택 주기 → 설치 속도</h3><div class="sub">메모 재컨택 간격이 짧을수록 실제로 빨리 설치되는가?</div><div class="chart-wrap ch-l"><canvas id="perfRetouch"></canvas></div><div class="insight" id="retouch-insight"></div></div>
       <div class="card col-6 fill" data-cid="perfDelay"><h3>🐢 7일+ 지연 사유</h3><div class="sub">설치완료됐지만 7일 이상 걸린 건 (메모 자동분류) · <b style="color:var(--s-blue-d)">기타 막대 클릭 시 세부내역</b></div><div class="chart-wrap ch-xl"><canvas id="perfDelay"></canvas></div></div>
-      <div class="card col-12" data-cid="perfDaily"><h3>📅 일별 처리량</h3><div class="sub">최근 45영업일 · 통화시도량 &amp; 설치완료 <b>(둘 다 실적로그 기록 기준)</b></div><div class="chart-wrap ch-m"><canvas id="perfDaily"></canvas></div></div>
+      <div class="card col-12" data-cid="perfDaily"><h3>📅 일별 처리량</h3><div class="sub">최근 45영업일 · 통화시도량(실적로그 기준) &amp; <b>설치완료(로우데이터 설치일 S열 기준)</b></div><div class="chart-wrap ch-m"><canvas id="perfDaily"></canvas></div></div>
       <!-- 구 '월·주·일 흐름' 탭의 월별 카드(2026-07-28 흡수). 주별·일별은 주간/일간 비교와 값이 완전히 같아 버렸고,
            월별만 대응물이 없어 여기로 옮겼다. 바로 위 perfMonthly 와 '설치완료'의 기준이 달라 숫자가 다르다 —
-           둘 다 부제에 기준을 명시했다. 지우지 말 것. -->
+           둘 다 부제에 기준을 명시했다. 지우지 말 것.
+           🆕 2026-09-04: perfDaily(바로 위 카드)의 '설치완료'만 실적로그(Q열,로우저장일) 기준이 실제 설치일과
+           밀려 보인다는 지적으로 S열(설치일) 기준으로 교체(대시보드API.js buildPerf_). perfMonthly는 미변경. -->
       <div class="card col-12" data-cid="flowMonthly"><h3>📆 월별 흐름 <small class="th-tgt" style="display:inline">설치일 기준</small></h3><div class="sub">통화시도·최초컨택 = 실적로그(자가설치 제외) · <b>설치완료 = 로우데이터 설치일(S열) 기준</b>, 2026 출고분 (전체 월) · 위 '월별 처리량 추세'는 설치완료를 <b>실적로그 기록</b>으로 세므로 숫자가 다릅니다</div><div class="chart-wrap ch-l"><canvas id="flowMonthly"></canvas></div></div>
     </div>
   </section>
