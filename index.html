@@ -1038,9 +1038,10 @@
        집계·30일 범위"까지 같이 없애버렸다는 걸 운영자가 뒤늦게 발견 — "3탭 구조는 되살리지 말고,
        한 메뉴(한 페이지) 안에서 월/주/일을 다 볼 수 있게" 재요청받아 이 단일 페이지 안에 월별·주별
        요약 표를 추가하고, 일별 창을 14일→30일로 넓혔다(탭 전환 없이 스크롤로 다 보임).
-       데이터는 여전히 payload.callInstall(buildCallInstallLive_, 최근 3개월치 dayRows) 그대로
-       재사용 — 월/주 표는 dayRows 전체를, 일별 표는 그중 최근 30일만 클라이언트에서 집계한다
-       (서버 재호출 없음, 날짜범위 선택 UI 없음). -->
+       데이터는 여전히 payload.callInstall(buildCallInstallLive_, 최근 6개월치 dayRows —
+       2026-09-10 3개월→6개월 확대, 롤링 3개월 창이 매달 앞으로 밀리며 5월 데이터가 잘려나가던
+       문제 해결) 그대로 재사용 — 월/주 표는 dayRows 전체를, 일별 표는 그중 최근 30일만
+       클라이언트에서 집계한다 (서버 재호출 없음, 날짜범위 선택 UI 없음). -->
   <section class="tab-content" id="tab-c2i">
     <div class="grid">
       <div class="card col-12" data-cid="c2iHead">
@@ -1052,11 +1053,11 @@
     <div class="tiles" id="c2i-kpi"></div>
     <div class="sec-head">👥 담당자별 비교 (30일 합계) <small>막대 = 설치예정 · 당일설치완료 · 하단 지표에 총설치완료 병기</small></div>
     <div class="grid" id="c2i-mgrgrid"></div>
-    <div class="sec-head">📅 월별 요약 <small>최근 3개월</small></div>
+    <div class="sec-head">📅 월별 요약 <small>최근 6개월</small></div>
     <div class="grid">
       <div class="card col-12" data-cid="c2iMonth"><div class="tbl-wrap"><table class="dtable no-grp" id="c2iMonthTable"></table></div></div>
     </div>
-    <div class="sec-head">📆 주별 요약 <small>최근 3개월 · 월요일 시작</small></div>
+    <div class="sec-head">📆 주별 요약 <small>최근 6개월 · 월요일 시작</small></div>
     <div class="grid">
       <div class="card col-12" data-cid="c2iWeek"><div class="tbl-wrap"><table class="dtable no-grp" id="c2iWeekTable"></table></div></div>
     </div>
@@ -3280,8 +3281,8 @@ function rcRenderTargetVsActual(){
 // 같이 없애버려서, 운영자가 "3탭 구조는 되살리지 말고 한 페이지 안에서 월/주/일을 다 보이게 해달라"고
 // 재요청 — 아래 c2iAggregateBy/c2iRenderGroupedTable로 월별·주별 요약 표를 이 페이지 안에 추가하고,
 // 일별 창을 14일→30일로 넓혔다. 백엔드(payload.callInstall = buildCallInstallLive_, 대시보드API.js)는
-// 그대로 재사용한다 — 이미 최근 3개월치 일별×담당자 dayRows를 계산해 내려주므로, 월/주 표는 그
-// 전체를, 일별 표는 그중 트레일링 30일만 클라이언트에서 잘라 쓴다(서버 재호출 없음).
+// 그대로 재사용한다 — 이미 최근 6개월치(2026-09-10 3개월→6개월 확대) 일별×담당자 dayRows를 계산해
+// 내려주므로, 월/주 표는 그 전체를, 일별 표는 그중 트레일링 30일만 클라이언트에서 잘라 쓴다(서버 재호출 없음).
 var C2I_WINDOW_DAYS = 30;
 var C2I_PALETTE = ["var(--s-blue)","var(--s-orange)","var(--s-aqua)","var(--s-violet)","var(--s-yellow)","var(--s-red)"];
 
@@ -3294,7 +3295,7 @@ function c2iPctText(n,d){ var p=c2iPct(n,d); return p==null?"–":(p+"%"); }
 // 월요일 시작 주 키 — GAS 쪽 weekKey(buildScoreboards_)와 동일 규칙을 클라이언트에서 재현(PHASE150 원본 로직 복원).
 function c2iWeekKey(ds){ var d=new Date(ds+"T00:00:00"); var wd=d.getDay(); d.setDate(d.getDate()-((wd+6)%7)); return c2iYmd(d); }
 
-// dayRows(전체 최근 3개월치)를 keyFn 기준(월/주)으로 담당자별 소계를 낸다. 월별·주별 요약 표가
+// dayRows(전체 최근 6개월치)를 keyFn 기준(월/주)으로 담당자별 소계를 낸다. 월별·주별 요약 표가
 // 이 한 함수를 공유한다 — 일별 상세 표(30일)와 달리 이쪽은 창 제한 없이 dayRows 전체를 쓴다.
 function c2iAggregateBy(rows, keyFn, labelFn){
   var map = {};
