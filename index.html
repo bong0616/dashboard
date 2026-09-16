@@ -4868,9 +4868,10 @@ function renderAll(d){
   document.getElementById("page-badge").textContent = CUR_PERIOD.start ? ("● "+CUR_PERIOD.label) : "● 전체 기간";
 }
 function applyData(d){ LAST_DATA=d; renderAll(LAST_DATA); }
-function boot(passcode) {
+function boot(passcode, _attempt) {
+  _attempt = _attempt || 1;
   document.getElementById("gate").style.display="none";
-  setLoading(true, "데이터 불러오는 중…");
+  setLoading(true, _attempt>1 ? ("데이터 불러오는 중… (재시도 "+_attempt+"/3)") : "데이터 불러오는 중…");
   fetchData(passcode, function(d){
     if(d && d.error){
       setLoading(false);
@@ -4890,7 +4891,14 @@ function boot(passcode) {
     // 카드 배치는 렌더가 끝난 뒤 한 번만 얹는다(코드 기본값을 먼저 떠 놔야 '원래대로'가 가능하다)
     initLayout(d.layout);
     loadFavorites(d.favorites); buildFavStars();
-  }, function(msg){ setLoading(false); showGate(msg); });
+  }, function(msg){
+    // 🆕 2026-09-16: 사내망 SSL검사 프록시 등으로 script.google.com 로드가 간헐적으로
+    //   끊기는 사고(운영자 신고 "데이터 로드 실패" 지속 발생) 대응 — 최초 로딩만 최대 2회
+    //   자동 재시도(1.5초 간격). 패스코드 오류는 위 d.error 분기로 이미 갈리므로 여기로
+    //   오는 건 네트워크 타임아웃·로드실패뿐이라 재시도해도 안전하다.
+    if(_attempt < 3){ setTimeout(function(){ boot(passcode, _attempt+1); }, 1500); return; }
+    setLoading(false); showGate(msg);
+  });
 }
 // 기존 호출부 호환용 얇은 래퍼 — 항상 '현재 탭' 기준으로 조회한다.
 function loadPeriod(start,end,label,fresh){ loadTabPeriod(CUR_TAB, start, end, label, fresh); }
