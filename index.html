@@ -593,6 +593,7 @@
   table.dtable.curve-tbl th:nth-child(-n+2) { z-index: 3; }
   table.dtable.curve-tbl tbody tr:hover td:nth-child(-n+2) { background: color-mix(in srgb, var(--s-blue) 6%, var(--surface-1)); }
   table.dtable.curve-tbl td.cv { font-weight: 600; color: var(--text-primary); }
+  table.dtable.curve-tbl td.cv-90 { border: 2px solid #1f9e57; color: #1f9e57; }
   table.dtable.curve-tbl td.cv-na { color: var(--muted); font-weight: 500; }
   table.dtable.curve-tbl td.imm { font-style: italic; }
 
@@ -686,7 +687,7 @@
   </div>
 </div>
 
-<div id="loading" style="display:none"><div class="spinner"></div><div>데이터 불러오는 중…</div></div>
+<div id="loading" style="display:none"><div class="spinner"></div><div id="loading-msg">데이터 불러오는 중…</div><div id="loading-hint" style="display:none;font-size:12px;opacity:.75;max-width:280px;text-align:center"></div></div>
 
 <!-- Sidebar -->
 <nav id="sidebar" style="display:none">
@@ -2909,11 +2910,15 @@ function cohortCurveTableHTML(rows, maxD){
     + ds.map(function(d){ return '<th class="dcol">D+'+d+'</th>'; }).join("")
     + '</tr></thead>';
   var body=rows.map(function(r){
+    // 🎯 2026-10-06(운영자 요청): 그 주 최초로 누적 설치완료율 90%를 넘은 칸을 초록 테두리로 표기
+    // (수기로 빨간 네모 쳐서 찾던 걸 자동화). 90% 미도달 주는 표기 없음.
+    var firstHit90=-1;
+    for(var dd=0; dd<=maxD; dd++){ if(r.cum[dd]!=null && r.cum[dd]>=0.9){ firstHit90=dd; break; } }
     var cells=ds.map(function(d){
       var v=r.cum[d];
       if(v==null) return '<td class="cv-na">–</td>';
       var p=Math.round(v*1000)/10;
-      return '<td class="cv" style="'+curveHeat(p)+'">'+p.toFixed(1)+'</td>';
+      return '<td class="cv'+(d===firstHit90?' cv-90':'')+'" style="'+curveHeat(p)+'">'+p.toFixed(1)+'</td>';
     }).join("");
     var imm = r.maxD < maxD;   // 아직 D+30이 안 지난 진행중 코호트
     // 이번 주(출고 마감 전)는 '집계중'으로 별도 표기 — 그냥 '진행중'과 달리 출고건수 자체가 아직 확정이 아니라서 구분한다.
@@ -4853,10 +4858,14 @@ function mergeData(base, part){
   return base;
 }
 
-function setLoading(on, msg){
+function setLoading(on, msg, hint){
   var el=document.getElementById("loading");
-  if(on){ var t=el.querySelector("div:last-child"); if(t) t.textContent=msg||"불러오는 중…"; el.style.display="flex"; }
-  else el.style.display="none";
+  if(on){
+    document.getElementById("loading-msg").textContent=msg||"불러오는 중…";
+    var h=document.getElementById("loading-hint");
+    if(hint){ h.textContent=hint; h.style.display="block"; } else { h.style.display="none"; }
+    el.style.display="flex";
+  } else el.style.display="none";
 }
 function renderAll(d){
   render(d);
@@ -4871,7 +4880,8 @@ function applyData(d){ LAST_DATA=d; renderAll(LAST_DATA); }
 function boot(passcode, _attempt) {
   _attempt = _attempt || 1;
   document.getElementById("gate").style.display="none";
-  setLoading(true, _attempt>1 ? ("데이터 불러오는 중… (재시도 "+_attempt+"/3)") : "데이터 불러오는 중…");
+  setLoading(true, _attempt>1 ? ("데이터 불러오는 중… (재시도 "+_attempt+"/3)") : "데이터 불러오는 중…",
+    "사내망 환경에 따라 최대 6분까지 걸릴 수 있습니다(자동 재시도 중). 계속 멈춰 있으면 새로고침 해주세요.");
   fetchData(passcode, function(d){
     if(d && d.error){
       setLoading(false);
