@@ -86,6 +86,32 @@
   .refresh-btn { margin-top: 10px; width: 100%; padding: 9px; border-radius: 10px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); color: #cdd6e2; cursor: pointer; font-size: 12.5px; font-family: var(--font); }
   .refresh-btn:hover { background: rgba(255,255,255,.1); }
 
+  /* ---------- 사이드바 기준축 그룹핑 미리보기(2026-10-12 논의, 토글) ----------
+     기존 플랫 navitem 목록은 그대로 두고, 켜졌을 때만 JS가 같은 DOM 노드를 그룹 바디로
+     옮긴다(복제 아님 — 이벤트 리스너·data-tab 그대로 유지). 꺼지면 고정 순서로 되돌린다. */
+  .navgroup-toggle-btn {
+    width: 100%; margin: 0 0 14px; padding: 8px 10px; border-radius: 10px;
+    border: 1px dashed rgba(255,255,255,.22); background: transparent; color: var(--sidebar-text);
+    cursor: pointer; font-size: 11.5px; font-family: var(--font); text-align: left;
+  }
+  .navgroup-toggle-btn:hover { background: rgba(255,255,255,.06); color: #fff; }
+  .navgroup-toggle-btn.on { border-style: solid; border-color: rgba(134,182,239,.5); background: rgba(42,120,214,.14); color: #dfe9fb; }
+  #nav-grouped-shell { display: none; }
+  .navgroup-head {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px; margin: 10px 0 2px;
+    border-radius: 8px; font-size: 11px; font-weight: 600; letter-spacing: .04em; cursor: pointer;
+  }
+  .navgroup-head:first-child { margin-top: 0; }
+  .navgroup-head .car { font-size: 9px; opacity: .75; transition: transform .15s ease; }
+  .navgroup-head.open .car { transform: rotate(90deg); }
+  .navgroup-head .gcount { margin-left: auto; font-size: 10px; opacity: .65; }
+  .navgroup-ship   { background: rgba(224,164,88,.14);  color: #e0a458; }
+  .navgroup-contact{ background: rgba(167,160,232,.14); color: #a7a0e8; }
+  .navgroup-snap   { background: rgba(159,176,196,.14); color: #9fb0c4; }
+  .navgroup-other  { background: rgba(205,187,140,.14); color: #cdbb8c; }
+  .navgroup-body.collapsed { display: none; }
+  .navgroup-body .navitem.navchild { margin-left: 14px; }
+
   /* ---------- Main ---------- */
   main { flex: 1; padding: 26px 30px 60px; overflow-x: hidden; }
   .page-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -695,10 +721,10 @@
     <div class="logo">📊</div>
     <div><b>아이샵케어</b><span>설치 운영 대시보드</span></div>
   </div>
+  <button class="navgroup-toggle-btn" id="navgroup-toggle" type="button">🧭 새 사이드바 미리보기(기준축별 그룹)</button>
   <div class="navitem" data-tab="favorites" id="nav-favorites"><span class="ic">⭐</span><div>즐겨찾기<small>내가 표시한 카드 모아보기</small></div></div>
   <div class="navitem active" data-tab="weeklyboard" id="nav-weeklyboard"><span class="ic">📅</span><div>위클리 현황판<small>출고주 6주 스코어보드</small></div><span class="navcaret" id="weeklyboard-caret">▸</span></div>
   <div class="navitem navchild" data-tab="weeklyaction" id="nav-weeklyaction" style="display:none"><span class="ic">📄</span><div>보고서<small>야간원격·당일배송 주차별 검토</small></div></div>
-  <div class="navitem navchild" data-tab="weeklyreport" id="nav-weeklyreport" style="display:none"><span class="ic">🗒️</span><div>위클리 리포트<small>주차별 요약 게시판</small></div></div>
   <div class="navitem" data-tab="c2i" id="nav-c2i"><span class="ic">📞</span><div>당일통화당일설치<small>최근 14일 · 담당자별 비교</small></div></div>
   <div class="navitem" data-tab="d7tracking" id="nav-d7tracking"><span class="ic">⏱️</span><div>D+7설치트래킹<small>출고 주차별 처리·지연사유</small></div></div>
   <div class="navitem" data-tab="cohort" id="nav-cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div><span class="navcaret" id="cohort-caret">▸</span></div>
@@ -1021,20 +1047,6 @@
     </div>
   </section>
 
-  <!-- WEEKLY REPORT (위클리 리포트 게시판, Phase 1, 2026-08-06 신설) — 위클리 현황판 하위 -->
-  <section class="tab-content" id="tab-weeklyreport">
-    <div class="grid">
-      <div class="card col-12" data-cid="wrHead">
-        <h3>🗒️ 위클리 리포트</h3>
-        <div class="sub">카드를 클릭하면 요약을 쓰거나 고칠 수 있고, 그 아래에 상세 리포트가 함께 보입니다. 아직 요약이 없는 최근 주는 "아직 작성 안 함"으로 표시됩니다.</div>
-      </div>
-      <div class="card col-12" data-cid="wrBoard">
-        <h3>📋 위클리 리포트 목록</h3>
-        <div class="sub">최신 주부터 표시됩니다. 카드를 클릭하면 리포트창이 뜹니다.</div>
-        <div id="wrBoardList" style="display:flex; flex-direction:column; gap:12px; margin-top:10px"></div>
-      </div>
-    </div>
-  </section>
 
   <!-- 당일통화당일설치(2026-08-14 재설계 → 같은 날 후속 수정) — 운영자가 예전에 Claude Artifact로
        받아본 정적 리포트(PHASE145) 양식을 라이브 대시보드에 반영해 달라는 요청으로 PHASE150의
@@ -2230,299 +2242,6 @@ function paintReturnedDetail(r){
   }
 }
 
-// ==================== 위클리 리포트 게시판(Phase 1~2, 2026-08-06 / Phase 3, PHASE 115) ====================
-var WR_LAST = [];      // 서버가 준 리포트 배열(최신 주 먼저, 요약 또는 AI초안이 있는 주만)
-var WR_RECENT_N = 8;   // 게시판에 항상 보여줄 최근 주 개수(요약도 AI초안도 없어도 "아직 작성 안 함" 카드로 노출)
-
-// "YYYY-MM-DD"(월요일) → "08월06일 위클리 리포트" 제목
-function wrTitle(week){
-  var s=week.split("-");
-  return s[1]+"월"+s[2]+"일 위클리 리포트";
-}
-// 오늘이 속한 주의 월요일부터 거슬러 최근 n개 주차 키를 최신순으로 반환.
-function wrRecentWeeks_(n){
-  var today = new Date();
-  var day = today.getDay(); // 0=일 ... 1=월
-  var diff = (day===0) ? -6 : (1-day);
-  var mon = new Date(today.getFullYear(), today.getMonth(), today.getDate()+diff);
-  var out = [];
-  for(var i=0;i<n;i++){
-    var d = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate()-7*i);
-    var y=d.getFullYear(), m=("0"+(d.getMonth()+1)).slice(-2), dd=("0"+d.getDate()).slice(-2);
-    out.push(y+"-"+m+"-"+dd);
-  }
-  return out;
-}
-// 서버 리포트 배열(WR_LAST)과 "최근 N주" 플레이스홀더를 합쳐 렌더용 배열을 만든다. 서버에 있는
-// 주는 그 데이터를 쓰고, 없는 주는 빈 자리표시 객체로 채운다(요약 없어도 목록에 계속 보이게).
-function wrMergedList_(){
-  var byWeek = {};
-  WR_LAST.forEach(function(r){ byWeek[r.week] = r; });
-  var weeks = wrRecentWeeks_(WR_RECENT_N);
-  WR_LAST.forEach(function(r){ if(weeks.indexOf(r.week)===-1) weeks.push(r.week); }); // 8주보다 오래된 것도 저장된 건 유지
-  weeks.sort(function(a,b){ return a<b?1:(a>b?-1:0); }); // 최신 먼저
-  var seen = {};
-  return weeks.filter(function(w){ if(seen[w]) return false; seen[w]=true; return true; })
-    .map(function(w){ return byWeek[w] || { week:w, summary:"", updatedAt:"", aiDraft:"", aiDraftAt:"", hasSnapshot:false }; });
-}
-function wrBoardHTML(list){
-  if(!list.length) return '<div class="modal-empty">표시할 리포트가 없습니다.</div>';
-  return list.map(function(r){
-    var body;
-    if(r.summary){
-      body = '<div style="font-size:13px; margin-top:6px">'+mdRender_(r.summary)+'</div>';
-    } else if(r.aiDraft){
-      body = '<div style="font-size:12.5px; color:var(--muted); margin-top:4px">아직 작성 안 함 · 🤖 AI 초안 있음(클릭해서 확인)</div>';
-    } else {
-      body = '<div style="font-size:12.5px; color:var(--muted); margin-top:4px">아직 작성 안 함</div>';
-    }
-    var lock = r.hasSnapshot ? '<div style="margin-top:6px; font-size:11px; color:var(--good,#3E8A5C)">🔒 저장 시점 스냅샷 보유</div>' : '';
-    return '<div class="card wr-card" style="padding:14px 16px; cursor:pointer" data-wr-week="'+esc(r.week)+'">'
-      +'<div style="display:flex; justify-content:space-between; align-items:baseline; gap:10px">'
-      +'<b style="font-size:15px">'+esc(wrTitle(r.week))+'</b>'
-      +'<span style="font-size:11px; color:var(--muted)">'+esc(wrPeriodLabel(r.week))+(r.updatedAt?' · 수정 '+esc(r.updatedAt):'')+'</span>'
-      +'</div>'+body+lock
-      +'</div>';
-  }).join('');
-}
-function wrRenderBoard(reports){
-  WR_LAST = reports||[];
-  var box=document.getElementById("wrBoardList");
-  if(!box) return;
-  var list = wrMergedList_();
-  box.innerHTML = wrBoardHTML(list);
-  box.querySelectorAll('.wr-card').forEach(function(el){
-    el.addEventListener('click', function(){ wrOpenReport(el.getAttribute('data-wr-week')); });
-  });
-}
-
-// ---- 리포트창(Phase 2의 "전체 리포트 보기" + Phase 1의 요약편집을 통합, PHASE 115) ----
-function wrRow_(cells){ return '<tr>'+cells.map(function(c,i){ return '<td'+(i===0?' style="text-align:left"':'')+'>'+c+'</td>'; }).join('')+'</tr>'; }
-function wrPct_(v){ return v==null ? '<span style="color:var(--muted)">–</span>' : (Math.round(v*1000)/10)+'%'; }
-function wrNum_(v,suf){ return v==null ? '<span style="color:var(--muted)">–</span>' : (Math.round(v*10)/10)+(suf||''); }
-
-// 4섹션 상세표 HTML — d는 buildWeeklyReportSnapshot_() 모양(스냅샷) 또는 LAST_DATA(라이브 폴백) 둘 다 받는다.
-function wrDetailHTML_(d){
-  var html = '';
-  var shipRows = ((d.ship && d.ship.weekly)||[]).slice(-4);
-  html += '<h4 style="margin:0 0 8px">① 주차별 속도 지표(출고일 코호트)</h4>';
-  html += '<table class="lcd-tbl"><thead><tr><th style="text-align:left">주차</th><th>출고량</th><th>완료율</th><th>평균설치소요일</th><th>평균재컨택</th><th>반품/폐업</th></tr></thead><tbody>';
-  shipRows.forEach(function(w){
-    html += wrRow_([rptWeekLabel(w.week)+(w.immature?' <span style="color:var(--muted);font-size:10.5px">(진행중)</span>':''),
-      fmt(w.shipped)+'건', wrPct_(w.doneRate), wrNum_(w.avgSpeed,'일'), wrNum_(w.avgRetouch,'회'), fmt(w.returned||0)+'건']);
-  });
-  html += '</tbody></table>';
-
-  var gapRows = ((d.weeklyBoard && d.weeklyBoard.weeklyGap)||[]).slice(-4);
-  html += '<h4 style="margin:16px 0 8px">② 통화-설치 갭 · 원격접수(주간)</h4>';
-  html += '<table class="lcd-tbl"><thead><tr><th style="text-align:left">주차</th><th>통화시도</th><th>설치완료</th><th>갭</th><th>원격접수(M열)</th></tr></thead><tbody>';
-  gapRows.forEach(function(w){
-    html += wrRow_([rptWeekLabel(w.week), fmt(w.calls)+'건', fmt(w.installs)+'건',
-      (w.gap>0?'+':'')+fmt(w.gap), fmt(w.remoteRecv||0)+'건']);
-  });
-  html += '</tbody></table>';
-
-  var reasonWeeks = ((d.reasons && d.reasons.delayCldWeekly)||[]).slice(-3);
-  var cats = (d.reasons && d.reasons.delayCldCats)||[];
-  html += '<h4 style="margin:16px 0 8px">③ 지연사유 전체분류(D+7일 이상, 최근 3주)</h4>';
-  if(reasonWeeks.length){
-    var totals = {}; cats.forEach(function(c){ totals[c]={cnt:0,leadSum:0,leadN:0}; });
-    reasonWeeks.forEach(function(w){ cats.forEach(function(c){
-      totals[c].cnt += (w.cats&&w.cats[c])||0;
-      totals[c].leadSum += (w.leadSum&&w.leadSum[c])||0;
-      totals[c].leadN += (w.leadN&&w.leadN[c])||0;
-    }); });
-    var sorted = cats.slice().sort(function(a,b){ return totals[b].cnt-totals[a].cnt; });
-    html += '<table class="lcd-tbl"><thead><tr><th style="text-align:left">사유</th><th>'+reasonWeeks.map(function(w){return rptWeekLabel(w.week);}).join('</th><th>')+'</th><th>3주합계</th><th>평균설치소요일</th></tr></thead><tbody>';
-    sorted.forEach(function(c){
-      if(totals[c].cnt===0) return;
-      var perWeek = reasonWeeks.map(function(w){ return fmt((w.cats&&w.cats[c])||0); });
-      var avgLead = totals[c].leadN>0 ? wrNum_(totals[c].leadSum/totals[c].leadN,'일')+' (n='+totals[c].leadN+')' : '<span style="color:var(--muted)">-</span>';
-      html += wrRow_([esc(c), perWeek.join('</td><td>'), '<b>'+fmt(totals[c].cnt)+'</b>', avgLead]);
-      // 🆕 2026-08-10(PHASE 125, 운영자 요청 — "기타 증가, 사유확인 필요"): "기타" 행 아래에 메모/K열
-      // 기준 자동 세분류(3주 합산)를 바로 붙인다. 클릭해서 원문 하나씩 확인할 필요 없이 여기서 바로 보임.
-      if(c==="기타"){
-        var etcTotals={};
-        reasonWeeks.forEach(function(w){ (w.etc||[]).forEach(function(e){ etcTotals[e.label]=(etcTotals[e.label]||0)+e.count; }); });
-        var etcKeys=Object.keys(etcTotals).sort(function(a,b){return etcTotals[b]-etcTotals[a];});
-        if(etcKeys.length){
-          var etcText=etcKeys.map(function(k){return esc(k)+' '+etcTotals[k]+'건';}).join(' · ');
-          html += '<tr><td colspan="'+(reasonWeeks.length+3)+'" style="font-size:11.5px;color:var(--muted);padding-top:0">└ 세부(메모·K열 기준): '+etcText+'</td></tr>';
-        }
-      }
-    });
-    html += '</tbody></table>';
-  } else {
-    html += '<div class="modal-empty">지연사유 데이터가 없습니다.</div>';
-  }
-
-  var actions = (d.actionTimeline && d.actionTimeline.actions)||[];
-  html += '<h4 style="margin:16px 0 8px">④ 설치가속화 액션 시행 전/후 비교('+((d.actionTimeline&&d.actionTimeline.compareWeeks)||'?')+'주)</h4>';
-  if(actions.length){
-    // 🆕 PHASE 124(2026-08-10, 운영자 피드백): 이 표만 놓고 보면 "출고일축"·"마지막통화일 기준"이
-    // 무슨 기준인지, %가 무엇을 뜻하는지 알기 어렵다(메인 대시보드 카드에는 이 설명이 있지만
-    // 리포트창 표에는 빠져 있었다) → 대시보드 카드 부제와 같은 정의를 표 위에 붙인다.
-    html += '<div class="coldef" style="margin-top:0 0 10px">'
-      + '<span class="cd-row"><span class="cd-k">시행 전/후 값</span> 시행일 기준 <b>전 2주 vs 후 2주</b> 실측 비교 · %는 <b>출고일(또는 마지막통화일) 기준 D+1(당일+다음날 누적) 설치완료율</b>입니다.</span>'
-      + '<span class="cd-row"><span class="cd-k">· 출고일축</span> 그 물량이 <b>출고된 날</b>부터 며칠 만에 설치됐는지(출고일→설치일).</span>'
-      + '<span class="cd-row"><span class="cd-k">· 마지막통화일 기준</span> 상담원이 <b>마지막으로 통화한 날</b>부터 며칠 만에 설치됐는지(부재 등도 포함하는 느슨한 정의).</span>'
-      + '</div>';
-    html += '<table class="lcd-tbl"><thead><tr><th style="text-align:left">액션</th><th>시행 전(D+1)</th><th>시행 후(D+1)</th><th>변화</th></tr></thead><tbody>';
-    actions.forEach(function(a){
-      var delta = a.deltaPct==null ? '<span style="color:var(--muted)">–</span>' : ((a.deltaPct>=0?'+':'')+(Math.round(a.deltaPct*1000)/10)+'%p');
-      var warn = [];
-      if(a.insufficientBefore) warn.push('시행전 데이터부족');
-      if(a.insufficientAfter) warn.push('진행중');
-      html += wrRow_([esc(a.label), wrPct_(a.before.rate), wrPct_(a.after.rate),
-        delta + (warn.length?' <span style="color:var(--s-orange,#c9822e);font-size:10.5px">('+warn.join(', ')+')</span>':'')]);
-    });
-    html += '</tbody></table>';
-  }
-  return html;
-}
-
-// 요약편집 영역 HTML — r은 wrMergedList_()가 만든 리포트 객체(빈 자리표시 포함).
-function wrEditorHTML_(r){
-  var showBadge = !r.summary && r.aiDraft;
-  var initialText = r.summary || r.aiDraft || "";
-  return '<div style="padding:10px; background:rgba(120,120,120,0.08); border-radius:8px">'
-    +'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">'
-    +(showBadge ? '<span class="wa-ai-badge">🤖 AI 추정 · 검토 전</span>' : '<span></span>')
-    +'<button type="button" class="fbtn" id="wrAiBtn" style="font-size:11px; padding:4px 10px">🤖 새로 불러오기</button>'
-    +'</div>'
-    +'<div class="wa-note-toolbar"><button type="button" class="wa-fmt-btn" data-fmt="bold" title="굵게"><b>B</b> 굵게</button><button type="button" class="wa-fmt-btn" data-fmt="bullet" title="글머리 기호">• 글머리기호</button><button type="button" class="wa-fmt-btn" data-fmt="number" title="번호 매기기">1. 번호매기기</button></div>'
-    +'<textarea id="wrEditorInput" maxlength="1000" rows="6" style="width:100%; box-sizing:border-box; resize:vertical; font-family:var(--font); font-size:13px; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--page); color:var(--text-primary)">'+esc(initialText)+'</textarea>'
-    +'<div class="note-preview-label">미리보기</div><div class="note-preview" id="wrEditorPreview"></div>'
-    +'<div style="display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-top:6px">'
-    +'<span id="wrEditorMsg" class="rpt-msg"></span>'
-    +'<button class="rpt-save" id="wrEditorSave">💾 요약 저장</button>'
-    +'</div></div>';
-}
-
-// 🆕 2026-08-08: 위클리 리포트는 화면 폭이 좁은 공용 모달(#modal) 대신 크기조절 가능한 별도
-// 브라우저 창으로 띄운다(운영자 요청 — 작은 창에서 가독성이 안 좋음). 같은 window name("wrReportWindow")을
-// 재사용해 카드를 여러 번 눌러도 창이 계속 늘어나지 않고 내용만 갈아끼운다.
-function wrOpenReport(week){
-  var r = wrMergedList_().filter(function(x){ return x.week===week; })[0] || { week:week, summary:"", aiDraft:"", hasSnapshot:false };
-  var win = window.open('', 'wrReportWindow', 'width=1120,height=880,resizable=yes,scrollbars=yes');
-  if(!win){ alert('팝업이 차단되었습니다. 브라우저 주소창의 팝업 차단 아이콘을 눌러 이 사이트를 허용해주세요.'); return; }
-
-  // 🚨 PHASE 124(2026-08-10): 스냅샷 원문(주당 ~6.6KB)을 메인 payload에서 뺐다(매주 계속 쌓여
-  // CacheService 100KB 한도를 다시 넘긴 원인 — PHASE 104와 같은 "무한누적 필드" 함정).
-  // 창을 여는 이 시점에 그 주 1건만 서버에서 불러온다(메모 원문 드릴다운과 같은 on-demand 패턴).
-  // detailHtml은 아래에서 재할당되는 클로저 변수 — 노션복사 버튼이 클릭 시점 값을 그대로 읽는다.
-  var detailHtml = '<div class="modal-empty">불러오는 중…</div>';
-  var styleTag = document.querySelector('style'); // 메인 문서의 CSS 변수·다크모드까지 그대로 재사용
-  var styleHtml = styleTag ? styleTag.outerHTML : '';
-
-  win.document.open();
-  win.document.write(
-    '<!doctype html><html lang="ko"><head><meta charset="utf-8">'
-    + '<title>'+esc(wrTitle(week))+'</title>'
-    + styleHtml
-    // 🆕 2026-08-08(가독성 버그 수정): 메인 문서의 <style>을 통째로 복사해 넣다 보니 body{display:flex}
-    // (사이드바+본문 가로배치 규칙)까지 같이 들어와, 팝업 안의 제목·요약·상세표가 세로로 쌓이지 않고
-    // 가로로 밀려 배치됐다. display:block으로 명시적으로 되돌려야 한다(속성만 덧씌우는 캐스케이드라
-    // max-width/margin만 추가해선 display가 안 바뀜).
-    + '<style>body{display:block; padding:24px 28px; max-width:980px; margin:0 auto} .wr-win-sub{margin:4px 0 18px; font-size:13px}</style>'
-    + '</head><body>'
-    + '<h2 style="margin-bottom:4px">'+esc(wrTitle(week))+'</h2>'
-    + '<div class="wr-win-sub" id="wrSnapNote">불러오는 중…</div>'
-    // 🆕 2026-08-08(노션 복사): 제목+요약+상세표만 골라 클립보드에 담아 노션에 붙이면 표·제목으로
-    // 바로 변환되게 한다(회의 중 반복 작업 — 운영자 요청, 검토 후 합의된 방식).
-    + '<div style="margin:2px 0 16px">'
-    +   '<button type="button" id="wrCopyNotionBtn" class="fbtn">📋 노션에 복사</button>'
-    +   ' <span id="wrCopyMsg" style="font-size:12px"></span>'
-    + '</div>'
-    + '<div id="wrEditorRoot"></div>'
-    + '<hr style="border-color:var(--border); margin:14px 0">'
-    + '<div id="wrDetailRoot">'+detailHtml+'</div>'
-    + '</body></html>'
-  );
-  win.document.close();
-  win.document.getElementById("wrEditorRoot").innerHTML = wrEditorHTML_(r);
-  bindNoteEditor_(win.document.getElementById("wrEditorInput"), { previewId:"wrEditorPreview", doc:win.document });
-
-  function renderDetail(d, isSnapshot){
-    detailHtml = d ? wrDetailHTML_(d) : '<div class="modal-empty">데이터가 아직 로드되지 않았습니다.</div>';
-    var noteEl = win.document.getElementById("wrSnapNote");
-    if(noteEl) noteEl.innerHTML = isSnapshot
-      ? '<span style="color:var(--good,#3E8A5C)">🔒 저장 시점 스냅샷</span>'
-      : '<span style="color:var(--s-orange,#c9822e)">현재 로드된 최신 데이터 기준(이 항목의 저장 시점 스냅샷이 아직 없습니다)</span>';
-    var rootEl = win.document.getElementById("wrDetailRoot");
-    if(rootEl) rootEl.innerHTML = detailHtml;
-  }
-  if(r.hasSnapshot){
-    fetchData(LAST_PASS, function(resp){
-      var parsed = null;
-      if(resp && resp.ok && resp.snapshot){ try { parsed = JSON.parse(resp.snapshot); } catch(e){ parsed = null; } }
-      renderDetail(parsed || LAST_DATA, !!parsed);
-    }, function(){ renderDetail(LAST_DATA, false); }, { params:{ action:"wrsnapshot", week:week } });
-  } else {
-    renderDetail(LAST_DATA, false);
-  }
-
-  // 🆕 2026-08-08: 버튼·서식툴바·입력창 껍데기는 빼고 제목+요약(현재 입력값)+상세표만 골라
-  // text/html·text/plain 둘 다 클립보드에 담는다 — 노션이 text/html을 해석해 표·제목 블록으로 붙인다.
-  // 클립보드 권한은 실제 클릭이 발생한 창(win) 기준으로 판단되므로 win.navigator를 써야 한다
-  // (opener의 navigator를 쓰면 "사용자 동작 없음"으로 거부될 수 있음).
-  win.document.getElementById("wrCopyNotionBtn").addEventListener('click', function(){
-    var msg = win.document.getElementById("wrCopyMsg");
-    var taEl = win.document.getElementById("wrEditorInput");
-    var summaryVal = taEl ? taEl.value.trim() : "";
-    var summaryHtml = summaryVal ? mdRender_(summaryVal) : '<p style="color:#888">(요약 없음)</p>';
-    var titlePlain = wrTitle(week);
-    var html = '<h1>'+esc(titlePlain)+'</h1>' + summaryHtml + '<hr>' + detailHtml;
-    var detailEl = win.document.getElementById("wrDetailRoot");
-    var text = titlePlain + "\n\n" + (summaryVal || "(요약 없음)") + "\n\n" + (detailEl ? detailEl.innerText : "");
-    if(!win.navigator.clipboard || !win.ClipboardItem){
-      msg.textContent = "이 브라우저는 복사를 지원하지 않습니다"; msg.style.color = "var(--s-red)"; return;
-    }
-    win.navigator.clipboard.write([
-      new win.ClipboardItem({
-        "text/html": new win.Blob([html], {type:"text/html"}),
-        "text/plain": new win.Blob([text], {type:"text/plain"})
-      })
-    ]).then(function(){
-      msg.textContent = "✅ 복사됨 — 노션에 Ctrl+V 하세요"; msg.style.color = "var(--good,#3E8A5C)";
-    }, function(e){
-      msg.textContent = "복사 실패: "+e.message; msg.style.color = "var(--s-red)";
-    });
-  });
-
-  win.document.getElementById("wrAiBtn").addEventListener('click', function(){
-    if(!LAST_PASS) return;
-    var btn = this, originalHTML = btn.innerHTML;
-    var msg = win.document.getElementById("wrEditorMsg");
-    btn.disabled = true; btn.innerHTML = "⏳ 불러오는 중…";
-    msg.textContent = "생성 중…"; msg.style.color = "var(--muted)";
-    fetchData(LAST_PASS, function(resp){
-      btn.disabled = false; btn.innerHTML = originalHTML;
-      if(!resp || !resp.ok){ msg.textContent = "생성 실패: "+((resp&&resp.error)||"알 수 없음"); msg.style.color = "var(--s-red)"; return; }
-      msg.textContent = "새 초안을 불러왔습니다"; msg.style.color = "var(--good,#3E8A5C)";
-      var ta = win.document.getElementById("wrEditorInput");
-      ta.value = resp.aiDraft;
-      ta.dispatchEvent(new Event("input", {bubbles:true}));
-      wrRenderBoard(resp.reports||[]);
-    }, function(m){ btn.disabled = false; btn.innerHTML = originalHTML; msg.textContent = "생성 실패: "+m; msg.style.color = "var(--s-red)"; },
-    { params:{ action:"genweeklyreportai", week:week } });
-  });
-
-  win.document.getElementById("wrEditorSave").addEventListener('click', function(){
-    if(!LAST_PASS) return;
-    var summary = win.document.getElementById("wrEditorInput").value.trim();
-    var msg = win.document.getElementById("wrEditorMsg");
-    if(!summary){ msg.textContent = "요약 내용을 입력하세요"; msg.style.color = "var(--s-red)"; return; }
-    msg.textContent = "저장 중…"; msg.style.color = "var(--muted)";
-    fetchData(LAST_PASS, function(resp){
-      if(!resp || !resp.ok){ msg.textContent = "저장 실패: "+((resp&&resp.error)||"알 수 없음"); msg.style.color = "var(--s-red)"; return; }
-      msg.textContent = "저장 완료"; msg.style.color = "var(--good,#3E8A5C)";
-      wrRenderBoard(resp.reports||[]);
-    }, function(m){ msg.textContent = "저장 실패: "+m; msg.style.color = "var(--s-red)"; },
-    { params:{ action:"setweeklyreport", week:week, summary:summary } });
-  });
-}
-
 // 일자별(2026-07-31 주차별→일자별 전환, 카드도 축소) — "YYYY-MM-DD" 문자열끼리는 그대로 사전순 비교가
 // 날짜 비교와 같아서 별도 파싱 헬퍼 없이 firstDate와 바로 비교한다.
 function wbNightTableHTML(ni){
@@ -2684,8 +2403,6 @@ function renderWeeklyBoard(d){
   wbRenderMemoLog();
   wbBindMemoButton();
   wbBindMemoLog();
-  // 🆕 2026-08-06(Phase 1): 위클리 리포트 게시판
-  wrRenderBoard((d.weeklyBoard && d.weeklyBoard.weeklyReports) || []);
 }
 
 // 📝 주차별 메모장(누적형) — 리포트 탭 '전체 주차 메모'(주당 1건, 덮어쓰기)와는 다른 저장소다.
@@ -3606,16 +3323,6 @@ var RPT = { week:null };
 function rptR1(v){ return v==null?null:Math.round(v*10)/10; }
 function rptFmt(r1){ return r1 ? function(v){ return v==null?"–":rptR1(v); } : fmt; }
 function rptWeekLabel(w){ var s=w.split("-"); var mon=new Date(+s[0],+s[1]-1,+s[2]); var sun=new Date(mon); sun.setDate(mon.getDate()+6); return (mon.getMonth()+1)+"/"+mon.getDate()+"~"+(sun.getMonth()+1)+"/"+sun.getDate(); }
-// 🆕 2026-08-13(월/목 분리): 위클리 리포트 카드의 날짜(d)는 이제 월요일이 아닐 수 있다(목요일 카드).
-// rptWeekLabel(위 함수)은 입력을 무조건 월요일로 가정해 그 날+6일을 "주"로 보여주므로, 목요일
-// 날짜를 그대로 넣으면 "8/13~8/19"처럼 실제로 다루는 주(8/10~8/16)와 다른 기간이 표시된다.
-// 이 함수는 먼저 그 날짜가 속한 주의 월요일을 다시 찾은 뒤 같은 방식으로 범위를 계산한다.
-function wrPeriodLabel(d){
-  var s=d.split("-"); var dt=new Date(+s[0],+s[1]-1,+s[2]);
-  var dow=dt.getDay(); var diff=(dow===0)?-6:(1-dow);
-  var mon=new Date(dt.getFullYear(),dt.getMonth(),dt.getDate()+diff);
-  return rptWeekLabel(mon.getFullYear()+"-"+("0"+(mon.getMonth()+1)).slice(-2)+"-"+("0"+mon.getDate()).slice(-2));
-}
 function rptDelta(cur, prev, low, vf, unit){
   vf=vf||fmt; unit=unit||"";
   if(cur==null||prev==null) return {cls:"muted", arrow:"", pct:null, diff:null, txt:"전주 비교 불가"};
@@ -3676,7 +3383,7 @@ function renderD7Tracking(d7){
 
   var tblEl = document.getElementById("d7WeekTable");
   if(tblEl){
-    var head = '<thead><tr><th>주차</th><th>출고건</th><th>D+7이내<br>설치완료</th><th>D+7초과<br>설치완료</th>'
+    var head = '<thead><tr><th>주차</th><th>출고건</th><th>통화시도<br><small style="font-weight:500">원격/방문</small></th><th>D+7이내<br>설치완료</th><th>D+7초과<br>설치완료</th>'
       + '<th>폐업및반품</th><th>서류보완지연</th><th class="d7-reasons">지연사유 TOP5 <small style="font-weight:500">(14개 중 · 전체 출고 대비 %)</small></th></tr></thead>';
     var body = weekly.slice().reverse().map(function(w){
       var reasonPool = w.reasonPool!=null ? w.reasonPool : (w.shipped-w.fast-w.slow-w.returned-w.docPending);
@@ -3696,6 +3403,7 @@ function renderD7Tracking(d7){
       return '<tr class="d7-wkrow" data-week="'+esc(w.week)+'">'
         + '<td>'+rptWeekLabel(w.week)+(w.partial?'<span class="d7-partial">진행중</span>':'')+'<span class="d7-wk-delay">지연 '+wkDelayPct+'%</span></td>'
         + '<td>'+fmt(w.shipped)+'</td>'
+        + '<td>'+fmt(w.touch)+'<br><small class="c2i-pct">원격:'+fmt(w.remoteRecv||0)+'건 · 방문:'+fmt(w.visitRecv||0)+'건</small></td>'
         + '<td style="color:var(--good);font-weight:700">'+fmt(w.fast)+'<small class="c2i-pct">('+d7pct_(w.fast,w.shipped)+'%)</small></td>'
         + '<td>'+fmt(w.slow)+'<small class="c2i-pct">('+d7pct_(w.slow,w.shipped)+'%)</small></td>'
         + '<td style="color:var(--s-red);font-weight:700">'+fmt(w.returned)+'<small class="c2i-pct">('+d7pct_(w.returned,w.shipped)+'%)</small></td>'
@@ -4882,7 +4590,6 @@ var TAB_SECTIONS={
   shipweekly:["ship"], shipdaily:["ship"],
   weeklyboard:["ship","reasons","weeklyBoard"],
   weeklyaction:["cohort","weeklyBoard","accel"],
-  weeklyreport:["weeklyBoard"],
   c2i:["callInstall"],
   d7tracking:["d7tracking"],
   returned:["returned","ops","reasons","cohort"]
@@ -5483,7 +5190,7 @@ function shareTabLayout(){
   if(s) s.addEventListener("click", shareTabLayout);
 })();
 
-var TABMETA={ favorites:["즐겨찾기","내가 ⭐ 표시한 카드를 모아봅니다 · 탭에 들어올 때마다 원본을 다시 캡처합니다(실시간 동기화 아님)"], ops:["운영 대시보드","현재 잔여 업무량(콜리스트 기준) + 주간·일간 설치 채널구성 + 설치소요일 분포 · 지연사유 상세는 '설치지연상세사유' 탭 참고"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"], weeklyreport:["위클리 리포트","주차별 리포트 게시판 · 주요회의내용 4-5줄 요약(수기 입력, Phase 1)"], c2i:["당일통화당일설치","월별·주별 요약(최근 3개월) + 일별 상세(최근 30일) 한 페이지 · 통화→당일설치 전환(상담원 담당자별 비교)"],returned:["설치지연상세사유","현재 잔여 지연사유(부재단계별·경과일·미설치사유) + 로우데이터 I열(상태)이 반품·폐업인 2026년 출고건 출고 주차·월별 집계"] };
+var TABMETA={ favorites:["즐겨찾기","내가 ⭐ 표시한 카드를 모아봅니다 · 탭에 들어올 때마다 원본을 다시 캡처합니다(실시간 동기화 아님)"], ops:["운영 대시보드","현재 잔여 업무량(콜리스트 기준) + 주간·일간 설치 채널구성 + 설치소요일 분포 · 지연사유 상세는 '설치지연상세사유' 탭 참고"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"], d7tracking:["D+7 설치트래킹","출고일 기준 주차별 처리·지연사유 · 통화시도/원격·방문 접수건도 함께 확인"], c2i:["당일통화당일설치","월별·주별 요약(최근 3개월) + 일별 상세(최근 30일) 한 페이지 · 통화→당일설치 전환(상담원 담당자별 비교)"],returned:["설치지연상세사유","현재 잔여 지연사유(부재단계별·경과일·미설치사유) + 로우데이터 I열(상태)이 반품·폐업인 2026년 출고건 출고 주차·월별 집계"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
@@ -5493,7 +5200,7 @@ document.querySelectorAll(".navitem").forEach(function(n){
     // (D+7 지연분석은 2026-07-23 부서별 지연원인 탭으로 통합돼 하위 메뉴에서 빠졌다)
     // perf 는 2026-07-28 하위메뉴(월·주·일 흐름)가 사라져 TOGGLE 에서 뺐다.
     // ⚠️ 여기 남겨두면 getElementById("nav-flow") 가 null 이라 성과 탭 클릭이 통째로 죽는다.
-    var TOGGLE = { shipweekly:{children:["nav-shipdaily"], caret:"shipweekly-caret"}, weeklyboard:{children:["nav-weeklyaction","nav-weeklyreport"], caret:"weeklyboard-caret"}, cohort:{children:["nav-returned"], caret:"cohort-caret"} };
+    var TOGGLE = { shipweekly:{children:["nav-shipdaily"], caret:"shipweekly-caret"}, weeklyboard:{children:["nav-weeklyaction"], caret:"weeklyboard-caret"}, cohort:{children:["nav-returned"], caret:"cohort-caret"} };
     if (TOGGLE[t]) {
       var first = document.getElementById(TOGGLE[t].children[0]);
       var open = (first.style.display === "none");
@@ -5519,6 +5226,78 @@ document.querySelectorAll(".navitem").forEach(function(n){
 document.getElementById("modal-x").addEventListener("click", closeModal);
 document.getElementById("modal").addEventListener("click", function(e){ if(e.target.id==="modal") closeModal(); });
 document.addEventListener("keydown", function(e){ if(e.key==="Escape") closeModal(); });
+
+// ---- 사이드바 기준축 그룹핑 미리보기(2026-10-12 논의 — 출고일/설치일/통화일 혼재로 가독성 저하 지적에서 출발) ----
+// 1차는 탭 단위 그룹핑만 한다(혼재 카드 분리는 다음 단계). 기존 navitem DOM 노드를 그대로 옮기므로
+// 이미 붙어있는 클릭 리스너·data-tab·TOGGLE 맵은 전혀 건드리지 않는다 — 복제가 아니라 이동이라 안전하다.
+var NAV_GROUPS = [
+  { id:"ship",    label:"📦 출고축",   tabs:["weeklyboard","weeklyaction","cohort","returned","shipweekly","shipdaily","d7tracking","perf"] },
+  { id:"contact", label:"📞 컨택축",   tabs:["c2i"] },
+  { id:"snap",    label:"🕒 조회시점", tabs:["ops"] },
+  { id:"other",   label:"🗂 기타",     tabs:["report"] },
+];
+// 그룹핑 안 끌 때 원래 자리로 되돌릴 기준 순서(현재 사이드바 HTML 순서 그대로, favorites 제외 — favorites는 안 옮김)
+var NAV_ORIGINAL_ORDER = ["weeklyboard","weeklyaction","c2i","d7tracking","cohort","returned","shipweekly","shipdaily","ops","perf","report"];
+
+function ensureNavGroupShell(){
+  if (document.getElementById("nav-grouped-shell")) return;
+  var shell = document.createElement("div");
+  shell.id = "nav-grouped-shell";
+  NAV_GROUPS.forEach(function(g){
+    var head = document.createElement("div");
+    head.className = "navgroup-head navgroup-" + g.id;
+    head.innerHTML = '<span class="car">▸</span>' + g.label + '<span class="gcount">' + g.tabs.length + '</span>';
+    var body = document.createElement("div");
+    body.className = "navgroup-body";
+    body.id = "navgroup-body-" + g.id;
+    head.addEventListener("click", function(){
+      head.classList.toggle("open");
+      body.classList.toggle("collapsed");
+    });
+    shell.appendChild(head);
+    shell.appendChild(body);
+  });
+  var favEl = document.getElementById("nav-favorites");
+  favEl.parentNode.insertBefore(shell, favEl.nextSibling);
+}
+function setNavGrouping(on){
+  ensureNavGroupShell();
+  var sidebar = document.getElementById("sidebar");
+  var sideFoot = sidebar.querySelector(".side-foot");
+  var shell = document.getElementById("nav-grouped-shell");
+  var btn = document.getElementById("navgroup-toggle");
+  sidebar.classList.toggle("nav-grouped", on);
+  shell.style.display = on ? "block" : "none"; // CSS 기본값이 display:none이라 "" 로는 안 풀린다
+  if (btn) {
+    btn.classList.toggle("on", on);
+    btn.textContent = on ? "🧭 기존 사이드바로 되돌리기" : "🧭 새 사이드바 미리보기(기준축별 그룹)";
+  }
+  if (on) {
+    NAV_GROUPS.forEach(function(g){
+      var body = document.getElementById("navgroup-body-" + g.id);
+      g.tabs.forEach(function(tabId){
+        var el = document.querySelector('.navitem[data-tab="' + tabId + '"]');
+        if (el) body.appendChild(el); // 이동(복제 아님) — 리스너·data-tab 그대로
+      });
+    });
+  } else {
+    NAV_ORIGINAL_ORDER.forEach(function(tabId){
+      var el = document.querySelector('.navitem[data-tab="' + tabId + '"]');
+      if (el) sidebar.insertBefore(el, sideFoot); // side-foot은 한 번도 안 옮기는 고정 앵커
+    });
+  }
+  try { localStorage.setItem("navGroupPreview", on ? "1" : "0"); } catch (e) {}
+}
+(function(){
+  var btn = document.getElementById("navgroup-toggle");
+  if (!btn) return;
+  btn.addEventListener("click", function(){
+    setNavGrouping(!document.getElementById("sidebar").classList.contains("nav-grouped"));
+  });
+  var saved = null;
+  try { saved = localStorage.getItem("navGroupPreview"); } catch (e) {}
+  if (saved === "1") setNavGrouping(true);
+})();
 
 // auto-login if session has passcode
 (function(){
