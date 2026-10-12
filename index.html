@@ -788,8 +788,8 @@
          그대로 이 id들에 씀. -->
     <div class="sec-head">🔧 주간·일간 설치 채널구성</div>
     <div class="grid">
-      <div class="card col-12" data-cid="wkChannel"><h3>🔧 주별 설치 채널 구성</h3><div class="sub">자가설치 · 컨택후자가설치(상담원) · 방문설치 · 원격설치 완료 건수(설치일 기준) · 막대 안 %는 그 주 설치완료 대비 비중</div><div class="chart-wrap ch-m"><canvas id="wkChannel"></canvas></div></div>
-      <div class="card col-12" data-cid="dyChannel"><h3>🔧 일별 설치 채널 구성</h3><div class="sub">자가설치 · 컨택후자가설치(상담원) · 방문설치 · 원격설치 완료 건수(설치일 기준) · 막대 안 %는 그 날 설치완료 대비 비중</div><div class="chart-wrap ch-m"><canvas id="dyChannel"></canvas></div></div>
+      <div class="card col-12" data-cid="wkChannel"><h3>🔧 주별 설치 채널 구성</h3><div class="sub">자가설치 · 컨택후자가설치(상담원) · 방문설치 · 원격설치(설치일 기준) · 세로축 100% 고정 — 그 주 설치완료 대비 채널 비중(막대 안 숫자는 %, 툴팁에 실건수)</div><div class="chart-wrap ch-m"><canvas id="wkChannel"></canvas></div></div>
+      <div class="card col-12" data-cid="dyChannel"><h3>🔧 일별 설치 채널 구성</h3><div class="sub">자가설치 · 컨택후자가설치(상담원) · 방문설치 · 원격설치(설치일 기준) · 세로축 100% 고정 — 그 날 설치완료 대비 채널 비중(막대 안 숫자는 %, 툴팁에 실건수)</div><div class="chart-wrap ch-m"><canvas id="dyChannel"></canvas></div></div>
     </div>
 
     <!-- 구 '설치가속화 Action' 탭에 있던 카드 — 2026-08-26 운영자 지시로 그 탭 전체 삭제(당일배송·통화당일설치는
@@ -1501,31 +1501,35 @@ function renderWeekly(p){
   var rows = (p && p.weekly) || [];
   var labels = rows.map(function(x){ return wkLabel(x.week); });
 
-  // 주별 설치 채널 구성(누적 막대) — 각 세그먼트에 그 주 설치완료 대비 비중(%) 표기
-  // 🔀 2026-10-12(운영자 요청): 자가설치/컨택후자가설치(상담원)/방문설치/원격설치 4분류로 세분.
+  // 주별 설치 채널 구성(100% 누적 막대) — 세로축을 건수가 아니라 그 주 설치완료 대비 비중(%)으로
+  // 고정해 물량이 들쭉날쭉해도 채널 비율 변화가 한눈에 보이게 한다(2026-10-12 운영자 요청: "건수
+  // 기준이라 보기 힘들다"). 막대 높이=항상 100, 각 세그먼트 두께=그 채널 비중. 원본 건수는 _raw에
+  // 보관해 툴팁·데이터라벨에서 "N건 (P%)" 형태로 같이 보여준다.
   var chTotal = rows.map(function(x){ return (x.self||0)+(x.agent||0)+(x.visit||0)+(x.remote||0); });
-  var chLabel = function(v, ctx){
-    var tot = chTotal[ctx.dataIndex] || 0;
-    if (!v || tot <= 0) return "";
-    var p = Math.round(v / tot * 100);
-    return p >= 8 ? p + "%" : "";   // 세그먼트가 너무 얇으면 라벨 생략(겹침 방지)
+  function chPct(key){ return rows.map(function(x,i){ var t=chTotal[i]; return t>0 ? (x[key]||0)/t*100 : 0; }); }
+  function chRaw(key){ return rows.map(function(x){ return x[key]||0; }); }
+  var chLabel = function(v){
+    if (!v) return "";
+    var pr = Math.round(v);
+    return pr >= 8 ? pr + "%" : "";   // 세그먼트가 너무 얇으면 라벨 생략(겹침 방지)
   };
   var chDL = { display:true, color:"#fff", font:{weight:"700",size:10.5}, formatter:chLabel };
+  var chTooltip = { callbacks:{ label:function(ct){
+    var raw = (ct.dataset._raw && ct.dataset._raw[ct.dataIndex]) || 0;
+    return ct.dataset.label + ": " + fmt(raw) + "건 (" + Math.round(ct.parsed.y) + "%)";
+  } } };
   mk("wkChannel", { type:"bar",
     data:{ labels:labels,
       datasets:[
-        { label:"자가설치", data:rows.map(function(x){return x.self;}), backgroundColor:C["--s-aqua"], stack:"w", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
-        { label:"컨택후자가설치(상담원)", data:rows.map(function(x){return x.agent;}), backgroundColor:C["--s-blue"], stack:"w", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
-        { label:"방문설치", data:rows.map(function(x){return x.visit;}), backgroundColor:C["--s-violet"], stack:"w", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
-        { label:"원격설치", data:rows.map(function(x){return x.remote;}), backgroundColor:C["--s-yellow"], stack:"w", borderRadius:{topLeft:5,topRight:5}, borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL }
+        { label:"자가설치", data:chPct("self"), _raw:chRaw("self"), backgroundColor:C["--s-aqua"], stack:"w", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
+        { label:"컨택후자가설치(상담원)", data:chPct("agent"), _raw:chRaw("agent"), backgroundColor:C["--s-blue"], stack:"w", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
+        { label:"방문설치", data:chPct("visit"), _raw:chRaw("visit"), backgroundColor:C["--s-violet"], stack:"w", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
+        { label:"원격설치", data:chPct("remote"), _raw:chRaw("remote"), backgroundColor:C["--s-yellow"], stack:"w", borderRadius:{topLeft:5,topRight:5}, borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL }
       ] },
-    options:{ scales:{ x:{stacked:true,grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:16}}, y:{stacked:true,beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
+    options:{ scales:{ x:{stacked:true,grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:16}}, y:{stacked:true,beginAtZero:true,max:100,grid:{color:C["--grid"]},ticks:{color:C["--muted"],callback:function(v){return v+"%";}}} },
       interaction:{mode:"index",intersect:false},
       plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:true},
-        tooltip:{ callbacks:{ label:function(ct){
-          var tot = chTotal[ct.dataIndex] || 0, v = ct.parsed.y || 0;
-          return ct.dataset.label + ": " + fmt(v) + "건 (" + (tot>0?Math.round(v/tot*100):0) + "%)";
-        } } } } } });
+        tooltip:chTooltip } } });
 }
 
 // ---------- DAILY (일간 비교 스코어보드) — 주간 비교와 동일 지표를 '일' 단위로 ----------
@@ -1566,30 +1570,34 @@ function renderDaily(p){
   var labels = rows.map(function(x){ return dyLabel(x.date); });
 
   // 일별 설치 채널 구성(누적 막대) — 각 세그먼트에 그 날 설치완료 대비 비중(%) 표기
-  // 🔀 2026-10-12(운영자 요청): 자가설치/컨택후자가설치(상담원)/방문설치/원격설치 4분류로 세분.
+  // 🔀 2026-10-12(운영자 요청): "건수 기준이라 보기 힘들다" — 세로축을 건수가 아니라 그 날 설치완료
+  // 대비 비중(%)으로 고정한 100% 누적 막대로 변경. 막대 높이=항상 100, 세그먼트 두께=채널 비중.
+  // 원본 건수는 _raw에 보관해 툴팁·데이터라벨에서 "N건 (P%)" 형태로 같이 보여준다.
   var chTotal = rows.map(function(x){ return (x.self||0)+(x.agent||0)+(x.visit||0)+(x.remote||0); });
-  var chLabel = function(v, ctx){
-    var tot = chTotal[ctx.dataIndex] || 0;
-    if (!v || tot <= 0) return "";
-    var p = Math.round(v / tot * 100);
-    return p >= 8 ? p + "%" : "";
+  function chPct(key){ return rows.map(function(x,i){ var t=chTotal[i]; return t>0 ? (x[key]||0)/t*100 : 0; }); }
+  function chRaw(key){ return rows.map(function(x){ return x[key]||0; }); }
+  var chLabel = function(v){
+    if (!v) return "";
+    var pr = Math.round(v);
+    return pr >= 8 ? pr + "%" : "";
   };
   var chDL = { display:true, color:"#fff", font:{weight:"700",size:10.5}, formatter:chLabel };
+  var chTooltip = { callbacks:{ label:function(ct){
+    var raw = (ct.dataset._raw && ct.dataset._raw[ct.dataIndex]) || 0;
+    return ct.dataset.label + ": " + fmt(raw) + "건 (" + Math.round(ct.parsed.y) + "%)";
+  } } };
   mk("dyChannel", { type:"bar",
     data:{ labels:labels,
       datasets:[
-        { label:"자가설치", data:rows.map(function(x){return x.self;}), backgroundColor:C["--s-aqua"], stack:"d", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
-        { label:"컨택후자가설치(상담원)", data:rows.map(function(x){return x.agent;}), backgroundColor:C["--s-blue"], stack:"d", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
-        { label:"방문설치", data:rows.map(function(x){return x.visit;}), backgroundColor:C["--s-violet"], stack:"d", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
-        { label:"원격설치", data:rows.map(function(x){return x.remote;}), backgroundColor:C["--s-yellow"], stack:"d", borderRadius:{topLeft:5,topRight:5}, borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL }
+        { label:"자가설치", data:chPct("self"), _raw:chRaw("self"), backgroundColor:C["--s-aqua"], stack:"d", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
+        { label:"컨택후자가설치(상담원)", data:chPct("agent"), _raw:chRaw("agent"), backgroundColor:C["--s-blue"], stack:"d", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
+        { label:"방문설치", data:chPct("visit"), _raw:chRaw("visit"), backgroundColor:C["--s-violet"], stack:"d", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
+        { label:"원격설치", data:chPct("remote"), _raw:chRaw("remote"), backgroundColor:C["--s-yellow"], stack:"d", borderRadius:{topLeft:5,topRight:5}, borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL }
       ] },
-    options:{ scales:{ x:{stacked:true,grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:21}}, y:{stacked:true,beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
+    options:{ scales:{ x:{stacked:true,grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:21}}, y:{stacked:true,beginAtZero:true,max:100,grid:{color:C["--grid"]},ticks:{color:C["--muted"],callback:function(v){return v+"%";}}} },
       interaction:{mode:"index",intersect:false},
       plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:true},
-        tooltip:{ callbacks:{ label:function(ct){
-          var tot = chTotal[ct.dataIndex] || 0, v = ct.parsed.y || 0;
-          return ct.dataset.label + ": " + fmt(v) + "건 (" + (tot>0?Math.round(v/tot*100):0) + "%)";
-        } } } } } });
+        tooltip:chTooltip } } });
 }
 
 // ---------- SHIP COHORT (출고주/출고일 코호트 스코어보드) ----------
