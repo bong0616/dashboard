@@ -788,8 +788,8 @@
          그대로 이 id들에 씀. -->
     <div class="sec-head">🔧 주간·일간 설치 채널구성</div>
     <div class="grid">
-      <div class="card col-12" data-cid="wkChannel"><h3>🔧 주별 설치 채널 구성</h3><div class="sub">자가설치 · 상담원 완료 건수(설치일 기준) · 막대 안 %는 그 주 설치완료 대비 비중</div><div class="chart-wrap ch-m"><canvas id="wkChannel"></canvas></div></div>
-      <div class="card col-12" data-cid="dyChannel"><h3>🔧 일별 설치 채널 구성</h3><div class="sub">자가설치 · 상담원 완료 건수(설치일 기준) · 막대 안 %는 그 날 설치완료 대비 비중</div><div class="chart-wrap ch-m"><canvas id="dyChannel"></canvas></div></div>
+      <div class="card col-12" data-cid="wkChannel"><h3>🔧 주별 설치 채널 구성</h3><div class="sub">자가설치 · 컨택후자가설치(상담원) · 방문설치 · 원격설치 완료 건수(설치일 기준) · 막대 안 %는 그 주 설치완료 대비 비중</div><div class="chart-wrap ch-m"><canvas id="wkChannel"></canvas></div></div>
+      <div class="card col-12" data-cid="dyChannel"><h3>🔧 일별 설치 채널 구성</h3><div class="sub">자가설치 · 컨택후자가설치(상담원) · 방문설치 · 원격설치 완료 건수(설치일 기준) · 막대 안 %는 그 날 설치완료 대비 비중</div><div class="chart-wrap ch-m"><canvas id="dyChannel"></canvas></div></div>
     </div>
 
     <!-- 구 '설치가속화 Action' 탭에 있던 카드 — 2026-08-26 운영자 지시로 그 탭 전체 삭제(당일배송·통화당일설치는
@@ -797,6 +797,9 @@
     <div class="sec-head">📐 설치소요일 분포 <small>최초컨택 주 기준 — 이 카드만 다른 카드들과 기준 주가 다릅니다</small></div>
     <div class="grid">
       <div class="card col-12 fill" data-cid="boardLead"><h3>📐 설치소요일 분포 <small class="th-tgt" style="display:inline">최초컨택 주 기준</small></h3><div class="sub"><b>그 주에 최초컨택한 건들</b>이 출고→설치까지 며칠 걸렸는지 분포 · 전주 vs 금주 · 막대 위 %는 그 주 총건 대비 비중 (빠를수록 왼쪽)</div><div class="chart-wrap ch-m"><canvas id="boardLead"></canvas></div></div>
+      <!-- 🆕 2026-10-12(운영자 요청): 채널별(자가설치/컨택후자가설치(상담원)/방문설치/원격설치) 설치소요일 분포 비교.
+           기준이 전체기간 설치완료(설치일 기준)라 위 카드(최초컨택 주 기준·전주vs금주)와 모수가 다르다 — 부제에 명시. -->
+      <div class="card col-12 fill" data-cid="boardLeadChannel"><h3>📐 설치소요일 분포 <small class="th-tgt" style="display:inline">채널별</small></h3><div class="sub">2026년 설치완료건 전체를 채널별로 나눠 출고→설치 소요일 분포를 비교(위 카드와 기준 기간이 다름) · 막대 위 %는 그 채널 총 설치건 대비 비중 (빠를수록 왼쪽)</div><div class="chart-wrap ch-m"><canvas id="boardLeadChannel"></canvas></div></div>
     </div>
   </section>
 
@@ -1499,7 +1502,8 @@ function renderWeekly(p){
   var labels = rows.map(function(x){ return wkLabel(x.week); });
 
   // 주별 설치 채널 구성(누적 막대) — 각 세그먼트에 그 주 설치완료 대비 비중(%) 표기
-  var chTotal = rows.map(function(x){ return (x.self||0)+(x.sms||0)+(x.agent||0); });
+  // 🔀 2026-10-12(운영자 요청): 자가설치/컨택후자가설치(상담원)/방문설치/원격설치 4분류로 세분.
+  var chTotal = rows.map(function(x){ return (x.self||0)+(x.agent||0)+(x.visit||0)+(x.remote||0); });
   var chLabel = function(v, ctx){
     var tot = chTotal[ctx.dataIndex] || 0;
     if (!v || tot <= 0) return "";
@@ -1511,7 +1515,9 @@ function renderWeekly(p){
     data:{ labels:labels,
       datasets:[
         { label:"자가설치", data:rows.map(function(x){return x.self;}), backgroundColor:C["--s-aqua"], stack:"w", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
-        { label:"상담원", data:rows.map(function(x){return (x.agent||0)+(x.sms||0);}), backgroundColor:C["--s-blue"], stack:"w", borderRadius:{topLeft:5,topRight:5}, borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL }
+        { label:"컨택후자가설치(상담원)", data:rows.map(function(x){return x.agent;}), backgroundColor:C["--s-blue"], stack:"w", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
+        { label:"방문설치", data:rows.map(function(x){return x.visit;}), backgroundColor:C["--s-violet"], stack:"w", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
+        { label:"원격설치", data:rows.map(function(x){return x.remote;}), backgroundColor:C["--s-yellow"], stack:"w", borderRadius:{topLeft:5,topRight:5}, borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL }
       ] },
     options:{ scales:{ x:{stacked:true,grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:16}}, y:{stacked:true,beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
       interaction:{mode:"index",intersect:false},
@@ -1560,7 +1566,8 @@ function renderDaily(p){
   var labels = rows.map(function(x){ return dyLabel(x.date); });
 
   // 일별 설치 채널 구성(누적 막대) — 각 세그먼트에 그 날 설치완료 대비 비중(%) 표기
-  var chTotal = rows.map(function(x){ return (x.self||0)+(x.sms||0)+(x.agent||0); });
+  // 🔀 2026-10-12(운영자 요청): 자가설치/컨택후자가설치(상담원)/방문설치/원격설치 4분류로 세분.
+  var chTotal = rows.map(function(x){ return (x.self||0)+(x.agent||0)+(x.visit||0)+(x.remote||0); });
   var chLabel = function(v, ctx){
     var tot = chTotal[ctx.dataIndex] || 0;
     if (!v || tot <= 0) return "";
@@ -1572,7 +1579,9 @@ function renderDaily(p){
     data:{ labels:labels,
       datasets:[
         { label:"자가설치", data:rows.map(function(x){return x.self;}), backgroundColor:C["--s-aqua"], stack:"d", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
-        { label:"상담원", data:rows.map(function(x){return (x.agent||0)+(x.sms||0);}), backgroundColor:C["--s-blue"], stack:"d", borderRadius:{topLeft:5,topRight:5}, borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL }
+        { label:"컨택후자가설치(상담원)", data:rows.map(function(x){return x.agent;}), backgroundColor:C["--s-blue"], stack:"d", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
+        { label:"방문설치", data:rows.map(function(x){return x.visit;}), backgroundColor:C["--s-violet"], stack:"d", borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL },
+        { label:"원격설치", data:rows.map(function(x){return x.remote;}), backgroundColor:C["--s-yellow"], stack:"d", borderRadius:{topLeft:5,topRight:5}, borderColor:C["--surface-1"], borderWidth:{top:2}, datalabels:chDL }
       ] },
     options:{ scales:{ x:{stacked:true,grid:{display:false},ticks:{color:C["--muted"],maxRotation:0,autoSkip:true,maxTicksLimit:21}}, y:{stacked:true,beginAtZero:true,grid:{color:C["--grid"]},ticks:{color:C["--muted"]}} },
       interaction:{mode:"index",intersect:false},
@@ -1640,7 +1649,7 @@ function shipSpeedChart(cid, rows, labels, maxTicks){
 // ⚠️ 최초컨택(P열)은 자가설치 건에 안 찍힌다. 실측(2026-07-21 ship.daily 15일): 최초컨택 = 출고 − 자가설치완료 ±3건.
 //    이 사실을 안 적으면 "출고 147건 중 41건만 컨택(28%)"으로 읽혀 컨택 누락으로 오독된다(그 날 105건이 자가설치였음).
 var SHIP_COLDEF_HTML =
-    '<span class="cd-row"><span class="cd-k">읽는 법</span> 한 행 = <b>그 날(주) 출고된 물량</b>의 현재 처리 상태. 설치완료·완료율도 <b>설치한 날이 아니라 출고한 날</b>에 계상됩니다(주간·일간 비교 탭은 반대로 설치일 기준).</span>'
+    '<span class="cd-row"><span class="cd-k">읽는 법</span> 한 행 = <b>그 날(주) 출고된 물량</b>의 현재 처리 상태. 설치완료·완료율도 <b>설치한 날이 아니라 출고한 날</b>에 계상됩니다.</span>'
   + '<span class="cd-row"><span class="cd-k">최초컨택</span> 그 날 출고분 중 <b>상담원이 첫 컨택을 기록한 건수</b>(로우데이터 P열 최초컨택일) = <b>이 물량에 컨택이 들어갔는지</b>를 보는 칸. <span class="cd-warn">⚠️ 자가설치로 처리되는 건은 상담원 컨택이 없어 여기 안 잡힙니다</span> → 출고 대비 100%가 정상이 아니며, 실측상 <b>최초컨택 ≈ 출고 − 자가설치</b>(상담원이 맡은 물량)입니다.</span>'
   + '<span class="cd-row"><span class="cd-k">컨택 시도</span> 그 날 출고건들의 J열 메모 <b>[날짜] 스탬프 줄 수 합</b> = 통화·부재 <b>시도 횟수</b>(1건을 3번 컨택하면 3). 최초컨택이 <b>건수</b>라면 이건 <b>횟수</b>입니다. 자동문자 제외 · <span class="cd-warn">메모 미기재분은 0</span>이라 실제 시도량보다 적게 잡힙니다.</span>'
   + '<span class="cd-row"><span class="cd-k">방문설치/원격설치 접수</span> 그 날(주) 출고분 중 <b>로우데이터 N열</b>이 각각 방문설치·원격설치로 표시된 건수(2026-09-08 추가). 상담원접수·자동접수 여부와 무관하게 <b>접수 경로 자체</b>만 셉니다.</span>'
@@ -1659,11 +1668,11 @@ function shipTableHTML(rows, opts){
     + '<th rowspan="2" title="그 날(주) 출고분 중 로우데이터 N열=방문설치인 접수건. 상담원접수·자동접수 여부와 무관.">방문설치 접수<br><small class="th-tgt">N열 방문설치</small></th>'
     + '<th rowspan="2" title="그 날(주) 출고분 중 로우데이터 N열=원격설치인 접수건. 상담원접수·자동접수 여부와 무관.">원격설치 접수<br><small class="th-tgt">N열 원격설치</small></th>'
     + '<th rowspan="2" title="컨택 시도 ÷ (출고 − 자가설치완료). 자가설치는 상담원 컨택이 없어 분모에서 뺍니다 — 메모공란 때문에 1회 미만은 여전히 정상입니다.">건당 컨택<br><small class="th-tgt">시도÷(출고−자가설치)</small></th>'
-    + '<th colspan="3" class="grp grp-top gl gr">설치완료 <small>합계 = 자가설치 + 상담원</small></th>'
+    + '<th colspan="5" class="grp grp-top gl gr">설치완료 <small>합계 = 자가설치 + 컨택후자가설치(상담원) + 방문설치 + 원격설치</small></th>'
     + '<th rowspan="2">완료율</th><th rowspan="2">미완료<br><small class="th-tgt">잔량</small></th>'
     + '<th rowspan="2" title="출고일→배송완료일(T열) 평균 소요일. 2026-08-13 이후 출고분부터 집계(그 전 T값은 신뢰도 낮아 제외).">평균 배송완료일<br><small class="th-tgt">출고→배송완료<br>8/13부터 집계</small></th>'
     + '<th rowspan="2">평균 설치소요일<br><small class="th-tgt">목표 ≤'+SPD_TGT+'일</small></th><th rowspan="2">평균 재컨택주기<br><small class="th-tgt">목표 ≤'+RTC_TGT+'일</small></th>'
-    + '</tr><tr><th class="grp gl">합계</th><th class="grp">자가설치</th><th class="grp gr">상담원</th></tr></thead>';
+    + '</tr><tr><th class="grp gl">합계</th><th class="grp">자가설치</th><th class="grp">컨택후자가설치<br><small class="th-tgt">상담원</small></th><th class="grp">방문설치</th><th class="grp gr">원격설치</th></tr></thead>';
   var recent=rows.slice(-opts.recent);
   var lastIdx=recent.length-1;
   function grayCell(v,unit){ return '<td><span class="cell-main" style="color:var(--muted)">'+(v==null?"–":v)+(unit||"")+'</span></td>'; }
@@ -1689,7 +1698,9 @@ function shipTableHTML(rows, opts){
       + (im?grayCell(w.touchPerUnit==null?null:round1(w.touchPerUnit),"회"):neutralCell(w.touchPerUnit, prev?prev.touchPerUnit:null, round1, "회"))
       + plainCell(w.installs)
       + plainCell(w.self, {share: w.installs>0?Math.round(w.self/w.installs*100):null})
-      + plainCell((w.agent||0)+(w.sms||0), {share: w.installs>0?Math.round(((w.agent||0)+(w.sms||0))/w.installs*100):null})
+      + plainCell(w.agent, {share: w.installs>0?Math.round((w.agent||0)/w.installs*100):null})
+      + plainCell(w.visit, {share: w.installs>0?Math.round((w.visit||0)/w.installs*100):null})
+      + plainCell(w.remote, {share: w.installs>0?Math.round((w.remote||0)/w.installs*100):null})
       + rateCell
       + plainCell(w.open)
       + dlvCell
@@ -3907,8 +3918,8 @@ function paintReport(rows, notes){
   line("출고","shipped",false,false,"건");
   line("평균 설치속도","avgSpeed",true,true,"일");
   line("평균 재컨택주기","avgRetouch",true,true,"일");
-  var chTot=(cur.self||0)+(cur.sms||0)+(cur.agent||0);
-  if(chTot>0){ var sp=Math.round((cur.self||0)/chTot*100); lines.push('<li>설치 채널 — 자가 <b>'+sp+'%</b> · 상담원 <b>'+(100-sp)+'%</b></li>'); }
+  var chTot=(cur.self||0)+(cur.agent||0)+(cur.visit||0)+(cur.remote||0);
+  if(chTot>0){ var sp=Math.round((cur.self||0)/chTot*100); lines.push('<li>설치 채널 — 자가 <b>'+sp+'%</b> · 상담원(컨택후자가설치+방문+원격) <b>'+(100-sp)+'%</b></li>'); }
   if(prev===null) lines.unshift('<li class="flat">가장 오래된 주라 전주 비교가 없습니다.</li>');
   document.getElementById("rptSummary").innerHTML=lines.join("")||'<li class="flat">표시할 지표가 없습니다.</li>';
   var ta=document.getElementById("rptNote"); ta.value=notes[RPT.week]||"";
@@ -4581,8 +4592,9 @@ function renderBoard(d){
   var notes=d.weeklyNotes||{};
   var tbox=document.getElementById("board-tiles");
   if(!rows.length){ if(tbox) tbox.innerHTML='<div class="tile"><div class="t-label">주간 데이터 없음</div></div>'; return; }
-  // 상담원설치 = 상담원 + 문자발송(병합) 파생필드
-  rows.forEach(function(r){ if(r.agentAll==null) r.agentAll=(r.agent||0)+(r.sms||0); });
+  // 상담원설치 = 컨택후자가설치(상담원) + 방문설치 + 원격설치(자가설치 제외 전체) 파생필드
+  // 🔀 2026-10-12: 채널 4분류 세분 전과 총합이 같도록(= 설치완료 − 자가설치) agent+visit+remote로 유지.
+  rows.forEach(function(r){ if(r.agentAll==null) r.agentAll=(r.agent||0)+(r.visit||0)+(r.remote||0); });
   // 기준 주 선택: 드롭다운 채우고 선택 인덱스 확정(기본=최신 주)
   populateBoardWeekSel(rows);
   var selIdx=rows.length-1;
@@ -4627,6 +4639,25 @@ function renderBoard(d){
       plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}},
         datalabels:{ display:true, anchor:"end", align:"end", color:C["--text-secondary"], font:{weight:"600",size:9}, formatter:function(v,ctx){ if(!v) return ""; var p=ctx.dataset._pct?ctx.dataset._pct[ctx.dataIndex]:null; return p!=null?[String(v),"("+p+"%)"]:String(v); } },
         tooltip:{ callbacks:{ label:function(ct){ var p=ct.dataset._pct?ct.dataset._pct[ct.dataIndex]:null; return ct.dataset.label+": "+ct.parsed.y+"건"+(p!=null?(" ("+p+"%)"):""); } } } } } });
+  // 🆕 2026-10-12(운영자 요청): 설치소요일 분포 채널별(자가설치/컨택후자가설치(상담원)/방문설치/원격설치) 비교.
+  // 위 카드(최초컨택 주 기준·전주vs금주)와 달리 전체기간 설치완료(설치일 기준) 모수 — perfChannel 도넛과 동일 색상 배정.
+  var cbk=(d.perf&&d.perf.speed&&d.perf.speed.channelBuckets)||null;
+  if(cbk){
+    var cbkDefs=[["자가설치",cbk.자가설치,C["--s-aqua"]],["컨택후자가설치(상담원)",cbk.컨택후자가설치,C["--s-blue"]],["방문설치",cbk.방문설치,C["--s-violet"]],["원격설치",cbk.원격설치,C["--s-yellow"]]];
+    var cbkDs=cbkDefs.filter(function(c){ return c[1] && c[1].total>0; }).map(function(c){
+      var tot=c[1].total||0;
+      return { label:c[0]+" (n="+tot+")", backgroundColor:c[2], borderRadius:4,
+        data:lkeys.map(function(k){return c[1][k]||0;}),
+        _pct:lkeys.map(function(k){return tot>0?Math.round((c[1][k]||0)/tot*1000)/10:0;}) };
+    });
+    if(!cbkDs.length){ document.getElementById("boardLeadChannel").parentNode.innerHTML='<div class="ach-nums" style="padding:40px 0;text-align:center">표시할 데이터가 없습니다.</div>'; }
+    else mk("boardLeadChannel", { type:"bar",
+      data:{ labels:llabels, datasets:cbkDs },
+      options:{ scales:axes(),
+        plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}},
+          datalabels:{ display:true, anchor:"end", align:"end", color:C["--text-secondary"], font:{weight:"600",size:9}, formatter:function(v,ctx){ if(!v) return ""; var p=ctx.dataset._pct?ctx.dataset._pct[ctx.dataIndex]:null; return p!=null?[String(v),"("+p+"%)"]:String(v); } },
+          tooltip:{ callbacks:{ label:function(ct){ var p=ct.dataset._pct?ct.dataset._pct[ct.dataIndex]:null; return ct.dataset.label+": "+ct.parsed.y+"건"+(p!=null?(" ("+p+"%)"):""); } } } } } });
+  }
 }
 // (renderBoardTarget·renderBoardChannel 삭제 2026-07-24 — 월 목표·설치 채널 비율 카드가 각각 출고 코호트·주간 비교 탭과 중복이라 제거)
 var BOARD_SEL_WEEK=""; // 현황판 기준 주(주 키 "YYYY-MM-DD", 빈값=최신주). 드롭다운으로 저번주 등 선택
