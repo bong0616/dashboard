@@ -510,6 +510,11 @@
   /* 위클리 현황판 3종 표(지연사유 6주 추세·콜리스트 스냅샷·야간원격접수) — 공란이 너무 넓고 글자가
      작다는 지적(2026-08-01) — 셋 다 셀 여백을 줄이고(가로+세로) 폰트를 키워 밀도 있게 보이게 한다. */
   #wbSnapTable, #wbDelayTable, #wbNightTable { font-size: 14px; }
+  /* 🆕 2026-10-13(운영자 요청): 오늘 처리 현황 카드 — 기존 대비 폰트 50% 확대 + 총처리 제외 전부 %(소수1자리) 병기 */
+  #twProcessedTable { font-size: 18.75px; }
+  #twProcessedTable th { font-size: 17.25px; }
+  #twProcessedTable th, #twProcessedTable td { padding: 12px 14px; }
+  #twProcessedTable .tw-pct { font-size: 0.6em; font-weight: 600; color: var(--muted); margin-left: 5px; }
   .wb-trend-list { list-style:none; display:grid; gap:8px; margin-top:8px; }
   .wb-trend-list li { display:flex; gap:8px; align-items:flex-start; background: color-mix(in srgb, var(--s-blue) 6%, transparent); border-left:3px solid var(--s-blue); border-radius:8px; padding:9px 12px; font-size:13.5px; line-height:1.55; color: var(--text-secondary); }
   .wb-trend-src { font-size:11px; color: var(--muted); }
@@ -4844,14 +4849,24 @@ function renderTodayWork(d){
   if(ptbl){
     var proc = d.processed || {totals:{}, byManager:[]};
     var prows = (proc.byManager||[]).slice().sort(function(a,b){ return (b.processed.total||0)-(a.processed.total||0); });
-    var pcols = [["total","총처리"],["전산처리","전산처리"],["부재","부재"],["설치예정","설치예정"],["보류","보류"],["위약금청구진행중","위약금청구"],["반품및폐업","반품·폐업"],["서류보완중","서류보완중"],["반품진행중","반품진행중"],["기타","기타"],["remoteTotal","원격(총)"],["remoteCounselor","원격(상담원)"],["visitTotal","방문(총)"],["visitCounselor","방문(상담원)"]];
+    // 🔀 2026-10-13(운영자 요청): 설치예정·부재 순서 교체 · 총처리 제외 전부 그 행 총처리 대비 %(소수1자리) 병기
+    var pcols = [["total","총처리"],["전산처리","전산처리"],["설치예정","설치예정"],["부재","부재"],["보류","보류"],["위약금청구진행중","위약금청구"],["반품및폐업","반품·폐업"],["서류보완중","서류보완중"],["반품진행중","반품진행중"],["기타","기타"],["remoteTotal","원격(총)"],["remoteCounselor","원격(상담원)"],["visitTotal","방문(총)"],["visitCounselor","방문(상담원)"]];
+    function pcell(v, rowTotal){
+      v = v||0;
+      if (rowTotal>0) return '<span class="cell-main">'+fmt(v)+'</span><span class="tw-pct">'+(v/rowTotal*100).toFixed(1)+'%</span>';
+      return '<span class="cell-main">'+fmt(v)+'</span><span class="tw-pct">0.0%</span>';
+    }
     var phead='<thead><tr><th>담당자</th>'+pcols.map(function(c){return '<th>'+c[1]+'</th>';}).join('')+'</tr></thead>';
     var pbody = prows.map(function(r){
-      var p=r.processed;
-      return '<tr><td>'+r.manager+'</td>'+pcols.map(function(c){ return '<td>'+fmt(p[c[0]]||0)+'</td>'; }).join('')+'</tr>';
+      var p=r.processed, rt=p.total||0;
+      return '<tr><td>'+r.manager+'</td>'+pcols.map(function(c){
+        return c[0]==="total" ? '<td>'+fmt(p.total||0)+'</td>' : '<td>'+pcell(p[c[0]], rt)+'</td>';
+      }).join('')+'</tr>';
     }).join('') || '<tr><td colspan="'+(pcols.length+1)+'">데이터 없음</td></tr>';
-    var ptot = proc.totals||{};
-    var psum = '<tr class="cur"><td>합계</td>'+pcols.map(function(c){ return '<td>'+fmt(ptot[c[0]]||0)+'</td>'; }).join('')+'</tr>';
+    var ptot = proc.totals||{}, grandTotal = ptot.total||0;
+    var psum = '<tr class="cur"><td>합계</td>'+pcols.map(function(c){
+      return c[0]==="total" ? '<td>'+fmt(ptot.total||0)+'</td>' : '<td>'+pcell(ptot[c[0]], grandTotal)+'</td>';
+    }).join('')+'</tr>';
     ptbl.innerHTML = phead+'<tbody>'+psum+pbody+'</tbody>';
   }
 
