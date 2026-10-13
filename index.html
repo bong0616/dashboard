@@ -732,6 +732,9 @@
   <!-- 2026-08-14: 출고코호트 바로 밑으로 이동(운영자 요청, 성격이 비슷한 코호트 계열 메뉴끼리 묶음) -->
   <div class="navitem" data-tab="shipweekly" id="nav-shipweekly"><span class="ic">🚚</span><div>출고주 비교<small>출고 물량 처리현황</small></div><span class="navcaret" id="shipweekly-caret">▸</span></div>
   <div class="navitem navchild" data-tab="shipdaily" id="nav-shipdaily" style="display:none"><span class="ic">📬</span><div>출고일 비교<small>출고 물량 처리현황</small></div></div>
+  <!-- 🆕 2026-10-13 당일업무현황판 — 콜리스트 실시간(브라우저 폴링 + 서버 180초 캐시). 날짜조회 대상 아님. -->
+  <div class="navitem" data-tab="todaywork" id="nav-todaywork"><span class="ic">☎️</span><div>당일업무현황판<small>콜리스트 실시간 · 오늘 잔량/진행</small></div><span class="navcaret" id="todaywork-caret">▸</span></div>
+  <div class="navitem navchild" data-tab="todaywork-manager" id="nav-todaywork-manager" style="display:none"><span class="ic">👤</span><div>담당자별 잔량<small>콜리스트 실시간</small></div></div>
   <div class="navitem" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량 · 채널구성</small></div></div>
   <!-- 하위 '월·주·일 흐름'은 2026-07-28 삭제(주간/일간 비교와 완전 중복) → 성과는 이제 하위메뉴 없음(캐럿 제거) -->
   <div class="navitem" data-tab="perf" id="nav-perf"><span class="ic">⚡</span><div>성과<small>설치속도·작업량</small></div></div>
@@ -784,6 +787,32 @@
   <section class="tab-content" id="tab-favorites">
     <div class="sec-head">⭐ 즐겨찾기 <small>이 탭에 들어올 때마다 원본 카드를 다시 불러옵니다(스냅샷) · 실시간 동기화가 아니며 안의 입력/버튼은 비활성화됩니다</small></div>
     <div class="grid" id="favorites-grid"></div>
+  </section>
+
+  <!-- 🆕 2026-10-13 당일업무현황판 — 날짜조회(f-start/f-end) 대상 아님. 항상 '지금'을 본다.
+       서버 180초 캐시 + 탭에 머무는 동안 60초 간격 자동 재조회(가볍게 체감 실시간), ↻ 버튼은 강제 재계산. -->
+  <section class="tab-content" id="tab-todaywork">
+    <div class="sec-head">☎️ 당일업무현황판 <small><span id="tw-asof">불러오는 중…</span></small>
+      <button class="refresh-btn" id="tw-refresh" style="width:auto;margin:0 0 0 10px;padding:6px 12px;font-size:12px;">↻ 지금 새로고침</button>
+    </div>
+    <div class="tiles" id="tw-tiles"></div>
+    <div class="grid">
+      <div class="card col-6 fill" data-cid="twBaseline"><h3>🌅 아침 기준 대비 진행</h3><div class="sub">오전 자동화 요약보고 스냅샷(고정 분모) 대비 현재까지 처리된 건수 · 오후 3시 이후 추가분은 별도 표기</div><div id="tw-progress"></div></div>
+      <div class="card col-6 fill" data-cid="twReception"><h3>📨 접수 현황</h3><div class="sub">O열(접수플래그) 기준 · N열로 원격/방문 구분</div><div class="tiles" id="tw-reception"></div></div>
+    </div>
+    <div class="sec-head">📊 상태별 분포 <small>재컨택 대상(I열) 중 · 1~4차부재는 합산</small></div>
+    <div class="grid">
+      <div class="card col-12 fill" data-cid="twStatus"><div class="chart-wrap ch-m"><canvas id="twStatus"></canvas></div></div>
+    </div>
+  </section>
+
+  <section class="tab-content" id="tab-todaywork-manager">
+    <div class="sec-head">👤 담당자별 잔량 <small><span id="twm-asof">불러오는 중…</span></small>
+      <button class="refresh-btn" id="twm-refresh" style="width:auto;margin:0 0 0 10px;padding:6px 12px;font-size:12px;">↻ 지금 새로고침</button>
+    </div>
+    <div class="grid">
+      <div class="card col-12" data-cid="twManagerTable"><div class="tbl-wrap"><table class="dtable no-grp" id="twManagerTable"></table></div></div>
+    </div>
   </section>
 
   <section class="tab-content" id="tab-ops">
@@ -4698,6 +4727,118 @@ function loadTabPeriod(tab, start, end, label, fresh){
   }, opts);
 }
 
+// =========================================================================
+// 🆕 2026-10-13 당일업무현황판 — 날짜조회(TAB_SECTIONS/loadTabPeriod) 체계 밖의 전용 로더.
+// 서버 180초 캐시(action=todaywork) + 이 탭에 머무는 동안 60초 간격 자동 재조회(체감 실시간),
+// ↻ 버튼은 fresh=1로 캐시를 건너뛰고 강제 재계산한다. 다른 탭 재집계·CUR_PERIOD에는 영향 없음.
+// =========================================================================
+var TODAYWORK_DATA = null;
+var TODAYWORK_POLL = null;
+var TODAYWORK_POLL_MS = 60000;
+
+function startTodayWorkPolling(){
+  stopTodayWorkPolling();
+  TODAYWORK_POLL = setInterval(function(){
+    if(CUR_TAB==="todaywork" || CUR_TAB==="todaywork-manager") loadTodayWork(false);
+    else stopTodayWorkPolling();
+  }, TODAYWORK_POLL_MS);
+}
+function stopTodayWorkPolling(){
+  if(TODAYWORK_POLL){ clearInterval(TODAYWORK_POLL); TODAYWORK_POLL=null; }
+}
+
+function loadTodayWork(fresh){
+  if(!LAST_PASS) return;
+  fetchData(LAST_PASS, function(d){
+    if(!d || d.error){ renderTodayWorkError_(d && d.error || "응답 없음"); return; }
+    if(d.ok===false){ renderTodayWorkError_(d.error||"콜리스트 없음"); return; }
+    TODAYWORK_DATA=d;
+    renderTodayWork(d);
+  }, function(msg){ renderTodayWorkError_(msg); }, { fresh: fresh?1:0, params:{action:"todaywork"} });
+}
+
+function twTile(label, ic, val, sub){ return tile(label, ic, fmt(val), "건", sub||""); }
+
+function renderTodayWorkError_(msg){
+  var el=document.getElementById("tw-asof"); if(el) el.textContent="오류: "+msg;
+  var el2=document.getElementById("twm-asof"); if(el2) el2.textContent="오류: "+msg;
+}
+
+function renderTodayWork(d){
+  var asofTxt = d.asOf+" 기준";
+  var a1=document.getElementById("tw-asof"); if(a1) a1.textContent=asofTxt;
+  var a2=document.getElementById("twm-asof"); if(a2) a2.textContent=asofTxt;
+
+  var live=d.live||{firstContactTotal:0,recontactTotal:0,docPendingTotal:0,total:0};
+  var sb=d.statusBreakdown||{설치예정:0,보류:0,부재:0,기타:0};
+  var afternoonAvail = d.afternoon && d.afternoon.available;
+  var afternoonAdded = afternoonAvail ? (d.afternoon.added||0) : 0;
+  var afternoonTxt = !d.afternoon ? "–" : (afternoonAvail ? ("오늘 오후 반영분") : "오후 반영 전(15시~)");
+
+  document.getElementById("tw-tiles").innerHTML =
+    twTile("총 잔량","📋", live.total, "1차컨택 "+fmt(live.firstContactTotal)+" + 재컨택 "+fmt(live.recontactTotal)) +
+    twTile("1차컨택 잔량","🆕", live.firstContactTotal, "아직 한 번도 컨택 안 한 건") +
+    twTile("재컨택 잔량","🔁", live.recontactTotal, "마지막통화 지난 재컨택 대상") +
+    twTile("서류보완중","📄", live.docPendingTotal, "재컨택 후보 중 서류 미완료") +
+    twTile("오후 반영 추가분", "🚚", afternoonAdded, afternoonTxt);
+
+  // 아침 기준 대비 진행
+  var prog=document.getElementById("tw-progress");
+  if(prog){
+    if(d.baseline && d.baseline.found){
+      var baseTotal = (d.baseline.firstContact||0)+(d.baseline.recontact||0);
+      var planTotal = baseTotal + afternoonAdded;
+      var done = Math.max(0, planTotal - live.total);
+      var pct = planTotal>0 ? Math.round(done/planTotal*100) : 0;
+      prog.innerHTML =
+        '<div class="ach-top"><div class="ach-pct">'+pct+'%</div><div style="color:var(--muted);font-size:12px">오늘 예정 '+fmt(planTotal)+'건 중 '+fmt(done)+'건 처리</div></div>'
+        + '<div class="ach-track"><div style="position:absolute;inset:0;width:'+Math.min(100,pct)+'%;background:var(--s-blue);border-radius:999px"></div></div>'
+        + '<div style="font-size:11.5px;color:var(--muted);margin-top:4px">아침 기준 1차컨택 '+fmt(d.baseline.firstContact)+' + 재컨택 '+fmt(d.baseline.recontact)+(afternoonAdded?(' + 오후 추가 '+fmt(afternoonAdded)):'')+' = '+fmt(planTotal)+'건</div>';
+    } else {
+      prog.innerHTML = '<div style="color:var(--muted);font-size:12.5px">오늘 아침 기준 스냅샷이 아직 없습니다(생산성로우 L:Q 오늘 행 미발견).</div>';
+    }
+  }
+
+  // 접수 현황
+  var recBox=document.getElementById("tw-reception");
+  if(recBox){
+    var rc=d.reception||{remote:0,visit:0};
+    recBox.innerHTML = twTile("원격접수","📡", rc.remote||0, "N=원격설치 · O=접수완료") + twTile("방문설치접수","🚐", rc.visit||0, "N=방문설치 · O=접수완료");
+  }
+
+  // 상태별 분포 도넛 (재컨택 대상 내부)
+  var segs=[
+    ["설치예정", sb.설치예정||0, C["--s-blue"]],
+    ["보류", sb.보류||0, C["--s-yellow"]],
+    ["부재", sb.부재||0, C["--s-orange"]],
+    ["기타", sb.기타||0, C["--muted"]]
+  ].filter(function(x){return x[1]>0;});
+  mk("twStatus", { type:"doughnut",
+    data:{ labels:segs.map(function(x){return x[0];}),
+      datasets:[{ data:segs.map(function(x){return x[1];}), backgroundColor:segs.map(function(x){return x[2];}), borderColor:C["--surface-1"], borderWidth:2 }] },
+    options:{ cutout:"62%", plugins:{ legend:{ display:true, position:"right", labels:{ color:C["--text-secondary"], usePointStyle:true, pointStyle:"circle", padding:10, font:{size:12} } },
+      datalabels: dl({ color:"#fff", formatter:function(v){return v>0?v:"";} }) } } });
+
+  // 담당자별 테이블
+  var tbl=document.getElementById("twManagerTable");
+  if(tbl){
+    var rows=(d.byManager||[]).slice().sort(function(a,b){ return ((b.firstContact||0)+(b.recontact||0))-((a.firstContact||0)+(a.recontact||0)); });
+    var tot={firstContact:0,recontact:0,docPending:0,remote:0,visit:0};
+    rows.forEach(function(r){ Object.keys(tot).forEach(function(k){ tot[k]+=r[k]||0; }); });
+    var head='<thead><tr><th>담당자</th><th>1차컨택</th><th>재컨택</th><th>서류보완중</th><th>원격접수</th><th>방문접수</th></tr></thead>';
+    var body=rows.map(function(r){
+      return '<tr><td>'+r.manager+'</td><td>'+fmt(r.firstContact)+'</td><td>'+fmt(r.recontact)+'</td><td>'+fmt(r.docPending)+'</td><td>'+fmt(r.remote)+'</td><td>'+fmt(r.visit)+'</td></tr>';
+    }).join("") || '<tr><td colspan="6">데이터 없음</td></tr>';
+    var sum='<tr class="cur"><td>합계</td><td>'+fmt(tot.firstContact)+'</td><td>'+fmt(tot.recontact)+'</td><td>'+fmt(tot.docPending)+'</td><td>'+fmt(tot.remote)+'</td><td>'+fmt(tot.visit)+'</td></tr>';
+    tbl.innerHTML = head+'<tbody>'+sum+body+'</tbody>';
+  }
+
+  setTimeout(function(){ try{ charts.twStatus && charts.twStatus.resize(); }catch(e){} },20);
+}
+
+var twRefreshBtn=document.getElementById("tw-refresh"); if(twRefreshBtn) twRefreshBtn.addEventListener("click", function(){ loadTodayWork(true); });
+var twmRefreshBtn=document.getElementById("twm-refresh"); if(twmRefreshBtn) twmRefreshBtn.addEventListener("click", function(){ loadTodayWork(true); });
+
 // ===== 기간 필터 =====
 function pad2(n){ return (n<10?"0":"")+n; }
 function populateMonthFilter(months){
@@ -5193,7 +5334,9 @@ function shareTabLayout(){
   if(s) s.addEventListener("click", shareTabLayout);
 })();
 
-var TABMETA={ favorites:["즐겨찾기","내가 ⭐ 표시한 카드를 모아봅니다 · 탭에 들어올 때마다 원본을 다시 캡처합니다(실시간 동기화 아님)"], ops:["운영 대시보드","현재 잔여 업무량(콜리스트 기준) + 주간·일간 설치 채널구성 + 설치소요일 분포 · 지연사유 상세는 '설치지연상세사유' 탭 참고"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"], d7tracking:["D+7 설치트래킹","출고일 기준 주차별 처리·지연사유 · 통화시도/원격·방문 접수건도 함께 확인"], c2i:["당일통화당일설치","월별·주별 요약(최근 3개월) + 일별 상세(최근 30일) 한 페이지 · 통화→당일설치 전환(상담원 담당자별 비교)"],returned:["설치지연상세사유","현재 잔여 지연사유(부재단계별·경과일·미설치사유) + 로우데이터 I열(상태)이 반품·폐업인 2026년 출고건 출고 주차·월별 집계"] };
+var TABMETA={ favorites:["즐겨찾기","내가 ⭐ 표시한 카드를 모아봅니다 · 탭에 들어올 때마다 원본을 다시 캡처합니다(실시간 동기화 아님)"], ops:["운영 대시보드","현재 잔여 업무량(콜리스트 기준) + 주간·일간 설치 채널구성 + 설치소요일 분포 · 지연사유 상세는 '설치지연상세사유' 탭 참고"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"], d7tracking:["D+7 설치트래킹","출고일 기준 주차별 처리·지연사유 · 통화시도/원격·방문 접수건도 함께 확인"], c2i:["당일통화당일설치","월별·주별 요약(최근 3개월) + 일별 상세(최근 30일) 한 페이지 · 통화→당일설치 전환(상담원 담당자별 비교)"],returned:["설치지연상세사유","현재 잔여 지연사유(부재단계별·경과일·미설치사유) + 로우데이터 I열(상태)이 반품·폐업인 2026년 출고건 출고 주차·월별 집계"],
+  todaywork:["당일업무현황판","콜리스트 실시간 · 오늘 1차컨택/재컨택 잔량과 아침 기준 대비 진행현황 · 오후 3시 이후 추가분은 별도 표기 · 날짜조회 대상 아님(항상 지금 기준)"],
+  "todaywork-manager":["담당자별 잔량","콜리스트 실시간 · 담당자별 1차컨택/재컨택/서류보완중/원격·방문 접수 현황"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
@@ -5203,7 +5346,7 @@ document.querySelectorAll(".navitem").forEach(function(n){
     // (D+7 지연분석은 2026-07-23 부서별 지연원인 탭으로 통합돼 하위 메뉴에서 빠졌다)
     // perf 는 2026-07-28 하위메뉴(월·주·일 흐름)가 사라져 TOGGLE 에서 뺐다.
     // ⚠️ 여기 남겨두면 getElementById("nav-flow") 가 null 이라 성과 탭 클릭이 통째로 죽는다.
-    var TOGGLE = { shipweekly:{children:["nav-shipdaily"], caret:"shipweekly-caret"}, weeklyboard:{children:["nav-weeklyaction"], caret:"weeklyboard-caret"}, cohort:{children:["nav-returned"], caret:"cohort-caret"} };
+    var TOGGLE = { shipweekly:{children:["nav-shipdaily"], caret:"shipweekly-caret"}, weeklyboard:{children:["nav-weeklyaction"], caret:"weeklyboard-caret"}, cohort:{children:["nav-returned"], caret:"cohort-caret"}, todaywork:{children:["nav-todaywork-manager"], caret:"todaywork-caret"} };
     if (TOGGLE[t]) {
       var first = document.getElementById(TOGGLE[t].children[0]);
       var open = (first.style.display === "none");
@@ -5216,8 +5359,11 @@ document.querySelectorAll(".navitem").forEach(function(n){
     document.getElementById("page-desc").textContent=TABMETA[t][1];
     CUR_TAB=t;
     if(t==="favorites") renderFavoritesSnapshot(); // 즐겨찾기 탭은 서버 재조회 없이 매번 원본을 재캡처한다
+    // 🆕 2026-10-13: 당일업무현황판/담당자별 잔량은 날짜조회 체계 밖(항상 '지금') — 전용 로더로만 갱신한다.
+    if(t==="todaywork" || t==="todaywork-manager"){ loadTodayWork(false); startTodayWorkPolling(); }
+    else { stopTodayWorkPolling(); }
     // 커스텀 기간이 걸려 있는데 이 탭이 아직 그 기간으로 안 불러와졌으면 지금 이 탭 섹션만 조회(다른 탭 재집계 없음)
-    if(t!=="favorites" && CUR_PERIOD.start && TAB_LOADED[t]!==periodKey()){
+    if(t!=="favorites" && t!=="todaywork" && t!=="todaywork-manager" && CUR_PERIOD.start && TAB_LOADED[t]!==periodKey()){
       loadTabPeriod(t, CUR_PERIOD.start, CUR_PERIOD.end, CUR_PERIOD.label);
     }
     // resize charts in newly shown tab
@@ -5236,11 +5382,11 @@ document.addEventListener("keydown", function(e){ if(e.key==="Escape") closeModa
 var NAV_GROUPS = [
   { id:"ship",    label:"📦 출고축",   tabs:["weeklyboard","weeklyaction","cohort","returned","shipweekly","shipdaily","d7tracking","perf"] },
   { id:"contact", label:"📞 컨택축",   tabs:["c2i"] },
-  { id:"snap",    label:"🕒 조회시점", tabs:["ops"] },
+  { id:"snap",    label:"🕒 조회시점", tabs:["todaywork","todaywork-manager","ops"] },
   { id:"other",   label:"🗂 기타",     tabs:["report"] },
 ];
 // 그룹핑 안 끌 때 원래 자리로 되돌릴 기준 순서(현재 사이드바 HTML 순서 그대로, favorites 제외 — favorites는 안 옮김)
-var NAV_ORIGINAL_ORDER = ["weeklyboard","weeklyaction","c2i","d7tracking","cohort","returned","shipweekly","shipdaily","ops","perf","report"];
+var NAV_ORIGINAL_ORDER = ["weeklyboard","weeklyaction","c2i","d7tracking","cohort","returned","shipweekly","shipdaily","todaywork","todaywork-manager","ops","perf","report"];
 
 function ensureNavGroupShell(){
   if (document.getElementById("nav-grouped-shell")) return;
