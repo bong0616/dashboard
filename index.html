@@ -374,6 +374,16 @@
   .memo-edit-ta { width:100%; box-sizing:border-box; resize:vertical; font-family:var(--font); font-size:13px; padding:6px 8px; border-radius:8px; border:1px solid var(--border); background:var(--page); color:var(--text-primary); }
   .memo-edit-row { display:flex; align-items:center; gap:8px; margin-top:6px; justify-content:flex-end; }
   .memo-edit-msg { font-size:11px; color: var(--muted); }
+  /* 당일업무 메모 제목 토글(2026-10-13, 운영자 요청) — 누적되면 너무 길어지는 문제라, 제목만 보이고
+     클릭해야 본문이 펼쳐지게 한다. #twMemoLog 전용 스코프라 다른 메모장(.memo-entry 범용, 위클리
+     현황판·리포트 탭)의 기존 가로배치(시간+본문)는 그대로 유지된다. */
+  #twMemoLog .memo-entry { display:block; }
+  #twMemoLog .memo-head { display:flex; align-items:center; gap:8px; cursor:pointer; padding:2px 0; }
+  #twMemoLog .memo-caret { font-size:11px; color: var(--muted); flex-shrink:0; transition: transform .15s ease; }
+  #twMemoLog .memo-entry:not(.memo-entry-closed) .memo-caret { transform: rotate(90deg); }
+  #twMemoLog .memo-title-txt { font-size:13px; font-weight:700; color: var(--text-primary); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #twMemoLog .memo-entry-closed .memo-body-col { display:none; }
+  #twMemoLog .memo-body-col { padding:4px 0 2px 19px; }
   /* ===== 🔧 카드 배치 편집 모드 =====
      운영자가 코드를 거치지 않고 카드 순서·너비·숨김을 바꾼다. 저장은 ①내 브라우저(localStorage) 즉시,
      ②'전원 적용'을 누를 때만 서버('대시보드설정' 시트 kind=layout)로 올라간다.
@@ -806,29 +816,6 @@
       <div class="card col-6 fill" data-cid="twBaseline"><h3>🌅 아침 기준 대비 진행</h3><div class="sub">오전 자동화 요약보고 스냅샷(고정 분모) 대비 현재까지 처리된 건수 · 오후 3시 이후 추가분은 별도 표기</div><div id="tw-progress"></div></div>
       <div class="card col-6 fill" data-cid="twReception"><h3>📨 접수 현황</h3><div class="sub">O열(접수플래그) 기준 · N열로 원격/방문 구분</div><div class="tiles" id="tw-reception"></div></div>
     </div>
-    <div class="sec-head">📊 상태별 분포 <small>재컨택 대상(I열) 중 · 1~4차부재는 합산</small></div>
-    <div class="grid">
-      <div class="card col-12 fill" data-cid="twStatus"><div class="chart-wrap ch-m"><canvas id="twStatus"></canvas></div></div>
-    </div>
-
-    <!-- 🆕 2026-10-13(운영자 요청) 당일업무 메모(누적형) — 오늘 메모만 보인다(자정 지나면 자연히 비워짐, 과거 기록은 시트에 보존). -->
-    <div class="sec-head">📝 오늘 메모 <small>자유롭게 남기세요 · 지우지 않는 한 계속 누적(오늘 메모만 표시)</small></div>
-    <div class="grid">
-      <div class="card col-8" data-cid="twMemo">
-        <div style="margin:4px 0">
-          <div class="wa-note-toolbar"><button type="button" class="wa-fmt-btn" data-fmt="bold" title="굵게"><b>B</b> 굵게</button><button type="button" class="wa-fmt-btn" data-fmt="bullet" title="글머리 기호">• 글머리기호</button><button type="button" class="wa-fmt-btn" data-fmt="number" title="번호 매기기">1. 번호매기기</button></div>
-          <textarea id="twMemoInput" maxlength="1000" rows="3" placeholder="오늘 특이사항을 메모하세요…" style="width:100%;box-sizing:border-box;resize:vertical;font-family:var(--font);font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--page);color:var(--text-primary)"></textarea>
-          <div class="note-preview-label">미리보기</div><div class="note-preview" id="twMemoPreview"></div>
-          <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:6px">
-            <span id="twMemoCnt" style="font-size:11.5px;color:var(--muted)"></span>
-            <span id="twMemoMsg" style="font-size:11.5px;color:var(--muted)"></span>
-            <button class="fbtn fbtn-go" id="twMemoAddBtn">메모 추가</button>
-          </div>
-        </div>
-        <div id="twMemoLog" class="memo-log"></div>
-      </div>
-    </div>
-
     <!-- 🔀 2026-10-13(운영자 요청): '담당자별 잔량'(1차컨택/재컨택)이 아니라 '오늘 이미 처리완료한 건'을
          실적로그처럼 실시간 집계 — 모수는 R열(마지막통화일)=오늘인 행. 별도 탭이었던 걸 이 탭 맨 밑으로 흡수. -->
     <div class="sec-head">👤 오늘 처리 현황 <small>콜리스트 실시간 · R열(마지막통화일)=오늘 기준 · 담당자별(H열)</small></div>
@@ -840,6 +827,26 @@
     <div class="grid">
       <div class="card col-7" data-cid="twScheduleTable"><div class="tbl-wrap"><table class="dtable no-grp" id="twScheduleTable"></table></div></div>
       <div class="card col-5 fill" data-cid="twDailyAvg"><h3>📈 원격/방문설치 일평균 처리건수</h3><div class="sub">판별축 = M열(설치예정일, 실행기준) · 접수일 기준 아님 · 현재 콜리스트에 남아있는 M열 전체 기간으로 산출</div><div class="tiles" id="tw-dailyavg"></div></div>
+    </div>
+
+    <!-- 🔀 2026-10-13(운영자 요청): 누적될수록 길어진다는 지적으로 탭 맨 밑으로 이동 + 제목 토글식으로 개편.
+         오늘 메모만 보인다(자정 지나면 자연히 비워짐, 과거 기록은 시트에 보존). -->
+    <div class="sec-head">📝 오늘 메모 <small>자유롭게 남기세요 · 지우지 않는 한 계속 누적(오늘 메모만 표시) · 제목을 누르면 내용이 펼쳐집니다</small></div>
+    <div class="grid">
+      <div class="card col-8" data-cid="twMemo">
+        <div style="margin:4px 0">
+          <input type="text" id="twMemoTitleInput" maxlength="60" placeholder="제목(비우면 내용 첫 줄로 자동 생성)" style="width:100%;box-sizing:border-box;font-family:var(--font);font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--page);color:var(--text-primary);margin-bottom:6px" />
+          <div class="wa-note-toolbar"><button type="button" class="wa-fmt-btn" data-fmt="bold" title="굵게"><b>B</b> 굵게</button><button type="button" class="wa-fmt-btn" data-fmt="bullet" title="글머리 기호">• 글머리기호</button><button type="button" class="wa-fmt-btn" data-fmt="number" title="번호 매기기">1. 번호매기기</button></div>
+          <textarea id="twMemoInput" maxlength="1000" rows="3" placeholder="오늘 특이사항을 메모하세요…" style="width:100%;box-sizing:border-box;resize:vertical;font-family:var(--font);font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--page);color:var(--text-primary)"></textarea>
+          <div class="note-preview-label">미리보기</div><div class="note-preview" id="twMemoPreview"></div>
+          <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:6px">
+            <span id="twMemoCnt" style="font-size:11.5px;color:var(--muted)"></span>
+            <span id="twMemoMsg" style="font-size:11.5px;color:var(--muted)"></span>
+            <button class="fbtn fbtn-go" id="twMemoAddBtn">메모 추가</button>
+          </div>
+        </div>
+        <div id="twMemoLog" class="memo-log"></div>
+      </div>
     </div>
   </section>
 
@@ -4799,7 +4806,6 @@ function renderTodayWork(d){
   var a1=document.getElementById("tw-asof"); if(a1) a1.textContent=asofTxt;
 
   var live=d.live||{firstContactTotal:0,recontactTotal:0,docPendingTotal:0,total:0};
-  var sb=d.statusBreakdown||{설치예정:0,보류:0,부재:0,기타:0};
   var afternoonAvail = d.afternoon && d.afternoon.available;
   var afternoonAdded = afternoonAvail ? (d.afternoon.added||0) : 0;
   var afternoonTxt = !d.afternoon ? "–" : (afternoonAvail ? ("오늘 오후 반영분") : "오후 반영 전(15시~)");
@@ -4834,19 +4840,6 @@ function renderTodayWork(d){
     var rc=d.reception||{remote:0,visit:0};
     recBox.innerHTML = twTile("원격접수","📡", rc.remote||0, "N=원격설치 · O=접수완료") + twTile("방문설치접수","🚐", rc.visit||0, "N=방문설치 · O=접수완료");
   }
-
-  // 상태별 분포 도넛 (재컨택 대상 내부)
-  var segs=[
-    ["설치예정", sb.설치예정||0, C["--s-blue"]],
-    ["보류", sb.보류||0, C["--s-yellow"]],
-    ["부재", sb.부재||0, C["--s-orange"]],
-    ["기타", sb.기타||0, C["--muted"]]
-  ].filter(function(x){return x[1]>0;});
-  mk("twStatus", { type:"doughnut",
-    data:{ labels:segs.map(function(x){return x[0];}),
-      datasets:[{ data:segs.map(function(x){return x[1];}), backgroundColor:segs.map(function(x){return x[2];}), borderColor:C["--surface-1"], borderWidth:2 }] },
-    options:{ cutout:"62%", plugins:{ legend:{ display:true, position:"right", labels:{ color:C["--text-secondary"], usePointStyle:true, pointStyle:"circle", padding:10, font:{size:12} } },
-      datalabels: dl({ color:"#fff", formatter:function(v){return v>0?v:"";} }) } } });
 
   // 🆕 2026-10-13 오늘 처리 현황(담당자별) — '담당자별 잔량' 테이블을 대체
   var ptbl=document.getElementById("twProcessedTable");
@@ -4898,8 +4891,6 @@ function renderTodayWork(d){
 
   TW_MEMOS_LAST = d.memos||[];
   twRenderMemoLog();
-
-  setTimeout(function(){ try{ charts.twStatus && charts.twStatus.resize(); }catch(e){} },20);
 }
 
 var twRefreshBtn=document.getElementById("tw-refresh"); if(twRefreshBtn) twRefreshBtn.addEventListener("click", function(){ loadTodayWork(true); });
@@ -4909,16 +4900,27 @@ var twRefreshBtn=document.getElementById("tw-refresh"); if(twRefreshBtn) twRefre
 // 걸러 내려주므로 클라이언트는 그대로 렌더만 한다.
 var TW_MEMOS_LAST = [];
 var TW_MEMO_ROWS = {}; // row(시트 행번호) -> {text} — 편집 시작 시 원문을 다시 찾는 용도
+// 제목 미입력 시 폴백(서버도 동일 규칙으로 저장하지만, 저장 왕복 전 화면엔 안 쓰임 — 서버 응답의
+// it.title은 항상 채워져 오므로 여기선 편집 진입 시 입력칸 placeholder 용도로만 쓴다).
+function twTitleFallback_(text){
+  var firstLine = String(text||"").split("\n")[0].trim();
+  return firstLine.length>30 ? (firstLine.slice(0,30)+"…") : firstLine;
+}
 function twMemoLogHTML(memos){
   TW_MEMO_ROWS = {};
   if(!memos || !memos.length) return '<div class="memo-empty">오늘 메모가 아직 없습니다. 위에서 첫 메모를 남겨보세요.</div>';
   return memos.map(function(it){
-    if(it.row!=null) TW_MEMO_ROWS[it.row] = { text: it.text||"" };
-    return '<div class="memo-entry" data-row="'+(it.row!=null?it.row:"")+'">'
-      +'<div class="memo-time-col"><span class="memo-time">'+esc(it.time||"")+'</span>'
-      +(it.editTime?'<span class="memo-edited">수정 '+esc(it.editTime)+'</span>':"")+'</div>'
+    if(it.row!=null) TW_MEMO_ROWS[it.row] = { text: it.text||"", title: it.title||"" };
+    var title = it.title || twTitleFallback_(it.text);
+    return '<div class="memo-entry memo-entry-closed" data-row="'+(it.row!=null?it.row:"")+'">'
+      +'<div class="memo-head" data-row="'+(it.row!=null?it.row:"")+'">'
+        +'<span class="memo-caret">▸</span>'
+        +'<span class="memo-time">'+esc(it.time||"")+'</span>'
+        +'<span class="memo-title-txt">'+esc(title)+'</span>'
+        +(it.editTime?'<span class="memo-edited">수정 '+esc(it.editTime)+'</span>':"")
+        +(it.row!=null ? '<button type="button" class="memo-edit-btn" data-row="'+it.row+'" title="수정">✏️</button>' : '')
+      +'</div>'
       +'<div class="memo-body-col"><div class="memo-text">'+mdRender_(it.text||"")+'</div></div>'
-      +(it.row!=null ? '<button type="button" class="memo-edit-btn" data-row="'+it.row+'" title="수정">✏️</button>' : '')
       +'</div>';
   }).join('');
 }
@@ -4930,8 +4932,10 @@ function twMemoEnterEdit(row){
   var el = document.querySelector('#twMemoLog .memo-entry[data-row="'+row+'"]');
   var data = TW_MEMO_ROWS[row];
   if(!el || !data) return;
+  el.classList.remove("memo-entry-closed");
   el.classList.add("memo-entry-editing");
-  el.innerHTML = '<div class="wa-note-toolbar"><button type="button" class="wa-fmt-btn" data-fmt="bold" title="굵게"><b>B</b> 굵게</button><button type="button" class="wa-fmt-btn" data-fmt="bullet" title="글머리 기호">• 글머리기호</button><button type="button" class="wa-fmt-btn" data-fmt="number" title="번호 매기기">1. 번호매기기</button></div>'
+  el.innerHTML = '<input type="text" class="memo-edit-title" maxlength="60" placeholder="제목" value="'+esc(data.title||"")+'" style="width:100%;box-sizing:border-box;font-family:var(--font);font-size:13px;padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--page);color:var(--text-primary);margin-bottom:6px" />'
+    +'<div class="wa-note-toolbar"><button type="button" class="wa-fmt-btn" data-fmt="bold" title="굵게"><b>B</b> 굵게</button><button type="button" class="wa-fmt-btn" data-fmt="bullet" title="글머리 기호">• 글머리기호</button><button type="button" class="wa-fmt-btn" data-fmt="number" title="번호 매기기">1. 번호매기기</button></div>'
     +'<textarea class="memo-edit-ta" maxlength="1000" rows="3">'+esc(data.text)+'</textarea>'
     +'<div class="note-preview-label">미리보기</div><div class="note-preview memo-edit-preview"></div>'
     +'<div class="memo-edit-row">'
@@ -4955,7 +4959,9 @@ function twMemoSaveEdit(row){
   if(!LAST_PASS) return;
   var el = document.querySelector('#twMemoLog .memo-entry[data-row="'+row+'"]');
   if(!el) return;
+  var titleInput = el.querySelector(".memo-edit-title");
   var ta = el.querySelector(".memo-edit-ta"), msg = el.querySelector(".memo-edit-msg"), btn = el.querySelector(".memo-edit-save");
+  var title = (titleInput&&titleInput.value||"").trim();
   var text = (ta&&ta.value||"").trim();
   if(!text){ if(msg){ msg.textContent="내용을 입력하세요"; msg.style.color="var(--s-red)"; } return; }
   if(btn) btn.disabled = true;
@@ -4966,7 +4972,7 @@ function twMemoSaveEdit(row){
   }, function(){
     if(btn) btn.disabled=false;
     if(msg){ msg.textContent="통신 오류"; msg.style.color="var(--s-red)"; }
-  }, { params:{ action:"edittodayworkmemo", row: row, text: text } });
+  }, { params:{ action:"edittodayworkmemo", row: row, title: title, text: text } });
 }
 var TW_MEMO_LOG_BOUND=false;
 function twBindMemoLog(){
@@ -4975,9 +4981,11 @@ function twBindMemoLog(){
   TW_MEMO_LOG_BOUND=true;
   box.addEventListener("click", function(e){
     var t = e.target; if(!t) return;
-    if(t.classList.contains("memo-edit-btn")) twMemoEnterEdit(t.getAttribute("data-row"));
-    else if(t.classList.contains("memo-edit-cancel")) twRenderMemoLog();
-    else if(t.classList.contains("memo-edit-save")) twMemoSaveEdit(t.getAttribute("data-row"));
+    if(t.classList.contains("memo-edit-btn")){ twMemoEnterEdit(t.getAttribute("data-row")); return; }
+    if(t.classList.contains("memo-edit-cancel")){ twRenderMemoLog(); return; }
+    if(t.classList.contains("memo-edit-save")){ twMemoSaveEdit(t.getAttribute("data-row")); return; }
+    var head = t.closest(".memo-head");
+    if(head){ var entry = head.closest(".memo-entry"); if(entry && !entry.classList.contains("memo-entry-editing")) entry.classList.toggle("memo-entry-closed"); }
   });
 }
 var TW_MEMO_BOUND=false;
@@ -4989,7 +4997,8 @@ function twBindMemoButton(){
   bindNoteEditor_(document.getElementById("twMemoInput"), {previewId:"twMemoPreview", cntId:"twMemoCnt"});
   btn.addEventListener("click", function(){
     if(!LAST_PASS) return;
-    var ta=document.getElementById("twMemoInput"), msg=document.getElementById("twMemoMsg");
+    var titleInput=document.getElementById("twMemoTitleInput"), ta=document.getElementById("twMemoInput"), msg=document.getElementById("twMemoMsg");
+    var title=(titleInput.value||"").trim();
     var text=(ta.value||"").trim();
     if(!text){ msg.textContent="내용을 입력하세요"; msg.style.color="var(--s-red)"; return; }
     btn.disabled=true; msg.textContent="저장 중…"; msg.style.color="var(--muted)";
@@ -4997,12 +5006,13 @@ function twBindMemoButton(){
       btn.disabled=false;
       if(res&&res.ok){
         ta.value=""; ta.dispatchEvent(new Event("input", {bubbles:true}));
+        titleInput.value="";
         msg.textContent="추가됨 ✓"; msg.style.color="var(--good)";
         TW_MEMOS_LAST = res.memos||[];
         twRenderMemoLog();
       } else { msg.textContent=(res&&res.error)||"저장 실패"; msg.style.color="var(--s-red)"; }
     }, function(){ btn.disabled=false; msg.textContent="통신 오류"; msg.style.color="var(--s-red)"; },
-    { params:{ action:"addtodayworkmemo", text: text } });
+    { params:{ action:"addtodayworkmemo", title: title, text: text } });
   });
 }
 twBindMemoLog();
