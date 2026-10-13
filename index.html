@@ -63,6 +63,7 @@
   #sidebar {
     width: 232px; flex: 0 0 232px; background: var(--sidebar); color: var(--sidebar-text);
     display: flex; flex-direction: column; padding: 22px 16px; position: sticky; top: 0; height: 100vh;
+    overflow-y: auto; overflow-x: hidden; /* 🆕 2026-10-13: 메뉴 많을 때 하단 잘림 방지(스크롤) */
   }
   .brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 20px; }
   .brand .logo { width: 34px; height: 34px; border-radius: 9px; background: linear-gradient(135deg,#2a78d6,#1baf7a); display:flex; align-items:center; justify-content:center; font-size:18px; }
@@ -728,7 +729,11 @@
   </div>
   <button class="navgroup-toggle-btn" id="navgroup-toggle" type="button">🧭 새 사이드바 미리보기(기준축별 그룹)</button>
   <div class="navitem" data-tab="favorites" id="nav-favorites"><span class="ic">⭐</span><div>즐겨찾기<small>내가 표시한 카드 모아보기</small></div></div>
-  <div class="navitem active" data-tab="weeklyboard" id="nav-weeklyboard"><span class="ic">📅</span><div>위클리 현황판<small>출고주 6주 스코어보드</small></div><span class="navcaret" id="weeklyboard-caret">▸</span></div>
+  <!-- 🔀 2026-10-13(운영자 요청): 조회시점 그룹(당일업무현황판·운영)을 첫 화면 기본탭에 맞춰 최상단으로 이동.
+       NAV_ORIGINAL_ORDER·NAV_GROUPS 배열도 같은 순서로 맞춰야 그룹핑 토글 on/off 모두 일관된다. -->
+  <div class="navitem active" data-tab="todaywork" id="nav-todaywork"><span class="ic">☎️</span><div>당일업무현황판<small>콜리스트 실시간 · 오늘 잔량/진행</small></div></div>
+  <div class="navitem" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량 · 채널구성</small></div></div>
+  <div class="navitem" data-tab="weeklyboard" id="nav-weeklyboard"><span class="ic">📅</span><div>위클리 현황판<small>출고주 6주 스코어보드</small></div><span class="navcaret" id="weeklyboard-caret">▸</span></div>
   <div class="navitem navchild" data-tab="weeklyaction" id="nav-weeklyaction" style="display:none"><span class="ic">📄</span><div>보고서<small>야간원격·당일배송 주차별 검토</small></div></div>
   <div class="navitem" data-tab="c2i" id="nav-c2i"><span class="ic">📞</span><div>당일통화당일설치<small>최근 14일 · 담당자별 비교</small></div></div>
   <div class="navitem" data-tab="d7tracking" id="nav-d7tracking"><span class="ic">⏱️</span><div>D+7설치트래킹<small>출고 주차별 처리·지연사유</small></div></div>
@@ -737,10 +742,6 @@
   <!-- 2026-08-14: 출고코호트 바로 밑으로 이동(운영자 요청, 성격이 비슷한 코호트 계열 메뉴끼리 묶음) -->
   <div class="navitem" data-tab="shipweekly" id="nav-shipweekly"><span class="ic">🚚</span><div>출고주 비교<small>출고 물량 처리현황</small></div><span class="navcaret" id="shipweekly-caret">▸</span></div>
   <div class="navitem navchild" data-tab="shipdaily" id="nav-shipdaily" style="display:none"><span class="ic">📬</span><div>출고일 비교<small>출고 물량 처리현황</small></div></div>
-  <!-- 🆕 2026-10-13 당일업무현황판 — 콜리스트 실시간(브라우저 폴링 + 서버 180초 캐시). 날짜조회 대상 아님.
-       담당자별 잔량은 2026-10-13(운영자 요청) 별도 탭에서 이 탭 맨 밑 섹션으로 흡수 — 하위메뉴 없음. -->
-  <div class="navitem" data-tab="todaywork" id="nav-todaywork"><span class="ic">☎️</span><div>당일업무현황판<small>콜리스트 실시간 · 오늘 잔량/진행</small></div></div>
-  <div class="navitem" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량 · 채널구성</small></div></div>
   <!-- 하위 '월·주·일 흐름'은 2026-07-28 삭제(주간/일간 비교와 완전 중복) → 성과는 이제 하위메뉴 없음(캐럿 제거) -->
   <div class="navitem" data-tab="perf" id="nav-perf"><span class="ic">⚡</span><div>성과<small>설치속도·작업량</small></div></div>
   <div class="navitem" data-tab="report"><span class="ic">📝</span><div>주차별 리포트<small>전주 대비 요약·코멘트</small></div></div>
@@ -755,8 +756,8 @@
 <main id="main" style="display:none">
   <div class="page-head">
     <div>
-      <h1 id="page-title">위클리 현황판</h1>
-      <p id="page-desc">출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷</p>
+      <h1 id="page-title">당일업무현황판</h1>
+      <p id="page-desc">콜리스트 실시간 · 오늘 1차컨택/재컨택 잔량과 아침 기준 대비 진행현황 · 오후 3시 이후 추가분은 별도 표기 · 맨 밑에 오늘 처리현황(담당자별)·메모·원격방문 진행예정표 포함 · 날짜조회 대상 아님(항상 지금 기준)</p>
     </div>
     <div class="head-right">
       <div class="filters">
@@ -796,7 +797,7 @@
 
   <!-- 🆕 2026-10-13 당일업무현황판 — 날짜조회(f-start/f-end) 대상 아님. 항상 '지금'을 본다.
        서버 180초 캐시 + 탭에 머무는 동안 60초 간격 자동 재조회(가볍게 체감 실시간), ↻ 버튼은 강제 재계산. -->
-  <section class="tab-content" id="tab-todaywork">
+  <section class="tab-content active" id="tab-todaywork">
     <div class="sec-head">☎️ 당일업무현황판 <small><span id="tw-asof">불러오는 중…</span></small>
       <button class="refresh-btn" id="tw-refresh" style="width:auto;margin:0 0 0 10px;padding:6px 12px;font-size:12px;">↻ 지금 새로고침</button>
     </div>
@@ -972,7 +973,7 @@
   </section>
 
   <!-- WEEKLY BOARD (위클리 6주 현황판, 2026-07-30 신설) — 2026-07-31 운영자 지시로 첫 화면 -->
-  <section class="tab-content active" id="tab-weeklyboard">
+  <section class="tab-content" id="tab-weeklyboard">
     <div class="grid">
       <div class="card col-12" data-cid="wbTrend"><h3 id="wbTrendTitle">💡 이번 주 요약</h3>
         <div class="sub" id="wbTrendSub">최근 6주 데이터 기준 자동 생성 · 저장 없이 조회할 때마다 재계산됩니다</div>
@@ -4703,11 +4704,14 @@ function boot(passcode, _attempt) {
     document.getElementById("main").style.display="block";
     populateMonthFilter(d.meta.availableMonths||[]);
     CUR_PERIOD={start:"",end:"",label:"전체 기간"};
-    CUR_TAB="weeklyboard"; markAllLoaded("");   // 초기 전체 payload → 모든 탭이 전체기간으로 최신
+    CUR_TAB="weeklyboard"; markAllLoaded("");   // 초기 전체 payload는 여전히 전체 탭 기준(todaywork는 아래서 별도 로더로 전환)
     applyData(d);
     // 카드 배치는 렌더가 끝난 뒤 한 번만 얹는다(코드 기본값을 먼저 떠 놔야 '원래대로'가 가능하다)
     initLayout(d.layout);
     loadFavorites(d.favorites); buildFavStars();
+    // 🔀 2026-10-13(운영자 요청): 첫 화면 기본탭 = 당일업무현황판. 클릭 시뮬레이션으로
+    // active 클래스·page-title·CUR_TAB·전용 로더(loadTodayWork)·폴링 시작을 한 번에 재사용한다.
+    var twNav=document.getElementById("nav-todaywork"); if(twNav) twNav.click();
   }, function(msg){
     // 🆕 2026-09-16: 사내망 SSL검사 프록시 등으로 script.google.com 로드가 간헐적으로
     //   끊기는 사고(운영자 신고 "데이터 로드 실패" 지속 발생) 대응 — 최초 로딩만 최대 2회
@@ -5544,13 +5548,14 @@ document.addEventListener("keydown", function(e){ if(e.key==="Escape") closeModa
 // 1차는 탭 단위 그룹핑만 한다(혼재 카드 분리는 다음 단계). 기존 navitem DOM 노드를 그대로 옮기므로
 // 이미 붙어있는 클릭 리스너·data-tab·TOGGLE 맵은 전혀 건드리지 않는다 — 복제가 아니라 이동이라 안전하다.
 var NAV_GROUPS = [
+  { id:"snap",    label:"🕒 조회시점", tabs:["todaywork","ops"] },
   { id:"ship",    label:"📦 출고축",   tabs:["weeklyboard","weeklyaction","cohort","returned","shipweekly","shipdaily","d7tracking","perf"] },
   { id:"contact", label:"📞 컨택축",   tabs:["c2i"] },
-  { id:"snap",    label:"🕒 조회시점", tabs:["todaywork","ops"] },
   { id:"other",   label:"🗂 기타",     tabs:["report"] },
 ];
 // 그룹핑 안 끌 때 원래 자리로 되돌릴 기준 순서(현재 사이드바 HTML 순서 그대로, favorites 제외 — favorites는 안 옮김)
-var NAV_ORIGINAL_ORDER = ["weeklyboard","weeklyaction","c2i","d7tracking","cohort","returned","shipweekly","shipdaily","todaywork","ops","perf","report"];
+// 🔀 2026-10-13(운영자 요청): 조회시점(todaywork·ops)을 첫 화면 기본탭에 맞춰 최상단으로 이동.
+var NAV_ORIGINAL_ORDER = ["todaywork","ops","weeklyboard","weeklyaction","c2i","d7tracking","cohort","returned","shipweekly","shipdaily","perf","report"];
 
 function ensureNavGroupShell(){
   if (document.getElementById("nav-grouped-shell")) return;
