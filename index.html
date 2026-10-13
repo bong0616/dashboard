@@ -5485,8 +5485,7 @@ function shareTabLayout(){
 })();
 
 var TABMETA={ favorites:["즐겨찾기","내가 ⭐ 표시한 카드를 모아봅니다 · 탭에 들어올 때마다 원본을 다시 캡처합니다(실시간 동기화 아님)"], ops:["운영 대시보드","현재 잔여 업무량(콜리스트 기준) + 주간·일간 설치 채널구성 + 설치소요일 분포 · 지연사유 상세는 '설치지연상세사유' 탭 참고"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"], d7tracking:["D+7 설치트래킹","출고일 기준 주차별 처리·지연사유 · 통화시도/원격·방문 접수건도 함께 확인"], c2i:["당일통화당일설치","월별·주별 요약(최근 3개월) + 일별 상세(최근 30일) 한 페이지 · 통화→당일설치 전환(상담원 담당자별 비교)"],returned:["설치지연상세사유","현재 잔여 지연사유(부재단계별·경과일·미설치사유) + 로우데이터 I열(상태)이 반품·폐업인 2026년 출고건 출고 주차·월별 집계"],
-  todaywork:["당일업무현황판","콜리스트 실시간 · 오늘 1차컨택/재컨택 잔량과 아침 기준 대비 진행현황 · 오후 3시 이후 추가분은 별도 표기 · 날짜조회 대상 아님(항상 지금 기준)"],
-  "todaywork-manager":["담당자별 잔량","콜리스트 실시간 · 담당자별 1차컨택/재컨택/서류보완중/원격·방문 접수 현황"] };
+  todaywork:["당일업무현황판","콜리스트 실시간 · 오늘 1차컨택/재컨택 잔량과 아침 기준 대비 진행현황 · 오후 3시 이후 추가분은 별도 표기 · 맨 밑에 오늘 처리현황(담당자별)·메모·원격방문 진행예정표 포함 · 날짜조회 대상 아님(항상 지금 기준)"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
     document.querySelectorAll(".navitem").forEach(function(x){x.classList.remove("active");});
@@ -5496,7 +5495,7 @@ document.querySelectorAll(".navitem").forEach(function(n){
     // (D+7 지연분석은 2026-07-23 부서별 지연원인 탭으로 통합돼 하위 메뉴에서 빠졌다)
     // perf 는 2026-07-28 하위메뉴(월·주·일 흐름)가 사라져 TOGGLE 에서 뺐다.
     // ⚠️ 여기 남겨두면 getElementById("nav-flow") 가 null 이라 성과 탭 클릭이 통째로 죽는다.
-    var TOGGLE = { shipweekly:{children:["nav-shipdaily"], caret:"shipweekly-caret"}, weeklyboard:{children:["nav-weeklyaction"], caret:"weeklyboard-caret"}, cohort:{children:["nav-returned"], caret:"cohort-caret"}, todaywork:{children:["nav-todaywork-manager"], caret:"todaywork-caret"} };
+    var TOGGLE = { shipweekly:{children:["nav-shipdaily"], caret:"shipweekly-caret"}, weeklyboard:{children:["nav-weeklyaction"], caret:"weeklyboard-caret"}, cohort:{children:["nav-returned"], caret:"cohort-caret"} };
     if (TOGGLE[t]) {
       var first = document.getElementById(TOGGLE[t].children[0]);
       var open = (first.style.display === "none");
@@ -5510,10 +5509,10 @@ document.querySelectorAll(".navitem").forEach(function(n){
     CUR_TAB=t;
     if(t==="favorites") renderFavoritesSnapshot(); // 즐겨찾기 탭은 서버 재조회 없이 매번 원본을 재캡처한다
     // 🆕 2026-10-13: 당일업무현황판/담당자별 잔량은 날짜조회 체계 밖(항상 '지금') — 전용 로더로만 갱신한다.
-    if(t==="todaywork" || t==="todaywork-manager"){ loadTodayWork(false); startTodayWorkPolling(); }
+    if(t==="todaywork"){ loadTodayWork(false); startTodayWorkPolling(); }
     else { stopTodayWorkPolling(); }
     // 커스텀 기간이 걸려 있는데 이 탭이 아직 그 기간으로 안 불러와졌으면 지금 이 탭 섹션만 조회(다른 탭 재집계 없음)
-    if(t!=="favorites" && t!=="todaywork" && t!=="todaywork-manager" && CUR_PERIOD.start && TAB_LOADED[t]!==periodKey()){
+    if(t!=="favorites" && t!=="todaywork" && CUR_PERIOD.start && TAB_LOADED[t]!==periodKey()){
       loadTabPeriod(t, CUR_PERIOD.start, CUR_PERIOD.end, CUR_PERIOD.label);
     }
     // resize charts in newly shown tab
@@ -5532,11 +5531,11 @@ document.addEventListener("keydown", function(e){ if(e.key==="Escape") closeModa
 var NAV_GROUPS = [
   { id:"ship",    label:"📦 출고축",   tabs:["weeklyboard","weeklyaction","cohort","returned","shipweekly","shipdaily","d7tracking","perf"] },
   { id:"contact", label:"📞 컨택축",   tabs:["c2i"] },
-  { id:"snap",    label:"🕒 조회시점", tabs:["todaywork","todaywork-manager","ops"] },
+  { id:"snap",    label:"🕒 조회시점", tabs:["todaywork","ops"] },
   { id:"other",   label:"🗂 기타",     tabs:["report"] },
 ];
 // 그룹핑 안 끌 때 원래 자리로 되돌릴 기준 순서(현재 사이드바 HTML 순서 그대로, favorites 제외 — favorites는 안 옮김)
-var NAV_ORIGINAL_ORDER = ["weeklyboard","weeklyaction","c2i","d7tracking","cohort","returned","shipweekly","shipdaily","todaywork","todaywork-manager","ops","perf","report"];
+var NAV_ORIGINAL_ORDER = ["weeklyboard","weeklyaction","c2i","d7tracking","cohort","returned","shipweekly","shipdaily","todaywork","ops","perf","report"];
 
 function ensureNavGroupShell(){
   if (document.getElementById("nav-grouped-shell")) return;
