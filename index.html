@@ -882,6 +882,14 @@
       <div class="card col-12" data-cid="dyChannel"><h3>🔧 일별 설치 채널 구성</h3><div class="sub">자가설치 · 컨택후자가설치(상담원) · 방문설치 · 원격설치(설치일 기준) · 세로축 100% 고정 — 그 날 설치완료 대비 채널 비중(막대 안 숫자는 %, 툴팁에 실건수)</div><div class="chart-wrap ch-m"><canvas id="dyChannel"></canvas></div></div>
     </div>
 
+    <!-- 🆕 2026-10-15(운영자 요청): 주별 설치율 — 자가/컨택후자가 대 원격/방문 비중 + 출고·통화·갭·
+         D+7이내설치율·배송/재컨택 지표를 출고 코호트(d.ship) 기준 한 표로. D+7 이내 설치율만
+         d.d7tracking(최근 6주 한정)에서 끌어와 week로 조인하므로, 표도 그 6주로 맞춘다. -->
+    <div class="sec-head">🗓️ 주별 설치율 <small>출고주 기준 · 최근 6주</small></div>
+    <div class="grid">
+      <div class="card col-12" data-cid="wirTable"><div class="sub">자가설치·원격/방문 비중은 그 주 출고분의 설치완료 채널 구성(출고 코호트 기준, 설치일과 무관) · 통화건수는 실적로그 평일·상담원 합(자가설치 가중 0.3 포함) · Gap=출고−통화(양수면 통화가 밀림) · D+7 이내 설치율=그 주 출고건 중 출고→설치 7일 이내 완료 비중</div><div class="tbl-wrap"><table class="dtable no-grp" id="wirTable"></table></div></div>
+    </div>
+
     <!-- 구 '설치가속화 Action' 탭에 있던 카드 — 2026-08-26 운영자 지시로 그 탭 전체 삭제(당일배송·통화당일설치는
          보고서 탭/당일통화당일설치 탭과 중복). 이 카드만 다른 탭에 대응물이 없어 운영탭으로 이관. -->
     <div class="sec-head">📐 설치소요일 분포 <small>최초컨택 주 기준 — 이 카드만 다른 카드들과 기준 주가 다릅니다</small></div>
@@ -1298,6 +1306,7 @@ function render(d) {
   renderCohort(d.cohort);
   renderWeekly(d.perf);
   renderDaily(d.perf);
+  renderWeeklyInstallRate(d.ship, d.d7tracking);
   renderShipWeekly(d.ship);
   renderShipDaily(d.ship);
   renderCallToInstall(d.callInstall);
@@ -1608,6 +1617,55 @@ function renderWeekly(p){
       interaction:{mode:"index",intersect:false},
       plugins:{ legend:{display:true, labels:{usePointStyle:true,pointStyle:"rectRounded",color:C["--text-secondary"]}}, datalabels:{display:true},
         tooltip:chTooltip } } });
+}
+
+// 🆕 2026-10-15(운영자 요청) — 주별 설치율. d.ship.weekly(출고 코호트, self/agent/visit/remote·
+// shipped·logCalls·avgDeliverySpeed·avgRetouch·touchPerUnit 보유)를 기본 뼈대로 쓰고, D+7 이내
+// 설치율만 d.d7tracking.weekly(동일 "출고주" week키, 최근 6주 한정)에서 fast/shipped를 조인한다.
+// d7tracking이 6주만 있으므로 이 표도 그 교집합으로 자른다(그 밖의 주는 D+7 열을 낼 수 없음).
+function renderWeeklyInstallRate(ship, d7){
+  var tblEl=document.getElementById("wirTable");
+  if(!tblEl) return;
+  var rows=(ship&&ship.weekly)||[];
+  var d7map={};
+  ((d7&&d7.weekly)||[]).forEach(function(r){ d7map[r.week]=r; });
+  var recent=rows.filter(function(w){ return d7map[w.week]!=null; });
+  if(!recent.length){ tblEl.innerHTML='<tbody><tr><td style="color:var(--muted)">아직 집계된 주가 없습니다</td></tr></tbody>'; return; }
+
+  var head='<thead><tr><th>출고주</th>'
+    + '<th>자가설치<br><small class="th-tgt">자가+컨택후자가</small></th>'
+    + '<th>원격/방문<br><small class="th-tgt">원격+방문</small></th>'
+    + '<th>출고수량</th><th>통화건수</th><th>출고대비 통화건수 Gap</th>'
+    + '<th>D+7 이내 설치율<br><small class="th-tgt">출고 코호트</small></th>'
+    + '<th>평균배송완료소요일</th><th>재컨택주기</th><th>재컨택횟수</th></tr></thead>';
+
+  var lastIdx=recent.length-1;
+  var body=recent.map(function(w,i){
+    var d7r=d7map[w.week];
+    var selfGroup=(w.self||0)+(w.agent||0), remoteGroup=(w.visit||0)+(w.remote||0);
+    var chTotal=selfGroup+remoteGroup;
+    var selfPct=chTotal>0?selfGroup/chTotal*100:null, remotePct=chTotal>0?remoteGroup/chTotal*100:null;
+    var callsR=Math.round(w.logCalls||0);
+    var gap=w.shipped-callsR;
+    var gapColor=gap>0?'var(--critical)':(gap<0?'var(--good)':'var(--text-secondary)');
+    var d7Rate=(d7r && d7r.shipped>0)?(d7r.fast/d7r.shipped*100):null;
+    var isCur=(i===lastIdx);
+    var tag=w.immature?'<span class="curtag" style="background:var(--muted)">진행중</span>':(isCur?'<span class="curtag">최신</span>':'');
+    return '<tr'+(isCur?' class="cur"':'')+'>'
+      + '<td>'+w.week.slice(5).replace("-","/")+'주~'+tag+'</td>'
+      + '<td><span class="cell-main">'+(selfPct==null?"–":Math.round(selfPct)+"%")+'</span><br><span class="cell-pct">자가'+fmt(w.self||0)+'+컨택후자가'+fmt(w.agent||0)+'</span></td>'
+      + '<td><span class="cell-main">'+(remotePct==null?"–":Math.round(remotePct)+"%")+'</span><br><span class="cell-pct">원격'+fmt(w.remote||0)+'+방문'+fmt(w.visit||0)+'</span></td>'
+      + plainCell(w.shipped)
+      + plainCell(callsR)
+      + '<td><span class="cell-main" style="color:'+gapColor+'">'+(gap>0?'+':'')+fmt(gap)+'</span></td>'
+      + '<td><span class="cell-main">'+(d7Rate==null?"–":Math.round(d7Rate)+"%")+'</span>'+(d7r?'<br><span class="cell-pct">'+fmt(d7r.fast)+'/'+fmt(d7r.shipped)+'건</span>':'')+'</td>'
+      + '<td><span class="cell-main">'+(w.avgDeliverySpeed==null?"–":round1(w.avgDeliverySpeed)+"일")+'</span></td>'
+      + '<td><span class="cell-main">'+(w.avgRetouch==null?"–":round1(w.avgRetouch)+"일")+'</span></td>'
+      + '<td><span class="cell-main">'+(w.touchPerUnit==null?"–":round1(w.touchPerUnit)+"회")+'</span></td>'
+      + '</tr>';
+  }).reverse().join("");
+
+  tblEl.innerHTML = head+'<tbody>'+body+'</tbody>';
 }
 
 // ---------- DAILY (일간 비교 스코어보드) — 주간 비교와 동일 지표를 '일' 단위로 ----------
