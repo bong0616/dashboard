@@ -4928,9 +4928,15 @@ function renderTodayWorkError_(msg){
 
 // 🆕 2026-10-21(운영자 요청): '담당자별 진행' 카드 — 1차컨택/재컨택 각각 담당자를 드롭다운으로
 //   고른다. 선택값은 로컬 브라우저에 저장(팀 공유 아님, 사용자마다 자기가 보고 싶은 담당자를 고정).
-//   배정 = 잔여(콜리스트 실시간, 이미 d.byManager.firstContact/recontact로 집계됨) + 완료(오늘
-//   처리, firstContactDoneToday/recontactDoneToday) — 별도 저장 없이 매 폴링마다 다시 계산되는
-//   라이브 값이라 "아침 기준 대비 진행"(.ach-*, 오전 고정 스냅샷)과는 분모 성격이 다르다.
+// 🐛 2026-10-21 [운영자 신고] 최초 구현은 배정·잔여까지 선택한 담당자(H열)로 걸러서 1차컨택건이
+//   항상 "잔여 0건"으로 떴다 — 1차컨택 대상은 아직 아무도 안 받은 공용 풀이라(H열은 실제로
+//   전화를 건 순간에만 찍힘, 1.미설치 마스터 코드.js 온에디트) 사람 이름으로 거르면 늘 0에 가깝다.
+// 🔧 수정(운영자 지시): 배정·잔여는 사람별로 나누지 않고 **전사 공통값**을 쓴다.
+//   배정 = 아침 기준 스냅샷(d.baseline.firstContact/recontact, "아침 기준 대비 진행" 카드와 동일
+//   소스) · 잔여 = 콜리스트 W열 '1차컨택필요'/'재컨택필요건' 마킹 집계(= d.live.firstContactTotal/
+//   recontactTotal, markRecontactTargetsOnCallList_과 동일 판정이라 숫자가 항상 일치).
+//   드롭다운으로 바뀌는 건 "완료"(그 담당자가 오늘 처리한 건수, firstContactDoneToday/
+//   recontactDoneToday)뿐 — 전사 배정 대비 그 사람의 기여도를 보는 막대다(100% 넘을 수 있음).
 var TW_MGR_LIST = ["최승훈","김봉수","양나영","김규리"];
 var TW_MGR_DEFAULT = { fc: "최승훈", rc: "김봉수" };
 function twMgrSelected_(key){
@@ -4940,34 +4946,36 @@ function twMgrSelected_(key){
 function twMgrOptionsHtml_(selected){
   return TW_MGR_LIST.map(function(m){ return '<option'+(m===selected?' selected':'')+'>'+esc(m)+'</option>'; }).join("");
 }
-function renderMgrProgress(byManagerArr){
+function renderMgrProgress(baseline, live, byManagerArr){
   var wrap = document.getElementById("tw-mgr-rows");
   if(!wrap) return;
   var byName = {};
   (byManagerArr||[]).forEach(function(m){ byName[m.manager]=m; });
+  var baseFound = baseline && baseline.found;
 
-  function rowHtml(key, label, remainField, doneField, color){
+  function rowHtml(key, label, assigned, remaining, doneField, color){
     var sel = twMgrSelected_(key);
     var m = byName[sel] || {};
-    var remain = Number(m[remainField]||0), done = Number(m[doneField]||0);
-    var total = remain + done;
-    var pct = total>0 ? Math.round(done/total*100) : 0;
+    var done = Number(m[doneField]||0);
+    var pct = (baseFound && assigned>0) ? Math.round(done/assigned*100) : 0;
+    var barColor = pct>100 ? "var(--good)" : color;
     return '<div class="mgr-row">'
       + '<div class="r-label">'+esc(label)+'</div>'
       + '<select class="mgr-select" data-mgrkey="'+key+'">'+twMgrOptionsHtml_(sel)+'</select>'
-      + '<div class="mgr-stats">배정 <b>'+fmt(total)+'건</b> · 잔여 <b>'+fmt(remain)+'건</b> · 완료 <b>'+fmt(done)+'건</b></div>'
-      + '<div class="mgr-barwrap"><div class="mgr-track"><div class="mgr-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'
-      + '<div class="mgr-pctnum" style="color:'+color+'">'+pct+'%</div></div>'
+      + '<div class="mgr-stats">배정 <b>'+(baseFound?fmt(assigned)+'건':'–')+'</b> · 잔여 <b>'+fmt(remaining)+'건</b> · 완료 <b>'+fmt(done)+'건</b></div>'
+      + '<div class="mgr-barwrap"><div class="mgr-track"><div class="mgr-fill" style="width:'+Math.min(100,pct)+'%;background:'+barColor+'"></div></div>'
+      + '<div class="mgr-pctnum" style="color:'+barColor+'">'+pct+'%</div></div>'
       + '</div>';
   }
 
-  wrap.innerHTML = rowHtml("fc","1차컨택건","firstContact","firstContactDoneToday","var(--s-blue)")
-    + rowHtml("rc","재컨택건","recontact","recontactDoneToday","var(--s-aqua)");
+  wrap.innerHTML = rowHtml("fc","1차컨택건", baseFound?Number(baseline.firstContact||0):0, Number((live&&live.firstContactTotal)||0), "firstContactDoneToday","var(--s-blue)")
+    + rowHtml("rc","재컨택건", baseFound?Number(baseline.recontact||0):0, Number((live&&live.recontactTotal)||0), "recontactDoneToday","var(--s-aqua)");
 
   wrap.querySelectorAll("select.mgr-select").forEach(function(sel){
     sel.addEventListener("change", function(){
       try { localStorage.setItem("tw_mgr_"+sel.getAttribute("data-mgrkey"), sel.value); } catch(e){}
-      renderMgrProgress(TODAYWORK_DATA && TODAYWORK_DATA.byManager); // 서버 재조회 없이 즉시 재렌더
+      var dd = TODAYWORK_DATA || {};
+      renderMgrProgress(dd.baseline, dd.live, dd.byManager); // 서버 재조회 없이 즉시 재렌더
     });
   });
 }
@@ -4976,7 +4984,7 @@ function renderTodayWork(d){
   var asofTxt = d.asOf+" 기준";
   var a1=document.getElementById("tw-asof"); if(a1) a1.textContent=asofTxt;
 
-  renderMgrProgress(d.byManager); // 🆕 2026-10-21 '담당자별 진행' 카드(드롭다운)
+  renderMgrProgress(d.baseline, d.live, d.byManager); // 🆕 2026-10-21 '담당자별 진행' 카드(드롭다운)
 
   var live=d.live||{firstContactTotal:0,recontactTotal:0,docPendingTotal:0,total:0};
   var afternoonAvail = d.afternoon && d.afternoon.available;
