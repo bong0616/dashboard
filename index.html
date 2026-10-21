@@ -663,6 +663,21 @@
   tr.c2i-weekend { background: color-mix(in srgb, var(--muted) 6%, transparent); }
   .c2i-pct { color: var(--muted); font-weight:500; font-size:11px; margin-left:4px; }
 
+  /* 🆕 2026-10-21 '담당자별 진행' 카드 — 드롭다운으로 담당자 선택, "아침 기준 대비 진행"(.ach-*)보다
+     작게(막대 16px→7px, 숫자도 작게). 다른 내용 없이 라벨+드롭다운+수치+막대 한 줄짜리로만 구성. */
+  .mgr-rows { display:flex; flex-direction:column; gap:10px; }
+  .mgr-row { display:grid; grid-template-columns:96px 150px 1fr 190px; align-items:center; gap:14px; }
+  @media (max-width:860px){ .mgr-row{ grid-template-columns:1fr; } }
+  .mgr-row .r-label { font-size:12.5px; font-weight:700; color:var(--text-secondary); }
+  select.mgr-select { font-family:var(--font); font-size:12.5px; font-weight:600; color:var(--text-primary);
+    background:var(--page); border:1px solid var(--border); border-radius:8px; padding:7px 10px; cursor:pointer; width:100%; }
+  .mgr-stats { font-size:12px; color:var(--text-secondary); font-variant-numeric:tabular-nums; }
+  .mgr-stats b { color:var(--text-primary); font-weight:700; }
+  .mgr-barwrap { display:flex; align-items:center; gap:8px; }
+  .mgr-track { position:relative; flex:1; height:7px; border-radius:999px; background: color-mix(in srgb, var(--muted) 22%, transparent); overflow:hidden; }
+  .mgr-fill { position:absolute; inset:0; border-radius:999px; transition: width .3s ease; }
+  .mgr-pctnum { font-size:11.5px; font-weight:800; font-variant-numeric:tabular-nums; width:34px; text-align:right; flex:0 0 auto; }
+
   /* Mobile */
   @media (max-width: 860px) {
     body { flex-direction: column; }
@@ -816,6 +831,14 @@
       <div class="card col-6 fill" data-cid="twBaseline"><h3>🌅 아침 기준 대비 진행</h3><div class="sub">오전 자동화 요약보고 스냅샷(고정 분모) 대비 현재까지 처리된 건수 · 오후 3시 이후 추가분은 별도 표기</div><div id="tw-progress"></div></div>
       <div class="card col-6 fill" data-cid="twReception"><h3>📨 접수 현황</h3><div class="sub">O열(접수플래그) 기준 · N열로 원격/방문 구분</div><div class="tiles" id="tw-reception"></div></div>
     </div>
+    <!-- 🆕 2026-10-21(운영자 요청): 담당자별 진행 — 1차컨택/재컨택 각각 담당자를 드롭다운으로 골라
+         배정·잔여·완료를 본다. 배정=잔여(콜리스트 실시간)+완료(오늘 처리, P/R열 판정) 합산이라
+         별도 저장소 없이 라이브로만 계산된다(아침 고정 스냅샷 방식 아님, 운영자 확인). -->
+    <div class="sec-head">👤 담당자별 진행 <small>콜리스트 실시간 · 담당자 선택은 이 브라우저에 저장되어 계속 유지됩니다</small></div>
+    <div class="grid">
+      <div class="card col-12" data-cid="twMgrProgress"><div class="mgr-rows" id="tw-mgr-rows"></div></div>
+    </div>
+
     <!-- 🔀 2026-10-13(운영자 요청): '담당자별 잔량'(1차컨택/재컨택)이 아니라 '오늘 이미 처리완료한 건'을
          실적로그처럼 실시간 집계 — 모수는 R열(마지막통화일)=오늘인 행. 별도 탭이었던 걸 이 탭 맨 밑으로 흡수. -->
     <div class="sec-head">👤 오늘 처리 현황 <small>콜리스트 실시간 · R열(마지막통화일)=오늘 기준 · 담당자별(H열)</small></div>
@@ -4903,9 +4926,57 @@ function renderTodayWorkError_(msg){
   var el=document.getElementById("tw-asof"); if(el) el.textContent="오류: "+msg;
 }
 
+// 🆕 2026-10-21(운영자 요청): '담당자별 진행' 카드 — 1차컨택/재컨택 각각 담당자를 드롭다운으로
+//   고른다. 선택값은 로컬 브라우저에 저장(팀 공유 아님, 사용자마다 자기가 보고 싶은 담당자를 고정).
+//   배정 = 잔여(콜리스트 실시간, 이미 d.byManager.firstContact/recontact로 집계됨) + 완료(오늘
+//   처리, firstContactDoneToday/recontactDoneToday) — 별도 저장 없이 매 폴링마다 다시 계산되는
+//   라이브 값이라 "아침 기준 대비 진행"(.ach-*, 오전 고정 스냅샷)과는 분모 성격이 다르다.
+var TW_MGR_LIST = ["최승훈","김봉수","양나영","김규리"];
+var TW_MGR_DEFAULT = { fc: "최승훈", rc: "김봉수" };
+function twMgrSelected_(key){
+  try { var v = localStorage.getItem("tw_mgr_"+key); if (v && TW_MGR_LIST.indexOf(v)!==-1) return v; } catch(e){}
+  return TW_MGR_DEFAULT[key];
+}
+function twMgrOptionsHtml_(selected){
+  return TW_MGR_LIST.map(function(m){ return '<option'+(m===selected?' selected':'')+'>'+esc(m)+'</option>'; }).join("");
+}
+function renderMgrProgress(byManagerArr){
+  var wrap = document.getElementById("tw-mgr-rows");
+  if(!wrap) return;
+  var byName = {};
+  (byManagerArr||[]).forEach(function(m){ byName[m.manager]=m; });
+
+  function rowHtml(key, label, remainField, doneField, color){
+    var sel = twMgrSelected_(key);
+    var m = byName[sel] || {};
+    var remain = Number(m[remainField]||0), done = Number(m[doneField]||0);
+    var total = remain + done;
+    var pct = total>0 ? Math.round(done/total*100) : 0;
+    return '<div class="mgr-row">'
+      + '<div class="r-label">'+esc(label)+'</div>'
+      + '<select class="mgr-select" data-mgrkey="'+key+'">'+twMgrOptionsHtml_(sel)+'</select>'
+      + '<div class="mgr-stats">배정 <b>'+fmt(total)+'건</b> · 잔여 <b>'+fmt(remain)+'건</b> · 완료 <b>'+fmt(done)+'건</b></div>'
+      + '<div class="mgr-barwrap"><div class="mgr-track"><div class="mgr-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'
+      + '<div class="mgr-pctnum" style="color:'+color+'">'+pct+'%</div></div>'
+      + '</div>';
+  }
+
+  wrap.innerHTML = rowHtml("fc","1차컨택건","firstContact","firstContactDoneToday","var(--s-blue)")
+    + rowHtml("rc","재컨택건","recontact","recontactDoneToday","var(--s-aqua)");
+
+  wrap.querySelectorAll("select.mgr-select").forEach(function(sel){
+    sel.addEventListener("change", function(){
+      try { localStorage.setItem("tw_mgr_"+sel.getAttribute("data-mgrkey"), sel.value); } catch(e){}
+      renderMgrProgress(TODAYWORK_DATA && TODAYWORK_DATA.byManager); // 서버 재조회 없이 즉시 재렌더
+    });
+  });
+}
+
 function renderTodayWork(d){
   var asofTxt = d.asOf+" 기준";
   var a1=document.getElementById("tw-asof"); if(a1) a1.textContent=asofTxt;
+
+  renderMgrProgress(d.byManager); // 🆕 2026-10-21 '담당자별 진행' 카드(드롭다운)
 
   var live=d.live||{firstContactTotal:0,recontactTotal:0,docPendingTotal:0,total:0};
   var afternoonAvail = d.afternoon && d.afternoon.available;
