@@ -3559,15 +3559,20 @@ function renderD7Tracking(d7){
       var touchGap = (w.shipped||0) - (w.touch||0);
       var touchGapColor = touchGap>0 ? 'var(--critical)' : (touchGap<0 ? 'var(--good)' : 'var(--text-secondary)');
       var touchGapTxt = (touchGap>0?'+':'')+fmt(touchGap);
-      // 🆕 2026-10-21: 자가설치(컨택전/컨택후) — 둘 다 출고(w.shipped) 대비 %, 합산%은 상단 한 줄에.
+      // 🆕 2026-10-21: 자가설치(컨택전/컨택후) — 둘 다 출고(w.shipped) 대비 %.
       var preSelf = w.preSelf||0, postSelf = w.postSelf||0, selfSumPct = d7pct_(preSelf+postSelf, w.shipped);
+      // 🆕 2026-10-21(운영자 지시, 스크린샷 주석): 원격/방문도 자가설치 컬럼과 같은 구조로 —
+      //   개별 건수·%(기존 줄) 아래에 "총 N%"(둘을 합친 출고대비 비중)를 진하게 한 줄 더 추가.
+      var recvSumPct = d7pct_((w.remoteRecv||0)+(w.visitRecv||0), w.shipped);
       return '<tr class="d7-wkrow" data-week="'+esc(w.week)+'">'
         + '<td>'+rptWeekLabel(w.week)+(w.partial?'<span class="d7-partial">진행중</span>':'')+'<span class="d7-wk-delay">지연 '+wkDelayPct+'%</span></td>'
         + '<td style="text-align:left;font-weight:700">'+fmt(w.shipped)+'</td>'
         + '<td style="text-align:left">'+fmt(w.touch)+' <small class="c2i-pct" style="color:'+touchGapColor+'">('+touchGapTxt+')</small>'
-          + '<br><small class="c2i-pct">원격 '+fmt(w.remoteRecv||0)+'건('+d7pct_(w.remoteRecv||0,w.shipped)+'%) · 방문 '+fmt(w.visitRecv||0)+'건('+d7pct_(w.visitRecv||0,w.shipped)+'%)</small></td>'
-        + '<td style="text-align:left"><b>컨택전설치 '+fmt(preSelf)+'건, 컨택후설치 '+fmt(postSelf)+'건</b> <small class="c2i-pct">('+selfSumPct+'%)</small>'
-          + '<br><small class="c2i-pct">('+d7pct_(preSelf,w.shipped)+'%) ('+d7pct_(postSelf,w.shipped)+'%)</small></td>'
+          + '<br><small class="c2i-pct">원격 '+fmt(w.remoteRecv||0)+'건('+d7pct_(w.remoteRecv||0,w.shipped)+'%) · 방문 '+fmt(w.visitRecv||0)+'건('+d7pct_(w.visitRecv||0,w.shipped)+'%)</small>'
+          + '<div style="font-weight:700;margin-top:3px">총('+recvSumPct+'%)</div></td>'
+        + '<td style="text-align:left"><b>컨택전설치 '+fmt(preSelf)+'건, 컨택후설치 '+fmt(postSelf)+'건</b>'
+          + '<br><small class="c2i-pct">('+d7pct_(preSelf,w.shipped)+'%) ('+d7pct_(postSelf,w.shipped)+'%)</small>'
+          + '<div style="font-weight:700;margin-top:3px">총('+selfSumPct+'%)</div></td>'
         + '<td style="color:var(--good);font-weight:700">'+fmt(w.fast)+'<small class="c2i-pct">('+d7pct_(w.fast,w.shipped)+'%)</small></td>'
         + '<td>'+fmt(w.slow)+'<small class="c2i-pct">('+d7pct_(w.slow,w.shipped)+'%)</small></td>'
         + '<td style="color:var(--s-red);font-weight:700">'+fmt(w.returned)+'<small class="c2i-pct">('+d7pct_(w.returned,w.shipped)+'%)</small></td>'
