@@ -3535,7 +3535,9 @@ function renderD7Tracking(d7){
 
   var tblEl = document.getElementById("d7WeekTable");
   if(tblEl){
-    var head = '<thead><tr><th>주차</th><th>출고건</th><th>통화시도<br><small style="font-weight:500">원격/방문</small></th><th>D+7이내<br>설치완료</th><th>D+7초과<br>설치완료</th>'
+    var head = '<thead><tr><th>주차</th><th style="text-align:left">출고건</th><th style="text-align:left">통화시도<br><small style="font-weight:500">원격/방문 · 출고대비 Gap</small></th>'
+      + '<th style="text-align:left">자가설치<br><small style="font-weight:500">컨택전/후</small></th>'
+      + '<th>D+7이내<br>설치완료</th><th>D+7초과<br>설치완료</th>'
       + '<th>폐업및반품</th><th>서류보완지연</th><th class="d7-reasons">지연사유 TOP5 <small style="font-weight:500">(14개 중 · 전체 출고 대비 %)</small></th></tr></thead>';
     var body = weekly.slice().reverse().map(function(w){
       var reasonPool = w.reasonPool!=null ? w.reasonPool : (w.shipped-w.fast-w.slow-w.returned-w.docPending);
@@ -3552,10 +3554,20 @@ function renderD7Tracking(d7){
         + '<div class="d7-r-row" style="opacity:.65"><span class="d7-r-rank"></span><span class="d7-r-name">그 외 9개 사유</span>'
         + '<span class="d7-r-bar-wrap"></span><span class="d7-r-pct">'+fmt(etcN)+'건 ('+d7pct_(etcN,w.shipped)+'%)</span></div>';
       var wkDelayPct = d7pct_(w.shipped-w.fast, w.shipped);
+      // 🆕 2026-10-21(운영자 요청): 출고 대비 통화시도 Gap — wirTable과 동일 정의(출고-통화)·동일
+      //   색상 규칙(출고가 통화보다 많으면 밀리는 중=critical, 통화가 더 많으면 따라잡는 중=good).
+      var touchGap = (w.shipped||0) - (w.touch||0);
+      var touchGapColor = touchGap>0 ? 'var(--critical)' : (touchGap<0 ? 'var(--good)' : 'var(--text-secondary)');
+      var touchGapTxt = (touchGap>0?'+':'')+fmt(touchGap);
+      // 🆕 2026-10-21: 자가설치(컨택전/컨택후) — 둘 다 출고(w.shipped) 대비 %, 합산%은 상단 한 줄에.
+      var preSelf = w.preSelf||0, postSelf = w.postSelf||0, selfSumPct = d7pct_(preSelf+postSelf, w.shipped);
       return '<tr class="d7-wkrow" data-week="'+esc(w.week)+'">'
         + '<td>'+rptWeekLabel(w.week)+(w.partial?'<span class="d7-partial">진행중</span>':'')+'<span class="d7-wk-delay">지연 '+wkDelayPct+'%</span></td>'
-        + '<td>'+fmt(w.shipped)+'</td>'
-        + '<td>'+fmt(w.touch)+'<br><small class="c2i-pct">원격:'+fmt(w.remoteRecv||0)+'건 · 방문:'+fmt(w.visitRecv||0)+'건</small></td>'
+        + '<td style="text-align:left;font-weight:700">'+fmt(w.shipped)+'</td>'
+        + '<td style="text-align:left">'+fmt(w.touch)+' <small class="c2i-pct" style="color:'+touchGapColor+'">('+touchGapTxt+')</small>'
+          + '<br><small class="c2i-pct">원격 '+fmt(w.remoteRecv||0)+'건('+d7pct_(w.remoteRecv||0,w.shipped)+'%) · 방문 '+fmt(w.visitRecv||0)+'건('+d7pct_(w.visitRecv||0,w.shipped)+'%)</small></td>'
+        + '<td style="text-align:left"><b>컨택전설치 '+fmt(preSelf)+'건, 컨택후설치 '+fmt(postSelf)+'건</b> <small class="c2i-pct">('+selfSumPct+'%)</small>'
+          + '<br><small class="c2i-pct">('+d7pct_(preSelf,w.shipped)+'%) ('+d7pct_(postSelf,w.shipped)+'%)</small></td>'
         + '<td style="color:var(--good);font-weight:700">'+fmt(w.fast)+'<small class="c2i-pct">('+d7pct_(w.fast,w.shipped)+'%)</small></td>'
         + '<td>'+fmt(w.slow)+'<small class="c2i-pct">('+d7pct_(w.slow,w.shipped)+'%)</small></td>'
         + '<td style="color:var(--s-red);font-weight:700">'+fmt(w.returned)+'<small class="c2i-pct">('+d7pct_(w.returned,w.shipped)+'%)</small></td>'
