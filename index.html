@@ -1246,6 +1246,9 @@ var round1 = function (x) { return x==null?"–":(Math.round(x*10)/10); };
 
 var charts = {};
 function mk(id, cfg) { if (charts[id]) charts[id].destroy(); var el=document.getElementById(id); if(el) charts[id]=new Chart(el.getContext("2d"), cfg); }
+// 🆕 2026-10-21: 즐겨찾기 탭 스냅샷 차트 전용 레지스트리(snapshotCard가 채움) — resizeAllCharts가
+//   charts와 함께 리사이즈하고, renderFavoritesSnapshot 재진입 시 여기 담긴 인스턴스를 destroy한다.
+var favCharts = {};
 
 // Chart.js global defaults
 function setDefaults() {
@@ -4891,13 +4894,19 @@ function renderTodayWork(d){
   var afternoonAvail = d.afternoon && d.afternoon.available;
   var afternoonAdded = afternoonAvail ? (d.afternoon.added||0) : 0;
   var afternoonTxt = !d.afternoon ? "–" : (afternoonAvail ? ("오늘 오후 반영분") : "오후 반영 전(15시~)");
+  // 🆕 2026-10-21: "금일 예상 오후배송완료건" — 아직 안 일어난 오후 전환분만 예측(오전분은 이미
+  //   아침에 확인 가능해 제외). G×T 실측 기반, 학습구간은 서버가 "이번 달 1일~오늘"로 자동 갱신.
+  var fc = d.afternoon && d.afternoon.forecast;
+  var fcVal = (fc && fc.available && fc.expected != null) ? Math.round(fc.expected) : "–";
+  var fcSub = (fc && fc.available) ? ("학습구간 "+fc.trainWindow+" · 정확값 "+fc.expected+"건") : "데이터 부족";
 
   document.getElementById("tw-tiles").innerHTML =
     twTile("총 잔량","📋", live.total, "1차컨택 "+fmt(live.firstContactTotal)+" + 재컨택 "+fmt(live.recontactTotal)) +
     twTile("1차컨택 잔량","🆕", live.firstContactTotal, "아직 한 번도 컨택 안 한 건") +
     twTile("재컨택 잔량","🔁", live.recontactTotal, "마지막통화 지난 재컨택 대상") +
     twTile("서류보완중","📄", live.docPendingTotal, "재컨택 후보 중 서류 미완료") +
-    twTile("오후 반영 추가분", "🚚", afternoonAdded, afternoonTxt);
+    twTile("오후 반영 추가분", "🚚", afternoonAdded, afternoonTxt) +
+    twTile("금일 예상 오후배송완료건", "🔮", fcVal, fcSub);
 
   // 아침 기준 대비 진행
   var prog=document.getElementById("tw-progress");
@@ -5275,6 +5284,8 @@ function resizeAllCharts(){
   RESIZE_T=setTimeout(function(){
     RESIZE_T=null;
     Object.keys(charts).forEach(function(k){ try{ charts[k].resize(); }catch(e){} });
+    // 🆕 2026-10-21: 즐겨찾기 탭 스냅샷 차트(favCharts)도 배치편집 등으로 폭이 바뀌면 같이 리사이즈.
+    Object.keys(favCharts).forEach(function(k){ try{ favCharts[k].resize(); }catch(e){} });
   }, 60);
 }
 function effectiveLayout(tab){ return LAYOUT_LOCAL[tab] || LAYOUT_SHARED[tab] || null; }
@@ -5489,7 +5500,8 @@ function jumpToFavoriteSource(cid){
   }, 60);
 }
 // 원본 카드 하나를 즐겨찾기 탭에 넣을 읽기전용 스냅샷으로 복제. 실시간 동기화가 아니라
-// "즐겨찾기 탭에 들어올 때마다 그 순간 상태를 다시 캡처"하는 방식(차트 캔버스는 이미지로 고정).
+// "즐겨찾기 탭에 들어올 때마다 그 순간 상태를 다시 캡처"하는 방식(차트는 그 순간 data로 새
+// Chart.js 인스턴스를 만들어 호버 툴팁까지 그대로 살아있다 — 2026-10-21 이전엔 이미지로 고정했었다).
 function snapshotCard(cid){
   var src = findSourceCard_(cid); if (!src) return null;
   var clone = src.cloneNode(true);
@@ -5497,13 +5509,28 @@ function snapshotCard(cid){
   // cloneNode는 이벤트리스너를 복제하지 않는다 — 원본에 이미 붙어있던(먹통이 될) 편집툴바·별표는 지우고 새로 만든다.
   var oldTools = clone.querySelector(".cd-tools"); if (oldTools) oldTools.remove();
   var oldStar = clone.querySelector(".fav-star"); if (oldStar) oldStar.remove();
-  // 차트 캔버스 → 그 순간 이미지로 고정(캔버스를 그대로 복제하면 빈 화면이 된다, id도 원본과 중복된다)
+  // 🔀 2026-10-21(운영자 요청): 차트 캔버스를 이미지로 굳히면 호버 툴팁(실건수)이 죽는다 —
+  //   원본 Chart.js 인스턴스의 type/data/options를 그대로 복제해 새 캔버스에 새 Chart 인스턴스를
+  //   만든다. data는 깊은 복사라 스냅샷 시점 값으로 고정(실시간 동기화 아님, 기존 설계 그대로),
+  //   options(툴팁 콜백 등 함수 포함)는 참조 공유 — mk()가 다음 갱신 때 새 cfg 객체로 다시 만들 뿐
+  //   이 객체를 변형하지 않으므로 공유해도 안전하다. charts 레지스트리에 없는(원본 id를 못 찾은)
+  //   캔버스만 기존 이미지 고정 방식으로 폴백한다.
   var srcCanvases = src.querySelectorAll("canvas"), cloneCanvases = clone.querySelectorAll("canvas");
   for (var i = 0; i < cloneCanvases.length; i++) {
-    var oc = srcCanvases[i], cc = cloneCanvases[i], img = document.createElement("img");
-    try { img.src = oc.toDataURL("image/png"); } catch (e) { img.alt = "(차트를 불러올 수 없습니다)"; }
-    img.style.width = "100%"; img.style.display = "block";
-    cc.parentNode.replaceChild(img, cc);
+    var oc = srcCanvases[i], cc = cloneCanvases[i];
+    var srcChart = oc && oc.id ? charts[oc.id] : null;
+    if (srcChart) {
+      favCharts[cid + "_" + i] = new Chart(cc.getContext("2d"), {
+        type: srcChart.config.type,
+        data: JSON.parse(JSON.stringify(srcChart.data)),
+        options: srcChart.options
+      });
+    } else {
+      var img = document.createElement("img");
+      try { img.src = oc.toDataURL("image/png"); } catch (e) { img.alt = "(차트를 불러올 수 없습니다)"; }
+      img.style.width = "100%"; img.style.display = "block";
+      cc.parentNode.replaceChild(img, cc);
+    }
   }
   stripCloneIds_(clone);
   // 스냅샷 안 조작요소는 동작하지 않는다 — 명확히 비활성화(별표는 이 다음에 새로 붙여서 살아있게 함)
@@ -5518,6 +5545,10 @@ function snapshotCard(cid){
 }
 function renderFavoritesSnapshot(){
   var grid = document.getElementById("favorites-grid");
+  // 🆕 2026-10-21: 탭 재진입마다 새 Chart.js 인스턴스를 만들므로, innerHTML로 DOM만 지우면
+  //   이전 인스턴스가 destroy 안 된 채 누적된다(메모리 누수) — 비우기 전에 먼저 정리한다.
+  Object.keys(favCharts).forEach(function(k){ try{ favCharts[k].destroy(); }catch(e){} });
+  favCharts = {};
   grid.innerHTML = "";
   if (!FAVORITES.length) {
     grid.innerHTML = '<div class="card col-12"><div class="fav-empty">⭐ 아직 즐겨찾기한 카드가 없습니다. 각 카드 오른쪽 위 ☆ 를 눌러 추가하세요.</div></div>';
