@@ -295,58 +295,6 @@
   .memo-time-col { display:flex; flex-direction:column; gap:1px; flex-shrink:0; }
   .memo-time { font-size:11px; color: var(--muted); white-space:nowrap; padding-top:1px; }
   .memo-edited { font-size:10px; color: var(--muted); white-space:nowrap; font-style:italic; opacity:.85; }
-  /* 액션 효과 리포트 '주차별 요약'(2026-08-03) — 차트와 같은 계산값을 문장으로. 색상 코딩 없음(중립 표기 원칙). */
-  .wa-summary-list { display:flex; flex-direction:column; margin-top:4px; }
-  .wa-summary-row { padding:9px 2px; border-top:1px dashed var(--border); font-size:13.5px; line-height:1.6; color: var(--text-secondary); }
-  .wa-summary-row:first-child { border-top:none; }
-  .wa-summary-row b { color: var(--text-primary); font-weight:700; }
-  .wa-summary-tag { font-size:11.5px; color: var(--muted); font-style:italic; }
-  /* 액션 효과 리포트 차트 카드 — 범례·표·캘아웃(정적 리포트 스타일 차용, 2026-08-03). 해석 문구는
-     여기에도 안 넣는다 — 전부 데이터 사실(성숙도·표본 크기 등)만, 판단은 코멘트/AI초안에만 남긴다. */
-  .wa-legend { display:flex; gap:16px; flex-wrap:wrap; margin:10px 2px 2px; font-size:12px; color: var(--muted); }
-  .wa-legend span { display:inline-flex; align-items:center; gap:6px; }
-  .wa-legend i { width:10px; height:10px; border-radius:2px; display:inline-block; flex-shrink:0; }
-  .wa-callout { margin-top:14px; padding:12px 14px; border-radius:8px; border:1px solid var(--border); background: color-mix(in srgb, var(--text-primary) 4%, transparent); font-size:12.5px; color: var(--text-secondary); line-height:1.65; }
-  .wa-callout b { color: var(--text-primary); }
-  /* .dtable의 전역 min-width:640px는 col-12 표 기준 — col-6 카드 안의 짧은 표(3~4열)는 그 폭에
-     맞춰 강제로 넓어져 오른쪽 열이 카드 밖으로 밀려난다(2026-08-03 발견). ID가 클래스보다 우선하므로
-     이 표들만 내용 크기에 맞게 좁아지게 한다. */
-  #waDangtongTable, #waNightTable, #waCallD1Table { min-width: 0; }
-  /* "한눈에 보는 결론" — AI(Gemini)가 매주 다시 쓰는 액션별 태그+한줄평. 사람이 그 주 코멘트를
-     저장하기 전까지는 반드시 "AI 추정 · 검토 전" 배지를 붙인다(2026-08-03, 운영자 요청 + 확인) —
-     검토 안 된 AI 판단이 확정 결론처럼 보이면 안 된다는 게 이 기능 전체의 전제. */
-  .wa-ai-badge { display:inline-block; font-size:10.5px; font-weight:700; color: var(--s-yellow);
-    background: color-mix(in srgb, var(--s-yellow) 16%, transparent); border-radius:99px; padding:2px 9px;
-    margin-left:8px; vertical-align:middle; letter-spacing:.01em; }
-  .wa-verdict-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:11px; margin-top:8px; }
-  .wa-vcard { border:1px solid var(--border); border-radius:10px; padding:12px 13px 11px; background: var(--page);
-    display:flex; flex-direction:column; gap:5px; }
-  .wa-vtag { align-self:flex-start; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:99px; letter-spacing:.01em; }
-  .wa-vtag.good { background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good); }
-  .wa-vtag.bad { background: color-mix(in srgb, var(--s-red) 16%, transparent); color: var(--s-red); }
-  .wa-vtag.warn { background: color-mix(in srgb, var(--s-yellow) 16%, transparent); color: var(--s-yellow); }
-  .wa-vtitle { font-weight:700; font-size:13px; color: var(--text-primary); }
-  /* 가독성 개선(2026-08-11): AI 서술문이 3~4줄로 길어 카드가 커 보이던 것을 3줄로 시각적 말줄임.
-     원문은 title 속성으로 그대로 남겨 hover 시 전문 확인 가능. */
-  .wa-vbody { font-size:12.5px; line-height:1.55; color: var(--text-secondary);
-    display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
-  .wa-callout-ai { margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); }
-  /* '보고서' 탭(2026-08-04, 옛 라벨 '액션 효과 리포트') — 운영자가 예전에 세션 안에서 봤던 정적
-     Artifact 리포트의 "위아래로 읽는 문서" 느낌을 재현. 데이터·JS(WA.*)는 전혀 안 건드리고
-     이 탭 안에서만(#tab-weeklyaction 스코프) 카드 그리드 폭을 덮어쓴다 — 다른 탭의
-     .grid/.card/.col-*는 이 규칙의 영향을 받지 않는다(선택자가 이 탭 안으로 한정됨).
-     주차 선택 후 재조회는 기존 WA.week 메커니즘 그대로라 별도 저장소 없이도 "다시 불러오기"가 된다.
-     ⚠️ 2026-08-04 2차 수정: 처음엔 전 카드를 강제로 1열(880px)로 만들었는데, 운영자가 "화면
-     여백이 넓어 한 줄에 카드 두 개는 들어갈 공간이 있다"고 지적 — `.grid > .card{grid-column:1/-1}`
-     전체 강제 규칙을 없애고 폭만 넓혀서, HTML에 이미 있던 col-12/col-6 배치(당일배송·야간원격
-     2장만 원래부터 col-6 짝)가 자연스럽게 살아나게 했다. */
-  #tab-weeklyaction .grid { max-width: 1240px; margin: 0 auto; gap: 16px; }
-  #tab-weeklyaction .card { padding: 16px 20px 16px; }
-  #tab-weeklyaction [data-cid="waHead"] { padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-  #tab-weeklyaction [data-cid="waHead"] h3 { font-size: 17px; letter-spacing: -.3px; }
-  #tab-weeklyaction [data-cid="waVerdict"] { background: color-mix(in srgb, var(--s-blue) 5%, var(--surface-1)); border-color: color-mix(in srgb, var(--s-blue) 22%, var(--border)); }
-  #tab-weeklyaction .wa-verdict-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-  #tab-weeklyaction #waDangtongTable, #tab-weeklyaction #waNightTable, #tab-weeklyaction #waCallD1Table { min-width: 0; width: 100%; }
   /* 운영자 코멘트 서식 툴바(2026-08-04) — 저장은 여전히 일반 텍스트라, 굵게/글머리기호는 슬랙처럼
      "**텍스트**"·"- 항목" 표기를 텍스트에 직접 끼워 넣는 방식이다(별도 렌더링 화면은 아직 없음). */
   .wa-note-toolbar { display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap; }
@@ -758,8 +706,7 @@
        NAV_ORIGINAL_ORDER·NAV_GROUPS 배열도 같은 순서로 맞춰야 그룹핑 토글 on/off 모두 일관된다. -->
   <div class="navitem active" data-tab="todaywork" id="nav-todaywork"><span class="ic">☎️</span><div>당일업무현황판<small>콜리스트 실시간 · 오늘 잔량/진행</small></div></div>
   <div class="navitem" data-tab="ops"><span class="ic">📋</span><div>운영<small>잔여 업무량 · 채널구성</small></div></div>
-  <div class="navitem" data-tab="weeklyboard" id="nav-weeklyboard"><span class="ic">📅</span><div>위클리 현황판<small>출고주 6주 스코어보드</small></div><span class="navcaret" id="weeklyboard-caret">▸</span></div>
-  <div class="navitem navchild" data-tab="weeklyaction" id="nav-weeklyaction" style="display:none"><span class="ic">📄</span><div>보고서<small>야간원격·당일배송 주차별 검토</small></div></div>
+  <div class="navitem" data-tab="weeklyboard" id="nav-weeklyboard"><span class="ic">📅</span><div>위클리 현황판<small>출고주 6주 스코어보드</small></div></div>
   <div class="navitem" data-tab="c2i" id="nav-c2i"><span class="ic">📞</span><div>당일통화당일설치<small>최근 14일 · 담당자별 비교</small></div></div>
   <div class="navitem" data-tab="d7tracking" id="nav-d7tracking"><span class="ic">⏱️</span><div>D+7설치트래킹<small>출고 주차별 처리·지연사유</small></div></div>
   <div class="navitem" data-tab="cohort" id="nav-cohort"><span class="ic">📦</span><div>출고 코호트<small>진행률·전환</small></div><span class="navcaret" id="cohort-caret">▸</span></div>
@@ -1054,94 +1001,6 @@
       </div>
     </div>
   </section>
-
-  <!-- WEEKLY ACTION (액션 효과 리포트) — 위클리 현황판 하위 -->
-  <section class="tab-content" id="tab-weeklyaction">
-    <div class="grid">
-      <div class="card col-12" data-cid="waHead">
-        <h3>📄 보고서</h3>
-        <div class="sub">야간원격접수·당일배송 업데이트(오후 배송반영, 7/22~)의 주차별 실측 지표입니다. <b>수치는 항상 자동 재계산</b>되고, 해석·판단은 아래 코멘트에 직접 남겨 주세요.</div>
-        <div id="waWeekBox" style="margin:10px 0 14px"></div>
-        <div class="tiles" id="waTiles"></div>
-      </div>
-
-      <div class="card col-12" data-cid="waSummary">
-        <h3>📋 주차별 요약</h3>
-        <div class="sub">항상 가장 최근 마감된 주 기준(아래 주차 선택과 무관) · 🤖 AI 초안이 근거로 쓰는 수치와 동일 · 해석은 없음</div>
-        <div id="waSummaryList" class="wa-summary-list"></div>
-      </div>
-
-      <div class="card col-12" data-cid="waVerdict" style="display:none">
-        <h3>🔎 한눈에 보는 결론 <span id="waVerdictBadge"></span></h3>
-        <div class="sub">Gemini가 매주 자동으로 쓰는 요약입니다 · 운영자가 이 주차 코멘트를 저장하면 "검토완료"로 바뀝니다</div>
-        <div id="waVerdictGrid" class="wa-verdict-grid"></div>
-      </div>
-
-      <div class="card col-12 fill" data-cid="waD7">
-        <h3>📦 출고주차별 D+7 누적 설치완료율</h3>
-        <div class="sub">출고 후 7일 이내 설치완료 비율 · 우클리핑 영향이 없는(관측 성숙) 유일한 비교 지표 · 최근 몇 주는 "집계중"으로 표시됩니다 · 옆 스코어보드 전 지표를 병합 표시(원천 데이터 보유기간이 짧은 열은 그 이전 주 "–")</div>
-        <div class="chart-wrap ch-l"><canvas id="waD7Chart"></canvas></div>
-        <div class="tbl-wrap"><table class="dtable no-grp" id="waD7Table"></table></div>
-        <div class="wa-callout" id="waD7Callout"></div>
-        <table class="legend-table" id="waD7Legend"><tbody></tbody></table>
-      </div>
-
-      <div class="card col-6 fill" data-cid="waDangtong">
-        <h3>🚚 당일배송 업데이트 (오후 배송반영, 7/22~)</h3>
-        <div class="sub">배송완료 전환 후 1차컨택 당일설치율(당통비교 기준, 자가설치 제외) · 2026-05-04주부터 표시(그 이전은 채널분류 시작 전 데이터라 제외) · 최근 주는 컨택이 덜 끝나 출고 대비 %가 낮게 보일 수 있습니다</div>
-        <div class="chart-wrap ch-m"><canvas id="waDangtongChart"></canvas></div>
-        <div class="tbl-wrap"><table class="dtable no-grp" id="waDangtongTable"></table></div>
-        <div class="wa-callout" id="waDangtongCallout"></div>
-      </div>
-
-      <div class="card col-6 fill" data-cid="waNight">
-        <h3>🌙 야간원격접수 (선택 주 + 전주 일자별)</h3>
-        <div class="sub" id="waNightNote">18~24시 원격AS 채널 접수 · 설치완료는 사업자번호 매칭(누적형, 최근 며칠은 낮게 보일 수 있음)</div>
-        <div class="chart-wrap ch-m"><canvas id="waNightChart"></canvas></div>
-        <div class="tbl-wrap"><table class="dtable no-grp" id="waNightTable"></table></div>
-        <div class="wa-callout" id="waNightCallout" style="display:none"></div>
-      </div>
-
-      <div class="card col-12 fill" data-cid="waCallD1">
-        <h3>📞 콜 기준 D+1 설치완료율</h3>
-        <div class="sub">분모="그 주 <b>통화가 연결돼</b> 설치예정으로 확정된 매장(주문) 수" — 실적로그 콜시도 총량이나 전체 컨택 업체 수가 아닙니다(주말 제외) · U열 신설일(2026-07-21) 이전은 집계 불가 · <b>D+1(통화성공)과 D+1(부재,참고)은 서로 다른 그룹(분모가 다름)</b>입니다 — 통화성공군의 설치완료율과 부재군의 설치완료율을 나란히 보여줄 뿐, 같은 모집단을 비교하는 게 아닙니다.</div>
-        <div class="chart-wrap ch-m"><canvas id="waCallD1Chart"></canvas></div>
-        <div class="tbl-wrap"><table class="dtable no-grp" id="waCallD1Table"></table></div>
-        <div class="wa-callout" id="waCallD1Callout" style="display:none"></div>
-      </div>
-
-      <div class="card col-12" data-cid="atlHead">
-        <h3>📐 액션 시행 전/후 비교</h3>
-        <div class="sub">각 액션의 <b>시행일 기준 전 2주 vs 후 2주</b> 실측 비교입니다 · 시행 후 2주가 안 지났으면 가용한 기간만 집계됩니다</div>
-      </div>
-      <div class="card col-4 fill" data-cid="atlPmDelivery"><h3>🚚 오후배송반영 (7/21~)</h3>
-        <div class="sub">배송업데이트 대비 당일설치율 · 전/후 2주</div>
-        <div class="chart-wrap ch-m"><canvas id="atlPmDeliveryChart"></canvas></div>
-        <div id="atlPmDeliveryNote" class="wa-callout"></div>
-      </div>
-      <div class="card col-4 fill" data-cid="atlPmDeliveryShip"><h3>🚚📦 오후배송반영 · 출고일축 (7/21~)</h3>
-        <div class="sub">출고일→설치일 리드타임 · 당일/D+1(누적) · 전/후 2주</div>
-        <div class="chart-wrap ch-m"><canvas id="atlPmDeliveryShipChart"></canvas></div>
-        <div id="atlPmDeliveryShipNote" class="wa-callout"></div>
-      </div>
-      <div class="card col-4 fill" data-cid="atlPmDeliveryCall"><h3>🚚📞 오후배송반영 · 마지막통화일 기준 (7/21~)</h3>
-        <div class="sub">마지막통화일 기준(느슨한 정의 — 부재 등 포함) · 당일/D+1(누적) · 전/후 2주</div>
-        <div class="chart-wrap ch-m"><canvas id="atlPmDeliveryCallChart"></canvas></div>
-        <div id="atlPmDeliveryCallNote" class="wa-callout"></div>
-      </div>
-      <div class="card col-12" data-cid="waCaveat">
-        <h3>⚠️ 해석 시 주의사항</h3>
-        <div class="sub">
-          <ul style="margin:6px 0 0;padding-left:18px;line-height:1.7">
-            <li>두 액션 모두 2026-07-20~22 사이에 겹쳐 시작해 서로의 효과와 <b>휴가 성수기(부재·환경대기 증가)</b>가 섞여 있을 수 있습니다.</li>
-            <li>선택한 주가 최근 주일수록 <b>우클리핑</b>(아직 진행 중인 코호트)의 영향을 받습니다 — D+7·당통비교 등은 "집계중"으로 표시됩니다.</li>
-            <li>야간원격접수는 <b>기존에도 있던 채널</b>입니다 — 2026-07-20부터는 자동 집계(Slack 스크래핑)가 시작된 것이지, 접수 자체가 새로 생긴 게 아닙니다.</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </section>
-
 
   <!-- 당일통화당일설치(2026-08-14 재설계 → 같은 날 후속 수정) — 운영자가 예전에 Claude Artifact로
        받아본 정적 리포트(PHASE145) 양식을 라이브 대시보드에 반영해 달라는 요청으로 PHASE150의
@@ -3863,291 +3722,6 @@ function saveReportNote(notes){
   { params:{ action:"setnote", week:w, note:ta.value } });
 }
 
-// ===== 🎯 액션 효과 리포트 (야간원격접수·당일배송 업데이트, 2026-08-03 신설) =====
-// 계산값은 항상 자동 재계산(수치 수기수정 없음) — 해석·판단은 waNote 코멘트(별도 저장소)에만 남긴다.
-var WA = { week:null, aiDraftText:"" };
-var WA_BOUND = false;
-
-function waYmd(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
-// api_weekMonKey_(대시보드API.js)와 동일 로직의 클라이언트 복제 — 순수 날짜 포맷 변환이라 중복 허용.
-function waMondayKey(dateStr){
-  var s=dateStr.split("-"); var d=new Date(+s[0],+s[1]-1,+s[2]);
-  d.setDate(d.getDate() - ((d.getDay()+6)%7));
-  return waYmd(d);
-}
-function waShortLabel(w){ var s=w.split("-"); return (+s[1])+"/"+(+s[2]); }
-function waFind(rows, week){ for(var i=0;i<rows.length;i++){ if(rows[i].week===week) return i; } return -1; }
-
-// weekTile과 같은 화살표 규칙(위/아래 색상)을 값 쌍(cur/prev)에 직접 적용 — rows/key 인덱싱 없이 씀.
-function waArrow(cur, prev, opts){
-  opts=opts||{};
-  var valFn=opts.valFn||fmt, unit=opts.unit||"";
-  if(cur==null||prev==null) return '<span style="color:var(--muted)">전주 비교 불가</span>';
-  if(prev===0) return '<span style="color:var(--muted)">전주 '+valFn(prev)+unit+'</span>';
-  var delta=(cur-prev)/prev*100, up=cur>=prev;
-  var better=opts.lowerBetter?(cur<prev):(cur>prev);
-  var color=(cur===prev||opts.neutral)?"var(--muted)":(better?C["--good"]:C["--s-red"]);
-  var arrow=up?"▲":"▼";
-  return '<span style="color:'+color+';font-weight:700">'+arrow+' '+Math.abs(Math.round(delta))+'%</span> <span style="color:var(--muted)">전주 '+valFn(prev)+unit+'</span>';
-}
-function waTile(label, ic, cur, prev, opts){
-  opts=opts||{};
-  var valFn=opts.valFn||fmt, unit=opts.unit||"";
-  var val = cur==null ? "–" : valFn(cur);
-  var sub = cur==null ? '<span style="color:var(--muted)">아직 집계되지 않음(집계중 또는 대상 기간 아님)</span>' : waArrow(cur, prev, opts);
-  return tile(label, ic, val, unit, sub, opts.accent);
-}
-
-// cohort.shipCurve(D+0~D+30 누적표) → {week, d7, d0} 평면 배열로 변환. maxD<7이면 D+7 자체가 관측 불가.
-// d0(출고 당일 설치)은 그 주 마지막 출고일만 지나면 이미 확정값이라, D+7이 안 된 최신 주의 조기지표로 쓴다(waSummaryHTML).
-function waD7Rows(shipCurve){
-  return (shipCurve||[]).map(function(r){
-    var cum=r.cum||[];
-    return {
-      week:r.week, shipped:r.shipped, maxD:r.maxD, partial:!!r.partial,
-      d7:(r.maxD>=7 && cum[7]!=null)?cum[7]:null,
-      d0:(r.maxD>=0 && cum[0]!=null)?cum[0]:null
-    };
-  });
-}
-// shipCurve의 마지막 항목은 '진행중인 이번 주'(partial:true)일 수 있다 — 아직 출고가 안 끝난
-// 주라 다주차 트렌드의 기준으로 쓰면 다음 주만 지나도 값이 깨진다. waSummaryHTML은 항상 이
-// "마감된 마지막 주"를 T로 잡는다(대시보드API.js aiDraftTargetWeek_과 같은 대상 — AI 초안과
-// 같은 주를 설명해야 "같이 기재"한 의미가 있다), 위 차트/타일의 드롭다운 선택과는 무관하다.
-function waLastClosedWeek(d7rows){
-  for(var i=d7rows.length-1;i>=0;i--){ if(!d7rows[i].partial) return d7rows[i].week; }
-  return d7rows.length ? d7rows[d7rows.length-1].week : null;
-}
-// 선택주(week)로부터 n주 전 월요일 키. gatherWeeklyAiMetrics_(대시보드API.js)의 weekOffset_ 클라이언트 복제.
-function waWeekOffsetKey(week, n){
-  var s=week.split("-"); var d=new Date(+s[0],+s[1]-1,+s[2]);
-  d.setDate(d.getDate() - 7*n);
-  return waYmd(d);
-}
-function waRowAt(rows, week, key){
-  var i = waFind(rows, week);
-  return i<0 ? null : rows[i][key];
-}
-// 상승=빨강·하락=파랑(국내 증감 표기 관행) — 좋다/나쁘다 판단이 아니라 방향만 표시한다
-// (운영자 요청 2026-08-04). 이 탭의 "판단은 코멘트에만" 원칙과 안 부딪힌다 — 방향 표시일 뿐
-// 그 방향이 좋은지 나쁜지는 여전히 아무 말도 안 한다.
-function waDeltaColor_(dv){ return dv>0?C["--s-red"]:(dv<0?C["--s-blue"]:"var(--muted)"); }
-function waPctDeltaWord(cur, prev){
-  if(cur==null||prev==null) return "비교 불가";
-  var dv = Math.round((cur-prev)*1000)/10;
-  if(dv===0) return "변화 없음";
-  var word = Math.abs(dv)+"%p "+(dv>0?"상승":"하락");
-  return '<b style="color:'+waDeltaColor_(dv)+'">'+word+'</b>';
-}
-function waCountDeltaWord(cur, prev){
-  if(cur==null||prev==null) return "비교 불가";
-  var dv = Math.round(cur-prev);
-  if(dv===0) return "변화 없음";
-  var word = Math.abs(dv)+"건 "+(dv>0?"증가":"감소");
-  return '<b style="color:'+waDeltaColor_(dv)+'">'+word+'</b>';
-}
-// "주차별 요약" 카드 — AI 초안(gatherWeeklyAiMetrics_)이 근거로 쓰는 것과 같은 계산을 문장으로
-// 정리한 것(2026-08-03, 운영자 요청 "AI 초안만 봐서는 어디서 나온 수치인지 모르겠다, 리포트
-// 형식으로 주차별로 보고 싶다"). 해석 없이 계산값만 — 색상 코딩도 안 한다(이 탭 전체 원칙).
-function waSummaryHTML(d, w){
-  var d7rows = waD7Rows((d.cohort&&d.cohort.shipCurve)||[]);
-  var wT = waLastClosedWeek(d7rows) || w;   // 드롭다운 선택(w)과 무관 — 항상 최신 마감주(AI 초안과 동일 대상)
-  var wT1=waWeekOffsetKey(wT,1), wT2=waWeekOffsetKey(wT,2);
-  var lbl = waShortLabel;
-
-  var WA_DANGTONG_FLOOR = "2026-05-04";
-  var dtRows = ((d.weeklyBoard&&d.weeklyBoard.dangtong)||[]).filter(function(r){ return r.week >= WA_DANGTONG_FLOOR; });
-  var dailyNight = (d.weeklyBoard&&d.weeklyBoard.nightIntake&&d.weeklyBoard.nightIntake.daily)||[];
-  var niRows = waNightWeekly(dailyNight);
-  var cdRows = (d.accel&&d.accel.samedayWeekly)||[];
-  var absRows = (d.accel&&d.accel.absentSamedayWeekly)||[];
-
-  var d7T=waRowAt(d7rows,wT,"d7"), d7T1=waRowAt(d7rows,wT1,"d7"), d7T2=waRowAt(d7rows,wT2,"d7");
-  var d0T=waRowAt(d7rows,wT,"d0"), d0T1=waRowAt(d7rows,wT1,"d0");
-  var fcT=waRowAt(dtRows,wT,"fcRate"), fcT1=waRowAt(dtRows,wT1,"fcRate"), fcImmatureT=waRowAt(dtRows,wT,"immature");
-  var niT=waRowAt(niRows,wT,"count"), niT1=waRowAt(niRows,wT1,"count");
-  var niInstT=waRowAt(niRows,wT,"installed"), niInstT1=waRowAt(niRows,wT1,"installed");
-  var cdT=waRowAt(cdRows,wT,"rate"), cdT1=waRowAt(cdRows,wT1,"rate");
-  var abT=waRowAt(absRows,wT,"rate"), abT1=waRowAt(absRows,wT1,"rate");
-
-  var lines = [];
-  if(d7T!=null){
-    lines.push({label:"D+7 누적 설치완료율",
-      body: lbl(wT1)+"주 대비 "+lbl(wT)+"주 "+waPctDeltaWord(d7T,d7T1)+" ("+pct(d7T1,1)+" → "+pct(d7T,1)+")"});
-  } else {
-    lines.push({label:"D+7 누적 설치완료율",
-      body: lbl(wT2)+"주 대비 "+lbl(wT1)+"주 "+waPctDeltaWord(d7T1,d7T2)+" ("+pct(d7T2,1)+" → "+pct(d7T1,1)+")",
-      tag: lbl(wT)+"주 집계 중"});
-    lines.push({label:"D+0 설치완료율(조기지표)",
-      body: lbl(wT1)+"주 대비 "+lbl(wT)+"주 "+waPctDeltaWord(d0T,d0T1)+" ("+pct(d0T1,1)+" → "+pct(d0T,1)+")",
-      tag: lbl(wT)+"주 집계 중 · 최종 D+7 결과를 예단할 수 없음"});
-  }
-  lines.push({label:"1차 컨택 당일 설치율",
-    body: lbl(wT1)+"주 대비 "+lbl(wT)+"주 "+waPctDeltaWord(fcT,fcT1)+" ("+pct(fcT1,1)+" → "+pct(fcT,1)+")",
-    tag: fcImmatureT ? (lbl(wT)+"주 집계 중") : null});
-  lines.push({label:"콜 기준 D+1 이내 설치완료율 (통화성공)",
-    body: lbl(wT1)+"주 대비 "+lbl(wT)+"주 "+waPctDeltaWord(cdT,cdT1)+" ("+pct(cdT1,1)+" → "+pct(cdT,1)+")"});
-  lines.push({label:"콜 기준 D+1 이내 설치완료율 (부재건, 참고용)",
-    body: lbl(wT1)+"주 대비 "+lbl(wT)+"주 "+waPctDeltaWord(abT,abT1)+" ("+pct(abT1,1)+" → "+pct(abT,1)+")"});
-  lines.push({label:"야간원격접수 건수",
-    body: lbl(wT1)+"주 대비 "+lbl(wT)+"주 "+waCountDeltaWord(niT,niT1)+" ("+(niT1==null?"–":niT1+"건")+" → "+(niT==null?"–":niT+"건")+")"
-      +" · 설치완료 "+(niInstT1==null?"–":niInstT1+"건")+" → "+(niInstT==null?"–":niInstT+"건")});
-
-  return lines.map(function(ln){
-    // ln.body는 우리 코드가 만든 신뢰 가능한 HTML(색상 span 포함)이라 esc()로 감싸지 않는다 —
-    // 사용자 자유입력이 섞이는 문자열이 아니다(라벨·태그는 그대로 esc 유지).
-    return '<div class="wa-summary-row"><b>'+esc(ln.label)+'</b>: '+ln.body
-      +(ln.tag?' <span class="wa-summary-tag">('+esc(ln.tag)+')</span>':'')+'</div>';
-  }).join('');
-}
-function paintWaSummary(d, w){
-  var box=document.getElementById("waSummaryList"); if(!box) return;
-  box.innerHTML = waSummaryHTML(d, w);
-}
-// 야간원격접수 일자별 배열 → 주(월요일) 단위 합계. count/installed 둘 다 그냥 합산(주말 제외 없음 — 접수는 매일 발생).
-function waNightWeekly(daily){
-  var W={};
-  (daily||[]).forEach(function(r){
-    var wk=waMondayKey(r.date);
-    if(!W[wk]) W[wk]={week:wk, count:0, installed:0};
-    W[wk].count+=r.count||0; W[wk].installed+=r.installed||0;
-  });
-  return Object.keys(W).sort().map(function(k){ return W[k]; });
-}
-// 선택 주부터 이전 weeksBack주까지 포함한 날짜 문자열 배열(오래된 날짜가 먼저, 오름차순).
-// 운영자 요청(2026-08-04) — 야간원격접수는 선택 주 하나만이 아니라 최근 흐름(이전 3주)도 같이 보고 싶다.
-function waWeekDatesBack(monWeek, weeksBack){
-  var s=monWeek.split("-"); var mon=new Date(+s[0],+s[1]-1,+s[2]);
-  var start=new Date(mon); start.setDate(start.getDate() - 7*weeksBack);
-  var out=[];
-  for(var i=0;i<7*(weeksBack+1);i++){ var dd=new Date(start); dd.setDate(start.getDate()+i); out.push(waYmd(dd)); }
-  return out;
-}
-
-function renderWeeklyAction(d){
-  var box=document.getElementById("waWeekBox"); if(!box) return;
-  d = d || {};
-  var sc = (d.cohort && d.cohort.shipCurve) || [];
-  if(!sc.length){ box.innerHTML='<div class="rt-l">출고 코호트 데이터가 없습니다.</div>'; return; }
-  var weeks = sc.map(function(r){return r.week;});
-  if(!WA.week || weeks.indexOf(WA.week)<0) WA.week = weeks[weeks.length-1];
-  var latest = weeks[weeks.length-1];
-  var opts = weeks.slice().reverse().map(function(w){
-    return '<option value="'+w+'"'+(w===WA.week?' selected':'')+'>'+rptWeekLabel(w)+'주'+(w===latest?' (이번주·진행중)':'')+'</option>';
-  }).join("");
-  box.innerHTML = '<select class="rpt-week" id="waWeekSel">'+opts+'</select> <span class="rpt-range" id="waWeekRange"></span>';
-  document.getElementById("waWeekSel").addEventListener("change", function(){ WA.week=this.value; paintWeeklyAction(d); });
-  waBindButtons();
-  paintWeeklyAction(d);
-  paintActionTimeline(d.actionTimeline);
-}
-// 액션 시행일(pmDelivery) 기준 전/후 4주 실측 비교 카드 3종.
-// 서술형 설명(문장)은 Task 8(AI초안)이 각 note 슬롯에 덧붙인다 — 여기서는 수치+경고만 채운다.
-function paintActionTimeline(atl){
-  if(!atl || !atl.actions) return;
-  var idMap = { pmDelivery: "atlPmDelivery", pmDeliveryShip: "atlPmDeliveryShip", pmDeliveryCall: "atlPmDeliveryCall" };
-  atl.actions.forEach(function(a){
-    var base = idMap[a.key]; if(!base) return;
-    mk(base+"Chart", { type:"bar",
-      data:{ labels:["시행 전 2주","시행 후 2주"],
-        datasets:[{ data:[a.before.rate, a.after.rate], backgroundColor:[C["--muted"], C["--s-blue"]], borderRadius:6 }] },
-      options: Object.assign(axes({horizontal:false}), { plugins:{ datalabels: dlBarTop({formatter:function(v){return pct(v,1);}}) } })
-    });
-    var noteEl = document.getElementById(base+"Note");
-    if(!noteEl) return;
-    var warn = [];
-    if(a.insufficientBefore) warn.push("시행 전 데이터 부족");
-    if(a.insufficientAfter) warn.push("시행 후 아직 2주 미경과(집계중)");
-    // 🆕 2026-08-06(PHASE 105): shipInstall/callLoose 축은 rateD0(당일)를 별도로 받는다 — 대표 막대는
-    // D+1(누적), 그 아래 보조줄로 당일 수치를 함께 보여준다. 기존 delivery는 rateD0가 항상
-    // null이라 이 블록이 아예 안 붙어 기존 문구가 그대로 유지된다(하위호환).
-    var hasD0 = (a.before.rateD0 != null || a.after.rateD0 != null);
-    var deltaWord = a.deltaPct==null ? "–" : (a.deltaPct>=0?"+":"") + (Math.round(a.deltaPct*1000)/10) + "%p";
-    var mainLine = "<b>" + pct(a.before.rate,1) + " → " + pct(a.after.rate,1) + "</b> (" + (hasD0 ? "D+1누적, " : "") + deltaWord + ")";
-    var d0Line = "";
-    if(hasD0){
-      var deltaD0 = a.deltaPctD0==null ? "–" : (a.deltaPctD0>=0?"+":"") + (Math.round(a.deltaPctD0*1000)/10) + "%p";
-      d0Line = "<br><span style=\"font-size:11.5px;color:var(--muted)\">당일: " + pct(a.before.rateD0,1) + " → " + pct(a.after.rateD0,1) + " (" + deltaD0 + ")</span>";
-    }
-    noteEl.innerHTML = mainLine + d0Line +
-      (warn.length ? " · <span style=\"color:var(--s-orange)\">" + warn.join(", ") + "</span>" : "");
-  });
-  // Task 8 — AI초안(actionTimelineNotes)이 있으면 각 슬롯 끝에 서술형 문장을 얹는다. paintWeeklyAction(d)가
-  // 이 함수보다 먼저 불려 WA.aiDraft/WA.aiWeek/WA.actionNotes를 채워 두므로(index.html:3112 근처) 그대로
-  // 재사용한다(선택 주 파라미터 없음 — 위 노트가 매 호출마다 innerHTML로 통째로 갱신돼 append만 해도 중복이 안 남는다).
-  // 배지는 다른 wa-callout-ai들과 동일하게 aiWeek(AI가 실제로 쓴 주) 기준으로 "검토 전" 여부를 표시한다.
-  // 🆕 2026-08-06(PHASE 105): actionTimelineNotes는 pmDelivery 1키만 받으므로(신규 4개
-  // 파생 카드는 AI 서술형 슬롯 없음, 액션리포트AI초안.js 참고) 이 목록도 1개로 축소.
-  var aiDraft = WA.aiDraft;
-  if(aiDraft && aiDraft.actionTimelineNotes){
-    ["pmDelivery"].forEach(function(k){
-      var el = document.getElementById("atl"+k.charAt(0).toUpperCase()+k.slice(1)+"Note");
-      var txt = aiDraft.actionTimelineNotes[k];
-      // 🆕 2026-08-10(실제 발견): Gemini가 이 필드에서 반복 루프에 빠져 영어 지시문을 그대로
-      // 뱉은 사고가 있었다(액션리포트AI초안.js에서 저장 시점에도 걸러내지만, 그 수정 이전에
-      // 이미 저장된 이상 응답이 남아있을 수 있어 화면에서도 한 번 더 방어).
-      if(txt){
-        var korean=(txt.match(/[가-힣]/g)||[]).length, latin=(txt.match(/[A-Za-z]/g)||[]).length;
-        if(txt.length>300 || latin>korean) txt="";
-      }
-      if(el && txt) el.innerHTML += "<div class=\"wa-callout-ai\">"+waAiBadgeHTML(WA.aiWeek, WA.actionNotes||{})+mdRender_(txt)+"</div>";
-    });
-  }
-}
-
-// 저장된 AI 초안은 JSON 문자열이다(narrative+verdicts+callouts, 2026-08-03 구조화). 구버전(순수
-// 텍스트) 데이터가 남아있을 가능성에도 대비해 파싱 실패 시 narrative로만 감싸 되돌린다.
-function waParseAiDraft(raw){
-  if(!raw) return null;
-  try {
-    var obj = JSON.parse(raw);
-    if(obj && typeof obj==="object") return { narrative: obj.narrative||"", verdicts: obj.verdicts||[], callouts: obj.callouts||{}, actionTimelineNotes: obj.actionTimelineNotes||{} };
-  } catch(e){}
-  return { narrative: String(raw), verdicts: [], callouts: {}, actionTimelineNotes: {} };
-}
-function waVerdictTagClass(tag){
-  if(tag==="효과 확인") return "good";
-  if(tag==="효과 확인 안 됨") return "bad";
-  return "warn"; // 효과는 소폭 / 판단 보류 / 그 외
-}
-// AI가 검토(=그 주 사람 코멘트 저장)되기 전까지 붙는 배지. actionNotes[week]가 있으면 사람이 이미
-// 이 주를 확인했다고 본다(운영자 확정 2026-08-03 — 별도 "승인" 버튼 없이 기존 코멘트 저장을 재사용).
-function waAiBadgeHTML(week, actionNotes){
-  var reviewed = actionNotes && actionNotes[week] && String(actionNotes[week]).trim();
-  return reviewed ? "" : '<span class="wa-ai-badge">🤖 AI 추정 · 검토 전</span>';
-}
-function paintWaVerdict(draft, aiWeek, actionNotes){
-  var card = document.querySelector('[data-cid="waVerdict"]');
-  var box = document.getElementById("waVerdictGrid");
-  var badgeEl = document.getElementById("waVerdictBadge");
-  if(!card || !box) return;
-  if(!draft || !draft.verdicts || !draft.verdicts.length){ card.style.display="none"; return; }
-  card.style.display = "";
-  if(badgeEl) badgeEl.innerHTML = waAiBadgeHTML(aiWeek, actionNotes);
-  box.innerHTML = draft.verdicts.map(function(v){
-    var cls = waVerdictTagClass(v.tag);
-    return '<div class="wa-vcard"><span class="wa-vtag '+cls+'">'+esc(v.tag||"")+'</span>'
-      +'<div class="wa-vtitle">'+esc(v.action||"")+'</div>'
-      +'<div class="wa-vbody" title="'+esc(v.summary||"")+'">'+esc(v.summary||"")+'</div></div>';
-  }).join('');
-}
-// 차트 카드 캘아웃에 AI 문장을 덧붙인다 — 단, **선택주(selWeek)가 AI가 실제로 쓴 주(aiWeek)와 같을
-// 때만** 붙인다. 다른 주를 보고 있는데 aiWeek 얘기를 섞으면 어느 주 설명인지 헷갈린다.
-function waAppendAiCallout(elId, calloutKey, draft, aiWeek, selWeek, actionNotes){
-  var el = document.getElementById(elId); if(!el) return;
-  var old = el.querySelector(".wa-callout-ai"); if(old) old.remove();
-  var text = (draft && selWeek===aiWeek && draft.callouts) ? draft.callouts[calloutKey] : null;
-  if(text){
-    el.style.display = "";
-    var div = document.createElement("div");
-    div.className = "wa-callout-ai";
-    div.innerHTML = waAiBadgeHTML(aiWeek, actionNotes) + ' <span>'+esc(text)+'</span>';
-    el.appendChild(div);
-  } else if(!el.textContent.trim()){
-    el.style.display = "none";
-  }
-}
-
 // 📈 [2026-08-11 신설] "출고 코호트" 탭의 D+0~D+30 누적표(최근 18주 전체)를 '위클리 현황판'
 //   탭에도 최근 N주·핵심 체크포인트(D+7/D+14/D+30)만 간추려 보여준다 — 30개 열짜리 표를
 //   그대로 넣으면 너무 무거워서, 대표 구간만 뽑은 축약판. targetId/weeks를 받으므로 다른
@@ -4161,259 +3735,6 @@ function renderRecentCohortMini(c, targetId, weeks){
   var maxD = (c&&c.curveMaxD!=null)?c.curveMaxD:30;
   var rows = allRows.slice(-n); // cohortCurveTableHTML이 자체적으로 reverse()해 최신을 위로 올린다
   el.innerHTML = '<table class="dtable no-grp curve-tbl">' + cohortCurveTableHTML(rows, maxD) + '</table>';
-}
-function paintWeeklyAction(d){
-  var w = WA.week;
-  var rangeEl = document.getElementById("waWeekRange");
-  if(rangeEl) rangeEl.textContent = rptWeekLabel(w)+" 주";
-
-  var d7rows = waD7Rows((d.cohort&&d.cohort.shipCurve)||[]);
-  // 2026-05-04주 이전은 표시하지 않는다(운영자 요청 08/03) — 채널분류 시작일(5/6) 이전 데이터라
-  // fcRate/lcRate가 이 시기 특유의 이상치를 보였다. 타일·차트·표 전부 이 필터를 공유해 일관되게 자른다.
-  var WA_DANGTONG_FLOOR = "2026-05-04";
-  var dtRows = ((d.weeklyBoard&&d.weeklyBoard.dangtong)||[]).filter(function(r){ return r.week >= WA_DANGTONG_FLOOR; });
-  var dailyNight = (d.weeklyBoard&&d.weeklyBoard.nightIntake&&d.weeklyBoard.nightIntake.daily)||[];
-  var niRows = waNightWeekly(dailyNight);
-  var cdRows = (d.accel&&d.accel.samedayWeekly)||[];
-  var absRows = (d.accel&&d.accel.absentSamedayWeekly)||[];
-
-  function at(rows,key){ var i=waFind(rows,w); if(i<0) return {cur:null,prev:null}; return {cur:rows[i][key], prev:i>0?rows[i-1][key]:null}; }
-  var pctFn = function(v){ return v==null?"–":pct(v,1); };
-
-  var d7=at(d7rows,"d7"), fc=at(dtRows,"fcRate"), ni=at(niRows,"count"), cd=at(cdRows,"rate");
-
-  document.getElementById("waTiles").innerHTML =
-    waTile("D+7 누적 설치완료율","📦", d7.cur, d7.prev, {valFn:pctFn, accent:true}) +
-    waTile("1차컨택 당일설치율","🚚", fc.cur, fc.prev, {valFn:pctFn}) +
-    waTile("야간원격접수","🌙", ni.cur, ni.prev, {valFn:fmt, unit:"건", neutral:true}) +
-    waTile("콜 기준 D+1 전환율","📞", cd.cur, cd.prev, {valFn:pctFn});
-
-  var actionNotes = (d.weeklyBoard&&d.weeklyBoard.actionNotes)||{};
-  var aiDraftsRaw = (d.weeklyBoard&&d.weeklyBoard.aiDrafts)||{};
-  var aiWeek = waLastClosedWeek(d7rows);          // AI초안은 항상 이 주(마지막 마감주)에 대해서만 존재
-  var aiDraft = waParseAiDraft(aiDraftsRaw[aiWeek]);
-  WA.aiDraft = aiDraft; WA.aiWeek = aiWeek; WA.actionNotes = actionNotes;
-
-  paintWaSummary(d, w);
-  paintWaVerdict(aiDraft, aiWeek, actionNotes);
-  paintWaD7(d7rows, w, d);
-  waAppendAiCallout("waD7Callout", "d7", aiDraft, aiWeek, w, actionNotes);
-  paintWaDangtong(dtRows, w);
-  waAppendAiCallout("waDangtongCallout", "dangtong", aiDraft, aiWeek, w, actionNotes);
-  paintWaNight(dailyNight, w);
-  waAppendAiCallout("waNightCallout", "night", aiDraft, aiWeek, w, actionNotes);
-  paintWaCallD1(cdRows, w, absRows);
-  waAppendAiCallout("waCallD1Callout", "callD1", aiDraft, aiWeek, w, actionNotes);
-  paintWaNote(actionNotes);
-  paintWaAiDraft(aiDraft);
-}
-
-function paintWaD7(rows, selWeek, d){
-  var labels = rows.map(function(r){return waShortLabel(r.week);});
-  var data = rows.map(function(r){ return r.d7==null? null : Math.round(r.d7*1000)/10; });
-  var bg = rows.map(function(r){ return r.week===selWeek ? C["--s-blue-d"] : C["--s-aqua"]; });
-  // 운영자 요청(08/03) — 선 그래프는 값이 85~95%대에 몰려 있어 주차 간 차이가 잘 안 보였다.
-  // 막대 + 막대 위 %라벨로 바꾸고, 어차피 100%를 안 넘는 지표라 5%단위 그리드를 준다.
-  mk("waD7Chart", { type:"bar",
-    data:{ labels:labels, datasets:[
-      { label:"D+7 누적 설치완료율(%)", data:data, backgroundColor:bg, borderRadius:3,
-        datalabels: dlBarTop({ formatter:function(v){ return v==null?"":v+"%"; } }) }
-    ]},
-    options:{ scales:{ x:{grid:{display:false}},
-        y:{beginAtZero:true, max:100, ticks:{stepSize:5, callback:function(v){return v+"%";}}} },
-      plugins:{ legend:{display:false},
-        tooltip:{callbacks:{label:function(ctx){ var v=ctx.parsed.y; return v==null?"집계중":v+"%"; }}} } } });
-
-  // 🆕 2026-08-07(운영자 요청): 옆 "출고주 6주 스코어보드"의 전 지표를 이 18주 표에도 week 키로
-  // 병합. 각 원천의 보유기간이 서로 달라(ship.weekly/dangtong=16주, 지연사유Long=18주) 짧은 열은
-  // 그 이전 주에 "–"가 뜬다(운영자 승인 사항 — 신규 필드 없는데 억지로 계산하지 않는다).
-  var shipByWk = {}; ((d&&d.ship&&d.ship.weekly)||[]).forEach(function(w2){ shipByWk[w2.week]=w2; });
-  var DTB_FLOOR = "2026-05-04"; // 배송완료→당일설치/당일통화→당일설치 공통 시작 주(옆 카드 WA_DANGTONG_FLOOR와 동일 기준 재사용)
-  var dtbByWk = {}; ((d&&d.weeklyBoard&&d.weeklyBoard.dangtong)||[]).forEach(function(w2){ dtbByWk[w2.week]=w2; });
-  var reasonByWk = {}; ((d&&d.reasons&&d.reasons.delayCldWeeklyLong)||[]).forEach(function(w2){
-    reasonByWk[w2.week] = w2.top1 || null;
-  });
-  var dash = '<span style="color:var(--muted)">–</span>';
-
-  var tbl = document.getElementById("waD7Table");
-  if(tbl){
-    var head = '<thead><tr><th>출고주</th><th>출고건수</th><th>D+7 누적 설치완료율</th>'
-      +'<th>설치율(현재)</th><th>설치속도</th><th>배송완료→당일설치(배송기준)</th><th>당일통화→당일설치(마지막통화일기준)</th>'
-      +'<th>반품/폐업</th><th>주요 지연사유</th></tr></thead>';
-    var body = rows.slice().reverse().map(function(r){
-      var sw = shipByWk[r.week], dt = dtbByWk[r.week], rs = reasonByWk[r.week], floorOk = r.week >= DTB_FLOOR;
-      var fcCell = (floorOk && dt && dt.fcRate!=null) ? (pct(dt.fcRate,1)+' <span class="cell-pct">('+fmt(dt.fcInstall)+'/'+fmt(dt.contacted)+'건)</span>') : dash;
-      var lcCell = (floorOk && dt && dt.lcRate!=null) ? (pct(dt.lcRate,1)+' <span class="cell-pct">('+fmt(dt.lcInstall)+'/'+fmt(dt.contacted)+'건)</span>') : dash;
-      var rateCell = (sw && sw.doneRate!=null) ? (shipPct(sw.doneRate)+'% <span class="cell-pct">('+fmt(sw.installs)+'/'+fmt(sw.shipped)+'건)</span>') : dash;
-      var spdCell = (sw && sw.avgSpeed!=null) ? (round1(sw.avgSpeed)+'일') : dash;
-      var retCell = (sw && sw.returned!=null) ? fmt(sw.returned) : dash;
-      var rsCell = rs ? (esc(rs.label)+' '+fmt(rs.count)+'건') : dash;
-      return '<tr'+(r.week===selWeek?' class="cur"':'')+'><td>'+rptWeekLabel(r.week)+'</td><td>'+fmt(r.shipped)+'</td><td>'
-        +(r.d7==null?'<span style="color:var(--muted)">집계중</span>':pct(r.d7,1))+'</td>'
-        +'<td>'+rateCell+'</td><td>'+spdCell+'</td><td>'+fcCell+'</td><td>'+lcCell+'</td><td>'+retCell+'</td><td>'+rsCell+'</td></tr>';
-    }).join('');
-    tbl.innerHTML = head+'<tbody>'+body+'</tbody>';
-  }
-  var legEl = document.getElementById("waD7Legend");
-  if(legEl){
-    legEl.innerHTML = '<tbody>'
-      +'<tr><td class="lg-k">D+7 누적 설치완료율</td><td>출고 후 7일 이내 설치완료 비율(가장 오래 보유된 지표, 18주).</td></tr>'
-      +'<tr><td class="lg-k">설치율(현재)</td><td>그 주 출고 대비 <b>현재 시점</b> 설치완료 비율(설치완료건/출고건 병기) · 16주까지만 보유, 그 이전은 "–".</td></tr>'
-      +'<tr><td class="lg-k">설치속도</td><td>출고일→설치일 평균 소요일(설치완료건만) · 16주까지만 보유.</td></tr>'
-      +'<tr><td class="lg-k">배송완료→당일설치(배송기준)</td><td>배송완료 후 <b>최초컨택일</b> 기준 당일 설치(자가설치 제외) · <b>2026-05-04주부터</b> 집계(채널분류 시작 전 데이터는 "–").</td></tr>'
-      +'<tr><td class="lg-k">당일통화→당일설치(마지막통화일기준)</td><td>배송완료 후 시일이 지났어도 <b>마지막 통화일</b> 기준 당일 설치(자가설치 제외, 참고용) · <b>2026-05-04주부터</b> 집계(그 이전은 "–").</td></tr>'
-      +'<tr><td class="lg-k">반품/폐업</td><td>로우데이터 I열 상태값에 반품·폐업 포함된 건 · 16주까지만 보유.</td></tr>'
-      +'<tr><td class="lg-k">주요 지연사유</td><td>완료+미완료 전부(출고→설치 D+7초과 또는 미완료 경과 7일+) 중 메모기준 분류로 그 주 최다 1건만 표시 · 18주 보유.</td></tr>'
-      +'</tbody>';
-  }
-  var co = document.getElementById("waD7Callout");
-  if(co){
-    var sel = rows.filter(function(r){return r.week===selWeek;})[0];
-    if(!sel) co.innerHTML = '';
-    else if(sel.d7==null) co.innerHTML = '선택한 주는 출고 마지막 날짜로부터 <b>'+sel.maxD+'일</b>만 지나 D+7(7일 이내 설치완료) 판정이 아직 안 됩니다 — 최소 7일이 더 지나야 이 주의 값이 채워집니다.';
-    else co.innerHTML = '이 지표는 출고 후 7일이 다 지난 뒤의 최종값이라, 코호트가 아직 진행 중인 최근 주에도 값이 바뀌지 않습니다(우클리핑 영향 없음).';
-  }
-}
-
-function paintWaDangtong(rows, selWeek){
-  var labels = rows.map(function(r){return waShortLabel(r.week);});
-  var fc = rows.map(function(r){ return r.fcRate==null?null:Math.round(r.fcRate*1000)/10; });
-  var lc = rows.map(function(r){ return r.lcRate==null?null:Math.round(r.lcRate*1000)/10; });
-  var bg = rows.map(function(r){ return r.week===selWeek ? C["--s-blue-d"] : C["--s-blue-l"]; });
-  mk("waDangtongChart", { type:"bar",
-    data:{ labels:labels, datasets:[
-      { type:"bar", label:"1차컨택후당일설치건(%)", data:fc, backgroundColor:bg, borderRadius:3, yAxisID:"y",
-        datalabels: dlBarTop({ formatter:function(v){ return v==null?"":v+"%"; } }) },
-      { type:"line", label:"마지막통화 당일설치율(%, 참고)", data:lc, borderColor:C["--muted"], backgroundColor:"transparent",
-        borderDash:[4,3], tension:.25, pointRadius:2, yAxisID:"y",
-        // 운영자 요청(2026-08-04) — 참고선(lcRate)에도 %를 표시. fcRate 막대 라벨과 겹쳐 보이지
-        // 않도록 더 작은 회색 폰트로 구분한다.
-        datalabels: dl({ align:"top", color:C["--muted"], font:{weight:"600",size:9},
-          formatter:function(v){ return v==null?"":v+"%"; } }) }
-    ]},
-    // 운영자 요청(08/03) — 표시 구간을 2026-05-04주 이후로 좁혀서(그 이전엔 채널분류 시작 전이라
-    // lcRate 이상치가 섞여 있었다, [[dashboard-project]] 5/6 컷오버 참고) 상한도 80%로 낮췄다.
-    // fcRate/lcRate 정상 범위(30~55%)가 화면을 더 채워 주차 간 차이가 잘 보인다. 5%단위 그리드.
-    options:{ scales:{ x:{grid:{display:false}},
-        y:{beginAtZero:true, max:80, ticks:{stepSize:5, callback:function(v){return v+"%";}}} },
-      plugins:{ legend:{display:true, labels:{color:C["--text-secondary"]}} } } });
-
-  var tbl = document.getElementById("waDangtongTable");
-  if(tbl){
-    // 운영자 요청(2026-08-04) — 건수 따로/퍼센트 따로 보던 걸 "건수 (퍼센트)" 한 칸으로 합치고,
-    // 참고용으로만 hover title에 있던 lcRate(마지막통화 당일설치)를 별도 열로 꺼내 항상 보이게 함.
-    var head = '<thead><tr><th>출고주</th><th>컨택</th><th>1차컨택후당일설치건</th><th>마지막통화당일설치</th></tr></thead>';
-    var body = rows.slice().reverse().map(function(r){
-      var fcCell = fmt(r.fcInstall)+'건 ('+pct(r.fcRate,1)+')';
-      var lcCell = r.lcInstall==null ? '<span style="color:var(--muted)">–</span>' : fmt(r.lcInstall)+'건 ('+pct(r.lcRate,1)+')';
-      return '<tr'+(r.week===selWeek?' class="cur"':'')+' title="출고 '+fmt(r.shipped)+'건"><td>'+rptWeekLabel(r.week)+'</td><td>'+fmt(r.contacted)
-        +'</td><td>'+fcCell+'</td><td>'+lcCell+'</td></tr>';
-    }).join('');
-    tbl.innerHTML = head+'<tbody>'+body+'</tbody>';
-  }
-  var co = document.getElementById("waDangtongCallout");
-  if(co){
-    var sel = rows.filter(function(r){return r.week===selWeek;})[0];
-    co.innerHTML = (sel && sel.immature)
-      ? '선택한 주는 아직 마감 전이라 컨택이 다 끝나지 않았습니다 — <b>출고 대비 컨택 비율</b>은 낮게 보일 수 있지만, <b>fcRate(이미 컨택된 건 안에서의 당일설치율)</b>는 성숙도와 무관해 주차 비교에 그대로 쓸 수 있습니다.'
-      : '이 주는 마감 후 10일이 지나 컨택·설치 흐름이 안정됐습니다.';
-  }
-}
-
-function paintWaNight(dailyAll, selWeek){
-  var dates = waWeekDatesBack(selWeek, 1);   // 선택 주 + 이전 1주(총 2주, 오래된 순) — 4주는 너무 길어 보여 축소(2026-08-04)
-  var byDate={}; (dailyAll||[]).forEach(function(r){ byDate[r.date]=r; });
-  var labels = dates.map(function(dt){ var s=dt.split("-"); return (+s[1])+"/"+(+s[2]); });
-  var counts = dates.map(function(dt){ return byDate[dt]?byDate[dt].count:0; });
-  var installed = dates.map(function(dt){ return byDate[dt]?byDate[dt].installed:0; });
-  mk("waNightChart", { type:"bar",
-    data:{ labels:labels, datasets:[
-      { label:"접수건수", data:counts, backgroundColor:C["--s-blue-l"], borderRadius:3 },
-      { label:"설치완료(현재기준)", data:installed, backgroundColor:C["--s-aqua"], borderRadius:3 }
-    ]},
-    options:{ scales:{ x:{grid:{display:false}}, y:{beginAtZero:true, ticks:{precision:0}} },
-      plugins:{ legend:{display:true, labels:{color:C["--text-secondary"]}} } } });
-  var note=document.getElementById("waNightNote");
-  if(note){
-    var hasAny = dates.some(function(dt){return byDate[dt];});
-    note.textContent = hasAny
-      ? "18~24시 원격AS 채널 접수 · 설치완료는 사업자번호 매칭(누적형, 최근 며칠은 낮게 보일 수 있음)"
-      : "이 시트는 2026-07-23부터 적재되어 이 주는 데이터가 없습니다.";
-  }
-  var tbl = document.getElementById("waNightTable");
-  if(tbl){
-    var head = '<thead><tr><th>날짜</th><th>접수</th><th>설치완료</th><th>전환율</th></tr></thead>';
-    var body = dates.map(function(dt){
-      var o = byDate[dt];
-      var lbl = (function(){ var s=dt.split("-"); return (+s[1])+"/"+(+s[2]); })();
-      if(!o) return '<tr><td>'+lbl+'</td><td colspan="3" style="color:var(--muted)">집계 전</td></tr>';
-      var rate = o.count ? o.installed/o.count : null;
-      return '<tr><td>'+lbl+'</td><td>'+fmt(o.count)+'</td><td>'+fmt(o.installed)+'</td><td>'+pct(rate,1)+'</td></tr>';
-    }).join('');
-    tbl.innerHTML = head+'<tbody>'+body+'</tbody>';
-  }
-}
-
-function paintWaCallD1(rows, selWeek, absRows){
-  var labels = rows.map(function(r){return waShortLabel(r.week);});
-  var rate = rows.map(function(r){ return r.rate==null?null:Math.round(r.rate*1000)/10; });
-  var bg = rows.map(function(r){ return r.week===selWeek ? C["--s-violet"] : C["--s-blue-l"]; });
-  mk("waCallD1Chart", { type:"bar",
-    data:{ labels:labels, datasets:[
-      { type:"bar", label:"통화 후 설치예정 확정(건, 주말제외)", data:rows.map(function(r){return r.contacted;}), backgroundColor:bg, borderRadius:3, yAxisID:"y",
-        datalabels: dlBarTop({ formatter:function(v){ return (v==null||v===0)?"":fmt(v); } }) },
-      { type:"line", label:"D+1 전환율(%)", data:rate, borderColor:C["--s-red"], backgroundColor:"transparent", tension:.25, pointRadius:3, yAxisID:"y1",
-        datalabels: dl({ align:"top", color:C["--s-red"], font:{weight:"600",size:10}, formatter:function(v){ return v==null?"":v+"%"; } }) }
-    ]},
-    options:{ scales:{
-        x:{grid:{display:false}},
-        y:{beginAtZero:true, position:"left"},
-        y1:{beginAtZero:true, position:"right", grid:{drawOnChartArea:false}, ticks:{callback:function(v){return v+"%";}}}
-      },
-      plugins:{ legend:{display:true, labels:{color:C["--text-secondary"]}} } } });
-
-  var tbl = document.getElementById("waCallD1Table");
-  if(tbl){
-    absRows = absRows||[];
-    var head = '<thead><tr><th>주</th><th>통화 후 설치예정 확정건</th><th>D+1(설치예정 확정건 기준)</th><th>D+1(부재건 기준, 참고)</th></tr></thead>';
-    var body = rows.slice().reverse().map(function(r){
-      var ab = absRows.filter(function(x){return x.week===r.week;})[0];
-      return '<tr'+(r.week===selWeek?' class="cur"':'')+'><td>'+rptWeekLabel(r.week)+'</td><td>'+fmt(r.contacted)+'</td><td>'
-        +pct(r.rate,1)+'</td><td'+(ab?' title="부재건 '+fmt(ab.contacted)+'건"':'')+'>'+(ab?pct(ab.rate,1):'<span style="color:var(--muted)">–</span>')+'</td></tr>';
-    }).join('');
-    tbl.innerHTML = head+'<tbody>'+body+'</tbody>';
-  }
-}
-
-function paintWaAiDraft(draft){
-  var box = document.getElementById("waAiDraftBox");
-  if(!box) return;
-  var text = (draft && draft.narrative) || "";
-  WA.aiDraftText = text;
-  box.style.display = text ? "" : "none";
-  var t = document.getElementById("waAiDraftText");
-  if(t) t.textContent = text;
-}
-function paintWaNote(notes){
-  var ta = document.getElementById("waNote");
-  if(!ta) return;
-  ta.value = notes[WA.week] || "";
-  ta.dispatchEvent(new Event("input", {bubbles:true}));   // 글자수·미리보기 갱신
-  var msg = document.getElementById("waNoteMsg");
-  if(msg){ msg.textContent=""; msg.className="rpt-msg"; }
-}
-function saveWaNote(){
-  if(!LAST_PASS) return;
-  var w=WA.week, ta=document.getElementById("waNote"), msg=document.getElementById("waNoteMsg"), btn=document.getElementById("waNoteSave");
-  btn.disabled=true; msg.textContent="저장 중…"; msg.className="rpt-msg";
-  fetchData(LAST_PASS, function(res){
-    btn.disabled=false;
-    if(res&&res.ok){
-      if(LAST_DATA&&LAST_DATA.weeklyBoard) LAST_DATA.weeklyBoard.actionNotes = res.notes||{};
-      msg.textContent="저장됨 ✓"; msg.className="rpt-msg ok";
-    } else { msg.textContent=(res&&res.error)||"저장 실패"; msg.className="rpt-msg err"; }
-  }, function(){ btn.disabled=false; msg.textContent="통신 오류"; msg.className="rpt-msg err"; },
-  { params:{ action:"setaccelnote", week:w, note:ta.value } });
 }
 // 모든 메모/코멘트 입력란 공용 서식 버튼(2026-08-04, 운영자 요청으로 waNote 전용에서 전체로 확장)
 // — 슬랙 툴바처럼 선택 영역을 감싸거나(굵게) 줄마다 접두어를 붙인다(글머리기호·번호매기기).
@@ -4463,17 +3784,6 @@ function bindNoteEditor_(taEl, opts){
   }
   refresh();
 }
-function waBindButtons(){
-  if(WA_BOUND) return; WA_BOUND=true;
-  var sb=document.getElementById("waNoteSave"); if(sb) sb.addEventListener("click", saveWaNote);
-  bindNoteEditor_(document.getElementById("waNote"), {cntId:"waNoteCnt", previewId:"waNotePreview"});
-  var ub=document.getElementById("waAiDraftUse");
-  if(ub) ub.addEventListener("click", function(){
-    var box=document.getElementById("waNote");
-    if(box){ box.value = WA.aiDraftText||""; box.dispatchEvent(new Event("input", {bubbles:true})); box.focus(); }
-  });
-}
-
 // ===== 🎯 KPI 목표(조정형) 설정 UI =====
 function renderKpi(kpi){
   kpi = kpi || { speed:SPD_TGT, retouch:RTC_TGT };
@@ -4699,13 +4009,6 @@ function mdRender_(text){
 // J열 상태가 반품/폐업이면 애초에 설치될 수 없는 건이라 '미완료'로 뭉뚱그리면 안 된다
 // (신호없음 팝업이 반품접수 메모로 가득했던 이유). 재컨택 대상이 아니므로 회색으로 구분한다.
 function isDeadStatus(s){ s=String(s||""); return s.indexOf("반품")!==-1 || s.indexOf("폐업")!==-1; }
-function leadCell(x){
-  if(!x.installed){
-    if(isDeadStatus(x.status)) return '<b style="color:'+C["--muted"]+'" title="'+esc(x.status)+'">반품·폐업</b>';
-    return '<b style="color:'+C["--s-red"]+'">미완료</b>';
-  }
-  return esc(x.installed)+(x.lead!=null?' <span class="lcd-lead">D+'+x.lead+'</span>':'');
-}
 
 // ===== 현황판 드릴다운 — 잔여 경과일 막대 / D+7 지연사유 표 클릭 시 대상 목록 =====
 // 둘 다 캐시 payload가 아니라 클릭 시 on-demand 조회다(대시보드API.js 상단 '메모 원문 예외' 규칙 참고).
@@ -4785,7 +4088,10 @@ var TAB_SECTIONS={
   // 🆕 2026-08-26: 부재단계별·잔여경과일·미설치사유(현재잔여/키워드) 4카드가 '설치지연상세사유'
   // 탭으로 이관되며 ops는 그 카드들이 쓰던 reasons가 더는 필요없어 빠졌고, returned는
   // 그 카드들이 필요로 하는 ops(부재단계별)·reasons(미설치사유)·cohort(잔여경과일)가 추가됐다.
-  // 설치가속화 탭 삭제로 accel 탭 항목도 제거(accel '데이터 섹션'은 weeklyaction이 여전히 씀 — 별개).
+  // 설치가속화 탭 삭제로 accel 탭 항목도 제거. 2026-11-03: 그 accel을 쓰던 '보고서'(weeklyaction) 탭도
+  // 삭제돼 이제 TAB_SECTIONS 어디에도 "accel"이 없다 — 부분조회(커스텀 날짜조회)는 더 이상 accel을
+  // 계산하지 않는다. 단, 최초 전체 로드(sectionsStr 없음)는 need()가 항상 true라 여전히 계산된다
+  // (대시보드API.js buildAccel_은 3시 슬랙보고 등 다른 자동화도 직접 호출하므로 함수 자체는 그대로 둠).
   // ⚠️ cohort는 ops에 남겨둔다 — boardAging은 이관됐지만 [테스트] 리소스 계산기(rcCompute)가
   //    cohort.shipCurve(D+7 기준선 선별)를 그대로 쓴다. 빼면 커스텀 날짜조회 시 계산기만 옛 데이터로 고정된다.
   ops:["ops","perf","cohort","ship"],
@@ -4793,7 +4099,6 @@ var TAB_SECTIONS={
   weekly:["perf"], daily:["perf"], report:["perf"],
   shipweekly:["ship"], shipdaily:["ship"],
   weeklyboard:["ship","reasons","weeklyBoard"],
-  weeklyaction:["cohort","weeklyBoard","accel"],
   c2i:["callInstall"],
   d7tracking:["d7tracking"],
   returned:["returned","ops","reasons","cohort"]
@@ -4825,7 +4130,6 @@ function renderAll(d){
   if(d.achievement) renderAchievement(d.achievement, d.meta && d.meta.today);
   if(d.ship) renderResourceCalc(d.ship, d.achievement, d.meta && d.meta.today, d.cohort);
   renderWeeklyBoard(d);
-  renderWeeklyAction(d);
   document.getElementById("page-badge").textContent = CUR_PERIOD.start ? ("● "+CUR_PERIOD.label) : "● 전체 기간";
 }
 function applyData(d){ LAST_DATA=d; renderAll(LAST_DATA); }
@@ -5756,7 +5060,7 @@ function shareTabLayout(){
   if(s) s.addEventListener("click", shareTabLayout);
 })();
 
-var TABMETA={ favorites:["즐겨찾기","내가 ⭐ 표시한 카드를 모아봅니다 · 탭에 들어올 때마다 원본을 다시 캡처합니다(실시간 동기화 아님)"], ops:["운영 대시보드","현재 잔여 업무량(콜리스트 기준) + 주간·일간 설치 채널구성 + 설치소요일 분포 · 지연사유 상세는 '설치지연상세사유' 탭 참고"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], weeklyaction:["보고서","주(월요일) 선택 · 야간원격접수·당일배송 업데이트의 주차별 실측 지표 + 수기 코멘트(계산값은 항상 자동, 해석만 편집 가능)"], d7tracking:["D+7 설치트래킹","출고일 기준 주차별 처리·지연사유 · 통화시도/원격·방문 접수건도 함께 확인"], c2i:["당일통화당일설치","월별·주별 요약(최근 3개월) + 일별 상세(최근 30일) 한 페이지 · 통화→당일설치 전환(상담원 담당자별 비교)"],returned:["설치지연상세사유","현재 잔여 지연사유(부재단계별·경과일·미설치사유) + 로우데이터 I열(상태)이 반품·폐업인 2026년 출고건 출고 주차·월별 집계"],
+var TABMETA={ favorites:["즐겨찾기","내가 ⭐ 표시한 카드를 모아봅니다 · 탭에 들어올 때마다 원본을 다시 캡처합니다(실시간 동기화 아님)"], ops:["운영 대시보드","현재 잔여 업무량(콜리스트 기준) + 주간·일간 설치 채널구성 + 설치소요일 분포 · 지연사유 상세는 '설치지연상세사유' 탭 참고"], perf:["성과 대시보드","실적로그+로우데이터 기준 · 설치 속도와 작업량 · 월별 흐름(구 흐름 탭)"], cohort:["출고 코호트 대시보드","로우데이터 출고일 기준 · 출고 대비 설치 전환"], weekly:["주차별 처리속도현황","주차별(월요일 시작) 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], daily:["일자별 처리속도현황","일자별 출고·통화·설치·자가설치·설치속도·재컨택주기 비교"], shipweekly:["출고주 코호트 스코어보드","출고일 기준 · 그 주 출고 물량이 얼마나·얼마나 빨리 설치됐나(완료율·미완료 잔량·설치소요일) · 업무량 대비 리소스 진단 · 최근 주는 진행중(과소평가)"], shipdaily:["출고일 코호트 스코어보드","출고일 기준 · 그 날 출고 물량의 완료율·미완료 잔량·설치소요일 · 최근 며칠은 진행중(과소평가)"], report:["주차별 리포트","주(월요일 시작)별 핵심 지표 전주 대비 자동 요약 + 수기 코멘트"], weeklyboard:["위클리 현황판","출고주 6주 스코어보드(재컨택소요일·설치율·설치속도·당일설치 2종) · 로우데이터 지연사유 6주 추세 · 야간원격접수(일자별) · 콜리스트 현재 지연사유 스냅샷"], d7tracking:["D+7 설치트래킹","출고일 기준 주차별 처리·지연사유 · 통화시도/원격·방문 접수건도 함께 확인"], c2i:["당일통화당일설치","월별·주별 요약(최근 3개월) + 일별 상세(최근 30일) 한 페이지 · 통화→당일설치 전환(상담원 담당자별 비교)"],returned:["설치지연상세사유","현재 잔여 지연사유(부재단계별·경과일·미설치사유) + 로우데이터 I열(상태)이 반품·폐업인 2026년 출고건 출고 주차·월별 집계"],
   todaywork:["당일업무현황판","콜리스트 실시간 · 오늘 1차컨택/재컨택 잔량과 아침 기준 대비 진행현황 · 오후 3시 이후 추가분은 별도 표기 · 맨 밑에 오늘 처리현황(담당자별)·메모·원격방문 진행예정표 포함 · 날짜조회 대상 아님(항상 지금 기준)"] };
 document.querySelectorAll(".navitem").forEach(function(n){
   n.addEventListener("click", function(){
@@ -5767,7 +5071,7 @@ document.querySelectorAll(".navitem").forEach(function(n){
     // (D+7 지연분석은 2026-07-23 부서별 지연원인 탭으로 통합돼 하위 메뉴에서 빠졌다)
     // perf 는 2026-07-28 하위메뉴(월·주·일 흐름)가 사라져 TOGGLE 에서 뺐다.
     // ⚠️ 여기 남겨두면 getElementById("nav-flow") 가 null 이라 성과 탭 클릭이 통째로 죽는다.
-    var TOGGLE = { shipweekly:{children:["nav-shipdaily"], caret:"shipweekly-caret"}, weeklyboard:{children:["nav-weeklyaction"], caret:"weeklyboard-caret"}, cohort:{children:["nav-returned"], caret:"cohort-caret"} };
+    var TOGGLE = { shipweekly:{children:["nav-shipdaily"], caret:"shipweekly-caret"}, cohort:{children:["nav-returned"], caret:"cohort-caret"} };
     if (TOGGLE[t]) {
       var first = document.getElementById(TOGGLE[t].children[0]);
       var open = (first.style.display === "none");
@@ -5802,13 +5106,13 @@ document.addEventListener("keydown", function(e){ if(e.key==="Escape") closeModa
 // 이미 붙어있는 클릭 리스너·data-tab·TOGGLE 맵은 전혀 건드리지 않는다 — 복제가 아니라 이동이라 안전하다.
 var NAV_GROUPS = [
   { id:"snap",    label:"🕒 조회시점", tabs:["todaywork","ops"] },
-  { id:"ship",    label:"📦 출고축",   tabs:["weeklyboard","weeklyaction","cohort","returned","shipweekly","shipdaily","d7tracking","perf"] },
+  { id:"ship",    label:"📦 출고축",   tabs:["weeklyboard","cohort","returned","shipweekly","shipdaily","d7tracking","perf"] },
   { id:"contact", label:"📞 컨택축",   tabs:["c2i"] },
   { id:"other",   label:"🗂 기타",     tabs:["report"] },
 ];
 // 그룹핑 안 끌 때 원래 자리로 되돌릴 기준 순서(현재 사이드바 HTML 순서 그대로, favorites 제외 — favorites는 안 옮김)
 // 🔀 2026-10-13(운영자 요청): 조회시점(todaywork·ops)을 첫 화면 기본탭에 맞춰 최상단으로 이동.
-var NAV_ORIGINAL_ORDER = ["todaywork","ops","weeklyboard","weeklyaction","c2i","d7tracking","cohort","returned","shipweekly","shipdaily","perf","report"];
+var NAV_ORIGINAL_ORDER = ["todaywork","ops","weeklyboard","c2i","d7tracking","cohort","returned","shipweekly","shipdaily","perf","report"];
 
 function ensureNavGroupShell(){
   if (document.getElementById("nav-grouped-shell")) return;
