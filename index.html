@@ -1110,9 +1110,438 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script>
 // =================== CONFIG ===================
-var API_BASE = "https://script.google.com/macros/s/AKfycbzd8oX3LL_rTwG73cb-DFvWTJ-CnSs9273OjZsPQymz2uT8o89XE8z7TRPGztNA-GSc/exec";
-// 접근 코드는 소스에 저장하지 않습니다. 사용자가 입력한 코드를 GAS의 DASH_PASSCODE 와 대조합니다.
-// (코드 변경은 GAS 대시보드API.js 의 DASH_PASSCODE 한 곳만 바꾸면 됩니다.)
+// 🗑️ 2026-11-27 [운영자 요청] 미설치 시트 업무 종료 + 개인 포트폴리오 전환으로 실데이터 연동을
+//   끊었다. 실제 회사 GAS 배포 URL은 보안상 소스에서 제거했다(더 이상 호출되지 않음 — 아래
+//   fetchData()가 전부 로컬 가상 데이터(DEMO MODE 블록)로 응답한다).
+var API_BASE = ""; // (사용 안 함 — 과거: GAS 웹앱 /exec, 제거됨)
+
+// =================== DEMO MODE (가데이터 전용, 실데이터 연동 없음) ===================
+// 2026-11-27 [운영자 요청] 미설치 업무 종료로 실데이터 연동이 끊겨, 개인 포트폴리오 전시용으로
+// 전환한다. fetchData()가 모든 네트워크 호출을 가로채 아래 로직이 생성한 가상 데이터로 대체한다.
+// 매 접속(새로고침)마다 난수로 새로 생성해 "그때그때 약간씩 다른" 살아있는 느낌을 준다.
+// 응답 계약(ok/rows/targets/note 등 필드명)은 과거 GAS 백엔드(대시보드API.js)와 동일하게 맞춰
+// 아래쪽 5천여 줄의 렌더링 코드는 단 한 줄도 바꾸지 않았다 — fetchData() 하나만 네트워크 세부사항을
+// 캡슐화하고 있었기 때문에 가능했다.
+function dRand(min, max){ return min + Math.random()*(max-min); }
+function dInt(min, max){ return Math.floor(dRand(min, max+1)); }
+function dPick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function fmtYMD_(dt){ var y=dt.getFullYear(), m=("0"+(dt.getMonth()+1)).slice(-2), d=("0"+dt.getDate()).slice(-2); return y+"-"+m+"-"+d; }
+function addDays_(dt, n){ var r=new Date(dt); r.setDate(r.getDate()+n); return r; }
+function mondayOf_(dt){ var r=new Date(dt); var day=(r.getDay()+6)%7; r.setDate(r.getDate()-day); r.setHours(0,0,0,0); return r; }
+function sumVals_(o){ return Object.keys(o).reduce(function(s,k){return s+o[k];}, 0); }
+
+var DEMO_MANAGERS = ["김민지","박서준","이도윤","최유나"];
+var DEMO_STATUS_KEYS = ["설치예정","미설치","보류","부재","명의변경","서류보완중","기타"];
+var DEMO_ABSENT_KEYS = ["1차부재","2차부재","3차부재","4회이상부재"];
+var DEMO_DELIVERY_KEYS = ["배송중","배송완료","구매확정","기타"];
+var DEMO_MONTHSTATUS_KEYS = ["설치완료","설치예정","미설치·보류","명의변경","부재총계","설치거부·장기지연","반품·폐업","위약금청구진행중","서류보완중","기타"];
+var DEMO_UNINSTALL_REASONS = ["연락불가","단순변심","일정조율중","서류보완중","타사이탈","폐업예정","설치거부","원격설치희망","방문설치희망","기타"];
+var DEMO_DELAY_CATS = ["반품·폐업","설치거부·장기지연","전산미등록","상담미흡","오배송","명의변경·양도양수","기존 약정 잔여","고객 연락불가","고객 설치미룸","환경대기","개인사유(휴가/방학 등)","미래 설치예정","약속1회(이력다수)","방문설치 접수됨","원격 접수됨","기타"];
+var DEMO_RETURN_CATS = ["단순변심","상담미흡및오인지","매장탐색미흡","타사이탈/기존단말기사용","폐업·영업종료","시스템·장비 비호환","서류·인증 지연","위약금 처리중","명의변경","당사인터넷지연","창업지연","팝업/출장업체","배송(교환 및 오배송)","추가장비상담","오픈일미룸/전액약정","연락불가","개인사유(휴가/병원/출장)","설치미룸","설치약속불이행","기타"];
+var DEMO_MONTHS_2026 = ["2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09","2026-10","2026-11"];
+
+function demoDistribute_(total, keys, skew){
+  // total을 keys 개수만큼 임의 분배(합계 보존) — skew 인덱스는 더 큰 비중을 받는다.
+  var weights = keys.map(function(_,i){ return (skew!=null && i===skew) ? dRand(2.5,4) : dRand(0.4,1.4); });
+  var wsum = weights.reduce(function(a,b){return a+b;},0);
+  var out = {}, used = 0;
+  keys.forEach(function(k,i){
+    var v = (i===keys.length-1) ? (total-used) : Math.round(total*weights[i]/wsum);
+    v = Math.max(0, v);
+    used += v;
+    out[k] = v;
+  });
+  return out;
+}
+function demoCatArray_(cats, total){
+  var dist = demoDistribute_(total, cats, 0);
+  return cats.map(function(c){ return { label:c, count: dist[c] }; }).sort(function(a,b){return b.count-a.count;});
+}
+
+function buildDemoPayload(){
+  var today = new Date();
+  var todayStr = fmtYMD_(today);
+
+  // ---- ops ----
+  var listTotal = dInt(140, 220);
+  var status = demoDistribute_(listTotal, DEMO_STATUS_KEYS, 1); // 미설치 비중 크게
+  var absentTotal = status["부재"];
+  var absent = demoDistribute_(absentTotal, DEMO_ABSENT_KEYS, 0);
+  var delivery = demoDistribute_(listTotal, DEMO_DELIVERY_KEYS, 1);
+  var uByDelivery = { 배송중:0, 배송완료: dInt(15,40), 구매확정: dInt(2,10) };
+  var uSplit = { 배송중: dInt(50,90), 배송완료: dInt(20,45), 기타: dInt(0,5) };
+  var todayContactable = dInt(10,30), neverContacted = dInt(15,45);
+  var lastCallAging = { total: 0, d0:dInt(5,20), d1:dInt(20,45), d2:dInt(10,30), d3:dInt(3,15), d46:dInt(1,8), d7:dInt(0,5) };
+  lastCallAging.total = lastCallAging.d0+lastCallAging.d1+lastCallAging.d2+lastCallAging.d3+lastCallAging.d46+lastCallAging.d7;
+
+  var ops = {
+    listTotal: listTotal, status: status, absent: absent, delivery: delivery,
+    uninstallByDelivery: uByDelivery, uninstallSplit: uSplit,
+    todayContactable: todayContactable, neverContacted: neverContacted, lastCallAging: lastCallAging
+  };
+
+  // ---- perf.daily / dailyScore / ship.daily (최근 45일) ----
+  var daily=[], dailyScore=[], shipDaily=[];
+  for (var i=44;i>=0;i--){
+    var d = addDays_(today, -i);
+    var ds = fmtYMD_(d);
+    var calls = Math.round(dRand(60,220));
+    var installs = dInt(20,170);
+    var firstContacts = dInt(10,160);
+    daily.push({ date: ds, calls: calls, installs: installs, firstContacts: firstContacts });
+    var self_=dInt(5,30), agent=dInt(5,40), visit=dInt(1,15), remote=dInt(5,30);
+    dailyScore.push({ date: ds, shipped: dInt(20,80), calls: calls, firstContacts: firstContacts, installs: installs,
+      self: self_, agent: agent, visit: visit, remote: remote, avgSpeed: Math.round(dRand(2,9)*10)/10, avgRetouch: Math.round(dRand(1,4)*10)/10 });
+  }
+  for (i=29;i>=0;i--){
+    var sd = fmtYMD_(addDays_(today,-i));
+    shipDaily.push({ shipped: dInt(20,80), firstContacts: dInt(10,60), installs: dInt(15,70),
+      self: dInt(5,25), agent: dInt(5,35), visit: dInt(1,12), remote: dInt(5,25),
+      open: dInt(0,20), returned: dInt(0,6), touchTotal: dInt(30,150), visitRecv: dInt(0,8), remoteRecv: dInt(2,15),
+      autoReceived: dInt(0,10), agentUnits: dInt(10,50), touchPerUnit: Math.round(dRand(1,3)*100)/100,
+      d7Touch: dInt(5,40), d7Completed: dInt(5,40), d7TouchPerUnit: Math.round(dRand(1,3)*100)/100,
+      doneRate: Math.round(dRand(0.55,0.92)*1000)/1000, avgSpeed: Math.round(dRand(2,9)*10)/10,
+      avgDeliverySpeed: Math.round(dRand(1,5)*10)/10, avgFirstContactSpeed: Math.round(dRand(0.5,3)*10)/10,
+      avgRetouch: Math.round(dRand(1,4)*10)/10, date: sd, immature: i<2 });
+  }
+
+  // ---- 16주 주간 시리즈(perf.weekly / ship.weekly / d7tracking.weekly / returnedAnalysis.weekly) ----
+  var weeksN = 16;
+  var perfWeekly=[], shipWeekly=[], d7Weekly=[], retWeekly=[], leadDist=[], delayCldWeekly=[], delayKWeekly=[], delayCldWeeklyLong=[];
+  var dangtong=[], shipToDelivery=[], weeklyGap=[];
+  for (i=weeksN-1;i>=0;i--){
+    var wkStart = addDays_(mondayOf_(today), -7*i);
+    var wk = fmtYMD_(wkStart);
+    var shipped = dInt(130,320);
+    var calls = Math.round(dRand(400,1100));
+    var fc = dInt(80,260);
+    var installs = dInt(90,260);
+    var self2=dInt(20,90), agent2=dInt(20,100), visit2=dInt(5,30), remote2=dInt(20,80);
+    perfWeekly.push({ week: wk, shipped: shipped, calls: calls, firstContacts: fc, installs: installs,
+      self: self2, agent: agent2, visit: visit2, remote: remote2,
+      avgSpeed: Math.round(dRand(3,8)*10)/10, avgRetouch: Math.round(dRand(1.5,3.5)*10)/10 });
+    var touchTotal=dInt(300,900), agentUnits=dInt(80,220);
+    shipWeekly.push({ shipped: shipped, firstContacts: fc, installs: installs, self: self2, agent: agent2, visit: visit2, remote: remote2,
+      open: dInt(10,60), returned: dInt(2,18), touchTotal: touchTotal, visitRecv: dInt(5,25), remoteRecv: dInt(15,55),
+      autoReceived: dInt(5,30), agentUnits: agentUnits, touchPerUnit: Math.round((touchTotal/Math.max(1,agentUnits))*100)/100,
+      d7Touch: dInt(60,220), d7Completed: dInt(60,220), d7TouchPerUnit: Math.round(dRand(1,3)*100)/100,
+      doneRate: Math.round(dRand(0.6,0.9)*1000)/1000, avgSpeed: Math.round(dRand(3,8)*10)/10,
+      avgDeliverySpeed: Math.round(dRand(1,4)*10)/10, avgFirstContactSpeed: Math.round(dRand(0.5,2.5)*10)/10,
+      avgRetouch: Math.round(dRand(1.5,3.5)*10)/10, week: wk, immature: i===0, logCalls: calls, logWeekdays: 5 });
+    var top5 = demoCatArray_(DEMO_DELAY_CATS, dInt(20,60)).slice(0,5);
+    d7Weekly.push({ week: wk, partial: i===0, shipped: shipped, fast: dInt(60,200), slow: dInt(10,60),
+      returned: dInt(2,15), docPending: dInt(1,10), shipping: dInt(5,30), reasonPool: dInt(10,50),
+      top5: top5, etc: dInt(0,8), reasons: top5, touch: dInt(200,700), visitRecv: dInt(5,25), remoteRecv: dInt(15,55),
+      preSelf: dInt(10,50), postSelf: dInt(5,30) });
+    var retTotal = dInt(8,30);
+    retWeekly.push({ total: retTotal, shipped: shipped, pct: Math.round((retTotal/shipped)*1000)/1000,
+      cats: demoDistribute_(retTotal, DEMO_RETURN_CATS, 0), etc: [], week: wk });
+    var ldTotal = dInt(60,200);
+    var ldBuckets = demoDistribute_(ldTotal, ["0-2","3-4","5-6","7-13","14+"], 0);
+    ldBuckets.total = ldTotal; ldBuckets.week = wk;
+    leadDist.push(ldBuckets);
+    var dcwCats = demoDistribute_(dInt(20,60), DEMO_DELAY_CATS, 0);
+    delayCldWeekly.push({ week: wk, total: sumVals_(dcwCats), cats: dcwCats,
+      leadSum: Object.keys(dcwCats).reduce(function(o,k){ o[k]=Math.round(dcwCats[k]*dRand(2,9)); return o; },{}),
+      leadN: dcwCats, etc: demoCatArray_(["기타1","기타2"], dInt(0,6)) });
+    delayKWeekly.push({ week: wk, top3: demoCatArray_(DEMO_DELAY_CATS, dInt(10,30)).slice(0,3), blank: dInt(0,5) });
+    delayCldWeeklyLong.push({ week: wk, top1: demoCatArray_(DEMO_DELAY_CATS, dInt(10,30))[0] });
+
+    var contacted = Math.round(shipped*dRand(0.7,0.95));
+    var fcInstall = dInt(10,50), lcInstall = dInt(30,100);
+    dangtong.push({ week: wk, shipped: shipped, contacted: contacted,
+      fcInstall: fcInstall, fcRate: Math.round((fcInstall/shipped)*1000)/1000,
+      lcInstall: lcInstall, lcRate: Math.round((lcInstall/shipped)*1000)/1000, immature: i===0 });
+    var delivered = Math.round(shipped*dRand(0.8,0.97));
+    shipToDelivery.push({ week: wk, shipped: shipped, delivered: delivered, avgDays: Math.round(dRand(1,4)*10)/10, immature: i===0 });
+    var gap = Math.max(0, installs - calls*0.2);
+    weeklyGap.push({ week: wk, calls: calls, installs: installs, gap: Math.round(gap), gapRate: Math.round(dRand(0.05,0.3)*1000)/1000,
+      topReasons: demoCatArray_(DEMO_DELAY_CATS, dInt(10,30)).slice(0,3), remoteRecv: dInt(10,40) });
+  }
+
+  // ---- 12개월 시리즈(perf.monthly / flow.monthly / cohort.monthStatus / achievement) ----
+  var perfMonthly=[], flowMonthly=[], monthStatus={}, installByMonth={};
+  DEMO_MONTHS_2026.forEach(function(ym){
+    var mcalls = Math.round(dRand(2000,5200));
+    var minstalls = dInt(600,1500);
+    var mfc = dInt(500,1400);
+    perfMonthly.push({ ym: ym, calls: mcalls, installs: minstalls, firstContacts: mfc });
+    var mshipped = dInt(700,1700);
+    flowMonthly.push({ calls: mcalls, installs: minstalls, firstContacts: mfc, shipped: mshipped,
+      self: dInt(100,400), agent: dInt(100,450), visit: dInt(20,120), remote: dInt(100,350),
+      leadSum: dInt(2000,9000), leadN: dInt(500,1400), gapSum: dInt(500,3000), gapN: dInt(100,400), ym: ym });
+    var mTotal = dInt(700,1700);
+    monthStatus[ym] = demoDistribute_(mTotal, DEMO_MONTHSTATUS_KEYS, 0);
+    installByMonth[ym] = monthStatus[ym]["설치완료"];
+  });
+
+  // ---- cohort ----
+  var byMonth = DEMO_MONTHS_2026.map(function(ym){
+    var shipped = dInt(700,1700), completed = Math.round(shipped*dRand(0.75,0.95));
+    return { ym: ym, shipped: shipped, completed: completed,
+      self: Math.round(completed*dRand(0.2,0.35)), sms: Math.round(completed*dRand(0.05,0.12)),
+      agent: Math.round(completed*dRand(0.25,0.4)), visit: Math.round(completed*dRand(0.05,0.12)),
+      pending: shipped-completed, rate: Math.round((completed/shipped)*1000)/1000 };
+  });
+  var agingTotal = status["미설치"]+uSplit["배송완료"];
+  var agingDelivered = demoDistribute_(Math.max(10,agingTotal), ["0-6","7-13","14-29","30+"], 0);
+  var statusSummaryTotal = dInt(1500,2600);
+  var statusSummary = demoDistribute_(statusSummaryTotal, DEMO_MONTHSTATUS_KEYS, 0);
+  statusSummary["미설치·보류_배송중"] = dInt(30,90);
+  // cum[d]는 D+d 시점까지의 "누적 설치완료율"(0~1 분수, 카운트 아님) — cohortCurveTableHTML가
+  // v*1000/10으로 퍼센트 변환해서 찍는다. 아직 그 날짜가 지나지 않은 최근 코호트는 null(= "–").
+  var shipCurve=[], curveMaxD=30;
+  for (i=0;i<48;i++){
+    var wkDate = addDays_(mondayOf_(today), -7*(47-i));
+    var daysSince = Math.floor((today-wkDate)/86400000);
+    var entryMaxD = Math.max(0, Math.min(curveMaxD, daysSince));
+    var finalRate = dRand(0.65,0.93); // 이 코호트가 장기적으로 도달하는 누적설치율
+    var cum = [];
+    for (var dday=0; dday<=curveMaxD; dday++){
+      cum.push(dday>entryMaxD ? null : Math.round(finalRate*(1-Math.exp(-dday/6))*1000)/1000);
+    }
+    shipCurve.push({ week: fmtYMD_(wkDate), shipped: dInt(100,300), maxD: entryMaxD, cum: cum });
+  }
+  var cohort = { byMonth: byMonth, agingDelivered: agingDelivered, monthStatus: monthStatus, statusSummary: statusSummary, shipCurve: shipCurve, curveMaxD: curveMaxD };
+
+  // ---- reasons ----
+  var uninstallTotal = status["미설치"]+status["보류"];
+  var reasons = {
+    uninstallReason: demoCatArray_(DEMO_UNINSTALL_REASONS, uninstallTotal),
+    uninstallReasonKw: demoCatArray_(DEMO_UNINSTALL_REASONS.slice(0,6), Math.round(uninstallTotal*0.6)),
+    uninstallReasonKwEtc: demoCatArray_(["기타A","기타B","기타C"], dInt(5,20)),
+    uninstallKwSkipped: { 배송중: uSplit["배송중"], "미컨택(배송완료·메모없음)": dInt(5,20) },
+    uninstallTotal: uninstallTotal,
+    delayReason: demoCatArray_(DEMO_DELAY_CATS, dInt(60,160)),
+    delayEtcDetail: demoCatArray_(["기타1","기타2","기타3"], dInt(5,20)),
+    delayCats: DEMO_DELAY_CATS, delayTotal: dInt(60,160),
+    delayCldWeekly: delayCldWeekly, delayCldCats: DEMO_DELAY_CATS,
+    delayKWeekly: delayKWeekly, delayCldWeeklyLong: delayCldWeeklyLong
+  };
+
+  // ---- callInstall (관리자별 2명 x 최근 45일) ----
+  var mgrs = DEMO_MANAGERS.slice(0,2);
+  var dayRows=[], shipRows=[];
+  for (i=44;i>=0;i--){
+    var cdate = fmtYMD_(addDays_(today,-i));
+    mgrs.forEach(function(mg){
+      var mcalls = dInt(10,45);
+      dayRows.push({ date: cdate, manager: mg, calls: mcalls, planned: dInt(5,25), absent: dInt(0,6),
+        nameChange: dInt(0,2), notInstalled: dInt(2,15), docPending: dInt(0,4), returned: dInt(0,3),
+        refused: dInt(0,2), penalty: dInt(0,2), sameDayInstall: dInt(1,15), totalInstall: dInt(2,20),
+        visitRecv: dInt(0,5), remoteRecv: dInt(1,10), uReady: true });
+    });
+    shipRows.push({ date: cdate, shipped: dInt(15,60), completed: dInt(10,50), contactD1: dInt(5,40) });
+  }
+  var callInstall = { ok: true, managers: mgrs, windowStart: fmtYMD_(addDays_(today,-44)), windowEnd: todayStr,
+    dayRows: dayRows, shipRows: shipRows, note: "데모 데이터(가상)" };
+
+  // ---- d7tracking / returnedAnalysis ----
+  var d7tracking = { weekly: d7Weekly };
+  var retMonthly = DEMO_MONTHS_2026.map(function(ym){
+    var mshipped = dInt(700,1700), mtotal = dInt(20,90);
+    return { total: mtotal, shipped: mshipped, pct: Math.round((mtotal/mshipped)*1000)/1000,
+      cats: demoDistribute_(mtotal, DEMO_RETURN_CATS, 0), etc: [], month: ym };
+  });
+  var returnedAnalysis = { weekly: retWeekly, monthly: retMonthly, cats: DEMO_RETURN_CATS };
+
+  // ---- weeklyBoard ----
+  var nightDaily = [];
+  for (i=29;i>=0;i--){ var ndate=fmtYMD_(addDays_(today,-i)); nightDaily.push({ date: ndate, count: dInt(3,20), installed: dInt(1,15) }); }
+  var sampleMemos = ["고객 요청으로 재연락 예정","설치기사 일정 조율 중","서류 보완 요청 접수","원격설치 전환 희망 확인"];
+  var memoWeeks = [fmtYMD_(mondayOf_(today)), fmtYMD_(addDays_(mondayOf_(today),-7)), fmtYMD_(addDays_(mondayOf_(today),-14))];
+  var memosByWeek = {};
+  memoWeeks.forEach(function(mw){
+    memosByWeek[mw] = Array.from({length: dInt(1,3)}).map(function(_,idx){
+      return { text: dPick(sampleMemos), time: mw+" "+("0"+dInt(9,18)).slice(-2)+":00", row: 100+idx, editTime: null };
+    });
+  });
+  var weeklyBoard = { dangtong: dangtong, shipToDelivery: shipToDelivery,
+    nightIntake: { daily: nightDaily, firstDate: fmtYMD_(addDays_(today,-29)) },
+    memos: memosByWeek, weeklyGap: weeklyGap };
+
+  // ---- achievement ----
+  var targets = {}; var lastTwoMonths = DEMO_MONTHS_2026.slice(-2);
+  lastTwoMonths.forEach(function(ym){ targets[ym] = dInt(1000,1600); });
+  var resourceCalc = {};
+  DEMO_MONTHS_2026.slice(-4).forEach(function(ym){
+    resourceCalc[ym] = { shipBasis: dInt(900,1500), targetRate: Math.round(dRand(0.7,0.9)*100)/100,
+      agentCount: dInt(8,16), targetCallsPerAgent: { min: dInt(400,600), max: dInt(600,900) }, targetCalls: dInt(6000,12000) };
+  });
+  var achievement = { installByMonth: installByMonth, installAdjust: {}, targets: targets, resourceCalc: resourceCalc };
+
+  // ---- weeklyNotes(샘플 몇 주차만) ----
+  var weeklyNotes = {};
+  [0,1,2].forEach(function(wIdx){
+    var wk = fmtYMD_(addDays_(mondayOf_(today), -7*wIdx));
+    weeklyNotes[wk] = dPick(["이번 주 설치율 소폭 상승, 재컨택 속도 개선 중","원격설치 비중 증가 추세, 방문설치 인력 조정 검토","출고 지연 건 일부 발생, 다음 주 집중 관리 예정"]);
+  });
+
+  return {
+    meta: { generatedAt: todayStr+" "+("0"+today.getHours()).slice(-2)+":"+("0"+today.getMinutes()).slice(-2),
+      year: today.getFullYear(), today: todayStr, sheetTitle: "데모 대시보드(가상 데이터)",
+      availableMonths: DEMO_MONTHS_2026, period: null },
+    ops: ops, perf: { daily: daily, monthly: perfMonthly,
+      thisWeek: { calls: perfWeekly[perfWeekly.length-1].calls, installs: perfWeekly[perfWeekly.length-1].installs, firstContacts: perfWeekly[perfWeekly.length-1].firstContacts },
+      thisMonth: { calls: perfMonthly[perfMonthly.length-1].calls, installs: perfMonthly[perfMonthly.length-1].installs, firstContacts: perfMonthly[perfMonthly.length-1].firstContacts },
+      install: (function(){
+        var total2026 = dInt(9000,14000), completed = Math.round(total2026*dRand(0.8,0.95));
+        var bySource = demoDistribute_(completed, ["자가설치","문자발송","상담원","공란","방문설치","원격설치"], 2);
+        return { total2026: total2026, completed: completed, completionRate: Math.round((completed/total2026)*1000)/1000,
+          bySource: bySource, channelSince: "2026-01-01", completedClassified: completed, bySourceClassified: bySource,
+          selfRate: Math.round(bySource["자가설치"]/completed*1000)/1000, smsRate: Math.round(bySource["문자발송"]/completed*1000)/1000,
+          agentRate: Math.round(bySource["상담원"]/completed*1000)/1000, remoteRate: Math.round(bySource["원격설치"]/completed*1000)/1000,
+          visitRate: Math.round(bySource["방문설치"]/completed*1000)/1000,
+          selfOrSmsRate: Math.round((bySource["자가설치"]+bySource["문자발송"])/completed*1000)/1000 };
+      })(),
+      speed: { buckets: demoDistribute_(dInt(500,1200), ["0-2","3-4","5-6","7-13","14+"], 0),
+        channelBuckets: ["자가설치","컨택후자가설치","방문설치","원격설치"].reduce(function(o,ch){
+          var b = demoDistribute_(dInt(100,400), ["0-2","3-4","5-6","7-13","14+"], 0);
+          b.total = sumVals_(b); o[ch]=b; return o;
+        }, {}),
+        avgShipToInstall: Math.round(dRand(3,7)*10)/10, within5Rate: Math.round(dRand(0.5,0.8)*1000)/1000,
+        avgShipToFirstContact: Math.round(dRand(1,3)*10)/10, avgContacts: Math.round(dRand(1.5,3)*10)/10, avgRetouch: Math.round(dRand(1.5,3)*10)/10 },
+      retouchVsSpeed: ["1회","2회","3회","4회+"].map(function(g){ return { gap: g, avgLeadTime: Math.round(dRand(2,9)*10)/10, n: dInt(50,300) }; }),
+      flow: { monthly: flowMonthly }, weekly: perfWeekly, leadDistByContactWeek: leadDist, dailyScore: dailyScore },
+    cohort: cohort, reasons: reasons, ship: { weekly: shipWeekly, daily: shipDaily },
+    returnedAnalysis: returnedAnalysis, callInstall: callInstall, d7tracking: d7tracking,
+    weeklyBoard: weeklyBoard, achievement: achievement, weeklyNotes: weeklyNotes,
+    kpiTargets: demoLoadKpiTargets_(), layout: demoLoadLayout_(), favorites: demoLoadFavorites_(), sections: null
+  };
+}
+
+// ---- 당일업무현황판(todaywork) 전용 — 60초 폴링마다 살짝 흔들리는 "살아있는" 느낌 ----
+function buildDemoTodayWork_(){
+  var today = new Date();
+  var hh=("0"+today.getHours()).slice(-2), mm=("0"+today.getMinutes()).slice(-2);
+  var fc = dInt(10,35), rc = dInt(5,25), dp = dInt(1,10);
+  var byManager = DEMO_MANAGERS.map(function(m){
+    var cols = ["전산처리","설치예정","부재","보류","위약금청구진행중","반품및폐업","서류보완중","반품진행중","기타","remoteTotal","remoteCounselor","visitTotal","visitCounselor"];
+    var p = {}; cols.forEach(function(c){ p[c]=dInt(0,15); });
+    p.total = sumVals_(p);
+    return { manager: m, processed: p };
+  });
+  var totals = {}; ["total","전산처리","설치예정","부재","보류","위약금청구진행중","반품및폐업","서류보완중","반품진행중","기타","remoteTotal","remoteCounselor","visitTotal","visitCounselor"].forEach(function(c){
+    totals[c] = byManager.reduce(function(s,m){return s+(c==="total"?m.processed.total:(m.processed[c]||0));}, 0);
+  });
+  var schedByDate = [];
+  for (var i=0;i<7;i++){ schedByDate.push({ date: fmtYMD_(addDays_(today, i)), remote: dInt(2,12), visit: dInt(0,5) }); }
+  return {
+    asOf: fmtYMD_(today)+" "+hh+":"+mm,
+    baseline: { found: true, firstContact: fc+dInt(0,5), recontact: rc+dInt(0,5) },
+    live: { firstContactTotal: fc, recontactTotal: rc, docPendingTotal: dp, total: fc+rc+dp },
+    byManager: byManager,
+    afternoon: { available: today.getHours()>=15, added: dInt(3,15), forecast: { available: true, expected: dInt(5,20), trainWindow: "2026-11-01~"+fmtYMD_(today) } },
+    reception: { remote: dInt(5,25), visit: dInt(1,10) },
+    processed: { totals: totals, byManager: byManager },
+    schedule: { byDate: schedByDate, dailyAvg: { remote: dInt(6,15), visit: dInt(1,5), total: dInt(8,20), days: 20, from: "2026-11-01", to: fmtYMD_(today) } },
+    memos: DEMO_TW_MEMOS_.slice()
+  };
+}
+
+// ---- 드릴다운 상세(주문번호·경과일·메모) 공용 가짜 행 생성 ----
+var DEMO_SAMPLE_MEMOS = ["연락 시도 중, 부재중","서류 보완 요청함","설치일정 협의 중","고객 요청으로 보류","원격설치 전환 검토"];
+function demoFakeRows_(n){
+  var statuses = ["설치예정","미설치","보류","부재"];
+  return Array.from({length:n}).map(function(_,i){
+    return { order: "DEMO-"+(10000+dInt(0,89999)), age: dInt(0,30), shipped: fmtYMD_(addDays_(new Date(), -dInt(1,30))),
+      status: dPick(statuses), memo: Math.random()<0.7 ? dPick(DEMO_SAMPLE_MEMOS) : "" };
+  });
+}
+
+// ---- action별 가짜 응답 디스패처 ----
+var DEMO_PAYLOAD_CACHE = null;
+var DEMO_TW_MEMOS_ = []; // 당일업무현황판 메모 — todaywork는 60초마다 재조회하므로 세션 내 누적 보관 필요
+var DEMO_TW_MEMO_SEQ_ = 8000;
+var DEMO_WB_MEMO_SEQ_ = 9000;
+function demoNowHm_(){ var n=new Date(); return ("0"+n.getHours()).slice(-2)+":"+("0"+n.getMinutes()).slice(-2); }
+function demoLoadStore_(){ try{ return JSON.parse(localStorage.getItem("demoStore")||"{}"); }catch(e){ return {}; } }
+function demoSaveStore_(store){ try{ localStorage.setItem("demoStore", JSON.stringify(store)); }catch(e){} }
+function demoLoadKpiTargets_(){ var s=demoLoadStore_(); return s.kpiTargets || { speed: 5, retouch: 2.5 }; }
+function demoLoadLayout_(){ var s=demoLoadStore_(); return s.layout || {}; }
+function demoLoadFavorites_(){ var s=demoLoadStore_(); return s.favorites || ["weeklyboard","todaywork"]; }
+
+function demoRespond_(opts){
+  opts = opts || {};
+  var action = opts.params && opts.params.action;
+  if (!action){
+    if (!DEMO_PAYLOAD_CACHE) DEMO_PAYLOAD_CACHE = buildDemoPayload();
+    return DEMO_PAYLOAD_CACHE;
+  }
+  var p = opts.params;
+  switch(action){
+    case "todaywork": return buildDemoTodayWork_();
+    case "cldweekdetail": case "returneddetail": case "d7detail": case "agingdetail":
+      return { ok:true, count: dInt(3,12), rows: demoFakeRows_(dInt(3,12)) };
+    case "cldelay": {
+      var cats = demoCatArray_(DEMO_DELAY_CATS.slice(0,8), dInt(20,60)).map(function(c){ return { cat:c.label, count:c.count, avgAge: Math.round(dRand(1,15)*10)/10 }; });
+      var samples = {}; cats.forEach(function(c){ samples[c.cat] = demoFakeRows_(Math.min(c.count,6)); });
+      return { ok:true, memoCats: cats, samples: samples };
+    }
+    case "setfavorites": {
+      var store = demoLoadStore_(); store.favorites = JSON.parse(p.favorites||"[]"); demoSaveStore_(store);
+      return { ok:true, favorites: store.favorites };
+    }
+    case "setlayout": {
+      var store2 = demoLoadStore_(); store2.layout = store2.layout || {}; store2.layout[p.tab] = JSON.parse(p.layout||"[]"); demoSaveStore_(store2);
+      return { ok:true };
+    }
+    case "setkpi": {
+      var store3 = demoLoadStore_(); store3.kpiTargets = store3.kpiTargets || { speed:5, retouch:2.5 };
+      store3.kpiTargets[p.kind] = Number(p.value); demoSaveStore_(store3);
+      return { ok:true, kpiTargets: store3.kpiTargets };
+    }
+    case "settarget": {
+      if (!DEMO_PAYLOAD_CACHE) DEMO_PAYLOAD_CACHE = buildDemoPayload();
+      DEMO_PAYLOAD_CACHE.achievement.targets[p.month] = Number(p.target);
+      return { ok:true, targets: DEMO_PAYLOAD_CACHE.achievement.targets };
+    }
+    case "setinstall": {
+      if (!DEMO_PAYLOAD_CACHE) DEMO_PAYLOAD_CACHE = buildDemoPayload();
+      var adj = p.total==="" ? null : Number(p.total);
+      DEMO_PAYLOAD_CACHE.achievement.installAdjust[p.month] = adj;
+      return { ok:true, installAdjust: DEMO_PAYLOAD_CACHE.achievement.installAdjust, adjust: adj||0 };
+    }
+    case "setresourcecalc": {
+      if (!DEMO_PAYLOAD_CACHE) DEMO_PAYLOAD_CACHE = buildDemoPayload();
+      DEMO_PAYLOAD_CACHE.achievement.resourceCalc[p.month] = { shipBasis:Number(p.shipBasis), targetRate:Number(p.targetRate),
+        agentCount:Number(p.agentCount), targetCallsPerAgent:{min:Number(p.targetCalls)*0.8,max:Number(p.targetCalls)*1.2}, targetCalls:Number(p.targetCalls) };
+      return { ok:true };
+    }
+    case "setnote": {
+      if (!DEMO_PAYLOAD_CACHE) DEMO_PAYLOAD_CACHE = buildDemoPayload();
+      DEMO_PAYLOAD_CACHE.weeklyNotes[p.week] = p.note;
+      return { ok:true, note: p.note };
+    }
+    case "addmemo": {
+      if (!DEMO_PAYLOAD_CACHE) DEMO_PAYLOAD_CACHE = buildDemoPayload();
+      var wk = fmtYMD_(mondayOf_(new Date()));
+      var memos = DEMO_PAYLOAD_CACHE.weeklyBoard.memos;
+      if (!memos[wk]) memos[wk] = [];
+      memos[wk].unshift({ text: p.text||"", time: fmtYMD_(new Date())+" "+demoNowHm_(), row: DEMO_WB_MEMO_SEQ_++, editTime: null });
+      return { ok:true, memos: memos };
+    }
+    case "editmemo": {
+      if (!DEMO_PAYLOAD_CACHE) DEMO_PAYLOAD_CACHE = buildDemoPayload();
+      var memos2 = DEMO_PAYLOAD_CACHE.weeklyBoard.memos;
+      Object.keys(memos2).forEach(function(w){
+        memos2[w].forEach(function(m){ if (String(m.row)===String(p.row)) { m.text=p.text||""; m.editTime=fmtYMD_(new Date())+" "+demoNowHm_(); } });
+      });
+      return { ok:true, memos: memos2 };
+    }
+    case "addtodayworkmemo": {
+      DEMO_TW_MEMOS_.unshift({ row: DEMO_TW_MEMO_SEQ_++, title: p.title||"", text: p.text||"", time: demoNowHm_(), editTime: null });
+      return { ok:true, memos: DEMO_TW_MEMOS_.slice() };
+    }
+    case "edittodayworkmemo": {
+      var item = DEMO_TW_MEMOS_.filter(function(m){ return String(m.row)===String(p.row); })[0];
+      if (item){ item.title=p.title||""; item.text=p.text||""; item.editTime=demoNowHm_(); }
+      return { ok:true, memos: DEMO_TW_MEMOS_.slice() };
+    }
+    default:
+      return Object.assign({ ok:true }, p);
+  }
+}
 
 // =================== helpers ===================
 var css = function (v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); };
@@ -3914,7 +4343,7 @@ function populateBoardWeekSel(rows){
 function renderBoardNote(week, notes){
   var box=document.getElementById("boardNote"); if(!box) return;
   box.innerHTML='<div class="wa-note-toolbar"><button type="button" class="wa-fmt-btn" data-fmt="bold" title="굵게"><b>B</b> 굵게</button><button type="button" class="wa-fmt-btn" data-fmt="bullet" title="글머리 기호">• 글머리기호</button><button type="button" class="wa-fmt-btn" data-fmt="number" title="번호 매기기">1. 번호매기기</button></div>'
-    +'<textarea id="boardNoteTa" maxlength="1000" placeholder="이번 주 회의 메모 · 예: 김규리님 미설치 투입, 하루 40건 처리중"></textarea>'
+    +'<textarea id="boardNoteTa" maxlength="1000" placeholder="이번 주 회의 메모 · 예: 신규 인원 미설치 투입, 하루 40건 처리중"></textarea>'
     +'<div class="note-preview-label">미리보기</div><div class="note-preview" id="boardNotePreview"></div>'
     +'<div class="rpt-note-foot"><button class="rpt-save" id="boardNoteSave">코멘트 저장</button><span class="rpt-cnt" id="boardNoteCnt"></span><span class="rpt-msg" id="boardNoteMsg"></span></div>';
   var ta=document.getElementById("boardNoteTa"); ta.value=notes[week]||"";
@@ -4055,24 +4484,17 @@ function paintAgingDetail(def, r){
     }).join('')+'</tbody></table>';
 }
 
-// =================== data loading (JSONP) ===================
-var _jsonpSeq=0;
+// =================== data loading (DEMO — 네트워크 호출 없음) ===================
+// 2026-11-27 [운영자 요청] 미설치 시트 연동 종료 + 개인 포트폴리오 전환에 따라, 원래 JSONP로
+// GAS API_BASE를 호출하던 로직을 전부 제거하고 로컬 가상 데이터(demoRespond_, 위 DEMO MODE 블록)로
+// 대체했다. 호출 시그니처(passcode, cb, err, opts)는 그대로 유지해 나머지 호출부(약 5천여 줄)는
+// 전혀 건드리지 않았다 — 이 함수 하나만 네트워크 세부사항을 캡슐화하고 있었기 때문에 가능했다.
 function fetchData(passcode, cb, err, opts) {
   opts=opts||{};
-  var name="__dashcb"+(++_jsonpSeq);
-  var timeout=setTimeout(function(){ cleanup(); err("응답 시간 초과. 잠시 후 다시 시도해 주세요."); }, 120000);
-  function cleanup(){ try{delete window[name];}catch(e){window[name]=undefined;} if(s.parentNode) s.parentNode.removeChild(s); clearTimeout(timeout); }
-  window[name]=function(data){ cleanup(); cb(data); };
-  var s=document.createElement("script");
-  s.onerror=function(){ cleanup(); err("데이터 로드 실패."); };
-  var extra="";
-  if(opts.params){ for(var k in opts.params){ if(opts.params.hasOwnProperty(k)) extra+="&"+k+"="+encodeURIComponent(opts.params[k]); } }
-  s.src=API_BASE+"?key="+encodeURIComponent(passcode)+"&callback="+name
-    +(opts.fresh?"&fresh=1":"")
-    +((opts.start&&opts.end)?("&start="+opts.start+"&end="+opts.end):"")
-    +extra
-    +"&_="+Date.now();
-  document.body.appendChild(s);
+  setTimeout(function(){
+    try { cb(demoRespond_(opts)); }
+    catch(e){ err("데모 데이터 생성 오류: "+e.message); }
+  }, 150+Math.random()*250); // 자연스러운 로딩 체감(실제 네트워크 왕복처럼 보이도록)
 }
 
 var LAST_PASS=null, LAST_DATA=null;
@@ -4253,8 +4675,9 @@ function renderTodayWorkError_(msg){
 //   recontactTotal, markRecontactTargetsOnCallList_과 동일 판정이라 숫자가 항상 일치).
 //   드롭다운으로 바뀌는 건 "완료"(그 담당자가 오늘 처리한 건수, firstContactDoneToday/
 //   recontactDoneToday)뿐 — 전사 배정 대비 그 사람의 기여도를 보는 막대다(100% 넘을 수 있음).
-var TW_MGR_LIST = ["최승훈","김봉수","양나영","김규리"];
-var TW_MGR_DEFAULT = { fc: "최승훈", rc: "김봉수" };
+// 🗑️ 2026-11-27 [운영자 요청] 데모 전환 — 실제 담당자 이름 대신 DEMO_MANAGERS(가상 인물)로 교체.
+var TW_MGR_LIST = DEMO_MANAGERS.slice();
+var TW_MGR_DEFAULT = { fc: DEMO_MANAGERS[0], rc: DEMO_MANAGERS[1] };
 function twMgrSelected_(key){
   try { var v = localStorage.getItem("tw_mgr_"+key); if (v && TW_MGR_LIST.indexOf(v)!==-1) return v; } catch(e){}
   return TW_MGR_DEFAULT[key];
@@ -5174,11 +5597,8 @@ function setNavGrouping(on){
   if (saved === "1") setNavGrouping(true);
 })();
 
-// auto-login if session has passcode
-(function(){
-  var saved=null; try{saved=sessionStorage.getItem("dashpass");}catch(e){}
-  if(saved){ boot(saved); } else { document.getElementById("gate-input").focus(); }
-})();
+// 🆕 2026-11-27 [운영자 요청] 데모 모드 — 접근 코드 없이 바로 가상 데이터로 부팅한다(개인 포트폴리오 전시용, 비공개 URL로만 접근 가능하다는 전제).
+boot("demo");
 </script>
 </body>
 </html>
